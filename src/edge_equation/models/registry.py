@@ -1,12 +1,10 @@
 from typing import Dict, Type
 
-
 class BaseModelRunner:
     name: str = "base"
 
     def run(self, data) -> dict:
         raise NotImplementedError
-
 
 class ModelRegistry:
     def __init__(self) -> None:
