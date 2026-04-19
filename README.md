@@ -1,2 +1,2 @@
-# edge-equation-v1
-Deterministic predictive analytics engine for Edge Equation
+# Edge Equation v1
+Deterministic sports analytics engine scaffold.

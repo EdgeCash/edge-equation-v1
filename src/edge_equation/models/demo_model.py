@@ -1,6 +1,5 @@
 from .registry import BaseModelRunner
 
-
 class DemoModel(BaseModelRunner):
     name = "demo-model"
 
