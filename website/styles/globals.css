@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import editorial + technical fonts */
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-ink-950 text-edge-text font-body antialiased;
+    font-feature-settings: "ss01", "cv11";
+    background-image:
+      radial-gradient(1200px 600px at 10% -10%, rgba(215, 181, 114, 0.06), transparent 60%),
+      radial-gradient(800px 500px at 110% 10%, rgba(215, 181, 114, 0.03), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3 {
+    @apply font-display text-edge-text;
+    font-variation-settings: "opsz" 120, "SOFT" 30;
+  }
+
+  ::selection {
+    @apply bg-edge-accent text-ink-950;
+  }
+}
+
+@layer components {
+  .hairline {
+    @apply border-t border-edge-line;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
