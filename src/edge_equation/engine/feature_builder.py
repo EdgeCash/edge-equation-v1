@@ -14,7 +14,14 @@ Phase 7a extensions:
   'venue'. HFACalculator resolves the home-field advantage; the total
   overrides inputs['home_adv'] and is recorded in metadata.
 
-Both kwargs are strict no-ops when None (existing callers unchanged).
+Phase 7b extension:
+- context_bundle (ContextBundle): when provided, ContextRegistry.compose sums
+  every active adjuster. home_adv_delta is added to inputs['home_adv'] (after
+  HFA resolution if present); totals_delta is added to inputs['dixon_coles_adj']
+  (initialized to 0 if absent). The full composed adjustment dict is stored
+  in metadata for audit.
+
+All three kwargs are strict no-ops when None (existing callers unchanged).
 """
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -23,11 +30,13 @@ from typing import Any, Optional
 from edge_equation.math.stats import DeterministicStats
 from edge_equation.math.decay import DecayParams, DecayWeights
 from edge_equation.math.hfa import HFACalculator
+from edge_equation.context.registry import ContextBundle, ContextRegistry
 from edge_equation.config.sport_config import SPORT_CONFIG
 
 
 META_DECAY_HALFLIFE_KEY = "phase7a_decay_halflife_days"
 META_HFA_VALUE_KEY = "phase7a_hfa_value"
+META_CONTEXT_ADJUSTMENT_KEY = "phase7b_context_adjustment"
 
 
 RATE_PROP_MARKETS = {
@@ -142,6 +151,24 @@ class FeatureBuilder:
         metadata[META_HFA_VALUE_KEY] = str(hfa.total)
 
     @staticmethod
+    def _apply_context(inputs: dict, context_bundle: ContextBundle, metadata: dict) -> None:
+        """
+        Compose all active context adjusters and merge into inputs:
+        - home_adv_delta -> added to inputs['home_adv'] (after HFA if present)
+        - totals_delta   -> added to inputs['dixon_coles_adj'] (created if absent)
+        The composed ContextAdjustment.to_dict() is stored in metadata.
+        """
+        adj = ContextRegistry.compose(context_bundle)
+        if "home_adv" in inputs:
+            inputs["home_adv"] = float(Decimal(str(inputs["home_adv"])) + adj.home_adv_delta)
+        else:
+            inputs["home_adv"] = float(adj.home_adv_delta)
+        inputs["dixon_coles_adj"] = float(
+            Decimal(str(inputs.get("dixon_coles_adj", 0.0))) + adj.totals_delta
+        )
+        metadata[META_CONTEXT_ADJUSTMENT_KEY] = adj.to_dict()
+
+    @staticmethod
     def build(
         sport: str,
         market_type: str,
@@ -153,6 +180,7 @@ class FeatureBuilder:
         metadata: Optional[dict] = None,
         decay_params: Optional[DecayParams] = None,
         hfa_context: Optional[dict] = None,
+        context_bundle: Optional[ContextBundle] = None,
     ) -> FeatureBundle:
         FeatureBuilder._validate_sport_market(sport, market_type)
         mutable_inputs = dict(inputs)
@@ -161,6 +189,8 @@ class FeatureBuilder:
             FeatureBuilder._apply_decay(mutable_inputs, decay_params, mutable_meta)
         if hfa_context is not None:
             FeatureBuilder._apply_hfa(sport, mutable_inputs, hfa_context, mutable_meta)
+        if context_bundle is not None:
+            FeatureBuilder._apply_context(mutable_inputs, context_bundle, mutable_meta)
         # Drop history lists before validation/storage -- they are transient.
         mutable_inputs.pop("home_strength_history", None)
         mutable_inputs.pop("away_strength_history", None)
