@@ -88,6 +88,26 @@ MIGRATIONS: Tuple[Tuple[int, str], ...] = (
         CREATE INDEX IF NOT EXISTS idx_realizations_game_id ON realizations(game_id);
         CREATE INDEX IF NOT EXISTS idx_realizations_recorded_at ON realizations(recorded_at);
     """),
+    (2, """
+        CREATE TABLE IF NOT EXISTS game_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id TEXT NOT NULL,
+            league TEXT NOT NULL,
+            home_team TEXT NOT NULL,
+            away_team TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            home_score INTEGER NOT NULL,
+            away_score INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'final',
+            recorded_at TEXT NOT NULL,
+            UNIQUE(game_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_game_results_league ON game_results(league);
+        CREATE INDEX IF NOT EXISTS idx_game_results_start_time ON game_results(start_time);
+        CREATE INDEX IF NOT EXISTS idx_game_results_home_team ON game_results(home_team);
+        CREATE INDEX IF NOT EXISTS idx_game_results_away_team ON game_results(away_team);
+    """),
 )
 
 

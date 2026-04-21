@@ -125,6 +125,24 @@ def _cmd_settle(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_load_results(args: argparse.Namespace) -> int:
+    from edge_equation.stats.csv_loader import ResultsCsvLoader
+    from edge_equation.stats.results import GameResultsStore
+    conn = _open_db(args.db)
+    try:
+        ids = ResultsCsvLoader.load_file(conn, args.results_csv)
+        counts = {}
+        for league in ("MLB", "NFL", "NHL", "NBA", "KBO", "NPB", "SOC"):
+            counts[league] = GameResultsStore.count_by_league(conn, league)
+    finally:
+        conn.close()
+    print(json.dumps({
+        "rows_loaded": len(ids),
+        "totals_by_league": counts,
+    }, indent=2, default=str))
+    return 0
+
+
 def _cmd_pipeline(args: argparse.Namespace) -> int:
     # Phase-1 demo pipeline retained for backwards compatibility.
     from edge_equation.engine.modes import PipelineMode
@@ -173,6 +191,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_settle.add_argument("--db", type=str, default=None)
     p_settle.add_argument("--slate-id", type=str, default=None)
     p_settle.set_defaults(func=_cmd_settle)
+
+    p_load = sub.add_parser(
+        "load-results",
+        help="Load completed-game scores from a CSV (for stats / Elo replay)",
+    )
+    p_load.add_argument("results_csv")
+    p_load.add_argument("--db", type=str, default=None)
+    p_load.set_defaults(func=_cmd_load_results)
 
     p_pipe = sub.add_parser("pipeline", help="Legacy Phase-1 pipeline demo")
     p_pipe.add_argument("--mode", type=str, default="daily")

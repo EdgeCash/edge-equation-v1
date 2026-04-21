@@ -1,0 +1,11 @@
+league,game_id,start_time,home_team,away_team,home_score,away_score,status
+KBO,KBO-2026-04-13-LG-DB,2026-04-13T18:30:00+09:00,Doosan Bears,LG Twins,5,3,final
+KBO,KBO-2026-04-13-SSG-KIA,2026-04-13T18:30:00+09:00,KIA Tigers,SSG Landers,2,4,final
+KBO,KBO-2026-04-14-LG-DB,2026-04-14T18:30:00+09:00,Doosan Bears,LG Twins,1,7,final
+KBO,KBO-2026-04-14-SSG-KIA,2026-04-14T18:30:00+09:00,KIA Tigers,SSG Landers,6,2,final
+KBO,KBO-2026-04-15-LG-DB,2026-04-15T18:30:00+09:00,LG Twins,Doosan Bears,4,3,final
+KBO,KBO-2026-04-16-LG-KIA,2026-04-16T18:30:00+09:00,KIA Tigers,LG Twins,3,5,final
+KBO,KBO-2026-04-17-DB-SSG,2026-04-17T18:30:00+09:00,SSG Landers,Doosan Bears,6,4,final
+KBO,KBO-2026-04-18-LG-KIA,2026-04-18T18:30:00+09:00,KIA Tigers,LG Twins,2,8,final
+KBO,KBO-2026-04-18-DB-SSG,2026-04-18T18:30:00+09:00,SSG Landers,Doosan Bears,4,4,final
+KBO,KBO-2026-04-19-LG-KIA,2026-04-19T18:30:00+09:00,LG Twins,KIA Tigers,7,1,final
