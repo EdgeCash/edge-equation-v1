@@ -1,11 +1,18 @@
 """Normalizer: raw dicts -> typed Slate."""
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
-from typing import Iterable
+from typing import Any, Dict, Iterable
 
 from edge_equation.ingestion.schema import (
     GameInfo, MarketInfo, Slate, VALID_LEAGUES, LEAGUE_TO_SPORT,
 )
+
+
+@dataclass
+class NormalizedFrame:
+    """Thin wrapper used by EnginePipeline to carry ingestion results downstream."""
+    data: Dict[str, Any] = field(default_factory=dict)
 
 LEAGUE_MARKETS = {
     "MLB":   {"ML", "Run_Line", "Total", "HR", "K", "NRFI", "YRFI"},

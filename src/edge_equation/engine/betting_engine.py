@@ -9,7 +9,11 @@ from typing import Optional
 from edge_equation.math.probability import ProbabilityCalculator
 from edge_equation.math.ev import EVCalculator
 from edge_equation.math.scoring import ConfidenceScorer
-from edge_equation.engine.feature_builder import FeatureBundle
+from edge_equation.engine.feature_builder import (
+    FeatureBundle,
+    META_DECAY_HALFLIFE_KEY,
+    META_HFA_VALUE_KEY,
+)
 from edge_equation.engine.pick_schema import Pick, Line
 
 
@@ -68,6 +72,11 @@ class BettingEngine:
         else:
             raise ValueError(f"BettingEngine: unsupported market {market}")
 
+        halflife_raw = bundle.metadata.get(META_DECAY_HALFLIFE_KEY)
+        hfa_raw = bundle.metadata.get(META_HFA_VALUE_KEY)
+        decay_halflife_days = Decimal(halflife_raw) if halflife_raw is not None else None
+        hfa_value = Decimal(hfa_raw) if hfa_raw is not None else None
+
         return Pick(
             sport=sport,
             market_type=market,
@@ -81,6 +90,8 @@ class BettingEngine:
             realization=realization,
             game_id=bundle.game_id,
             event_time=bundle.event_time,
+            decay_halflife_days=decay_halflife_days,
+            hfa_value=hfa_value,
             metadata={
                 "raw_universal_sum": str(fv.get("raw_universal_sum"))
                     if fv.get("raw_universal_sum") is not None else None,
