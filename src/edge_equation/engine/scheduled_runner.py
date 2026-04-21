@@ -37,6 +37,8 @@ from edge_equation.posting.posting_formatter import PostingFormatter
 from edge_equation.publishing.discord_publisher import DiscordPublisher
 from edge_equation.publishing.email_publisher import EmailPublisher
 from edge_equation.publishing.x_publisher import XPublisher
+from edge_equation.stats.composer import FeatureComposer
+from edge_equation.stats.results import GameResultsStore
 
 
 CARD_TYPE_DAILY = "daily_edge"
@@ -91,7 +93,14 @@ def _collect_slate(
     api_key: Optional[str] = None,
     prefer_mock: bool = False,
 ) -> Slate:
-    """Walk the leagues, resolve a source for each, and merge into one Slate."""
+    """
+    Walk the leagues, resolve a source for each, and merge into one Slate.
+
+    For every league, any market the source emits WITHOUT a meta['inputs']
+    block (CSV slates, odds-API slates) gets enriched by FeatureComposer
+    using the game-results history already stored in SQLite. Markets that
+    arrive with inputs already set (the mock sources) pass through untouched.
+    """
     all_games: list = []
     all_markets: list = []
     for league in leagues:
@@ -103,8 +112,18 @@ def _collect_slate(
             api_key=api_key,
             prefer_mock=prefer_mock,
         )
-        all_games.extend(source.get_raw_games(run_datetime))
-        all_markets.extend(source.get_raw_markets(run_datetime))
+        league_games = source.get_raw_games(run_datetime)
+        league_markets = source.get_raw_markets(run_datetime)
+
+        # Pull recent results for this league to build Elo + team stats.
+        results = GameResultsStore.list_by_league(conn, league=league, limit=500)
+        if results:
+            league_markets = FeatureComposer.enrich_markets(
+                league_markets, league_games, league, results,
+            )
+
+        all_games.extend(league_games)
+        all_markets.extend(league_markets)
     return normalize_slate(all_games, all_markets)
 
 
