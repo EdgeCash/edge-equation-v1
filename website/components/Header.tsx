@@ -3,6 +3,8 @@ import Link from "next/link";
 const nav = [
   { href: "/", label: "Home" },
   { href: "/daily-edge", label: "Daily Edge" },
+  { href: "/archive", label: "Archive" },
+  { href: "/grade-history", label: "Grades" },
   { href: "/premium-edge", label: "Premium" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
