@@ -10,11 +10,22 @@ from typing import Optional, Protocol
 
 @dataclass(frozen=True)
 class PublishResult:
-    """Result of a single publish_card call."""
+    """
+    Result of a single publish_card call.
+
+    failsafe_triggered + failsafe_detail describe what happened when the
+    primary publish path failed and a fallback (file write, email, etc.) was
+    invoked instead. `success` reflects ONLY the primary publish path --
+    never the failsafe -- so `success=False, failsafe_triggered=True` means
+    the post didn't go up but the failure was captured somewhere you can
+    act on.
+    """
     success: bool
     target: str
     message_id: Optional[str] = None
     error: Optional[str] = None
+    failsafe_triggered: bool = False
+    failsafe_detail: Optional[str] = None
 
     def to_dict(self) -> dict:
         return {
@@ -22,6 +33,8 @@ class PublishResult:
             "target": self.target,
             "message_id": self.message_id,
             "error": self.error,
+            "failsafe_triggered": self.failsafe_triggered,
+            "failsafe_detail": self.failsafe_detail,
         }
 
 
