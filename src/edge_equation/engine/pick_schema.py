@@ -10,7 +10,7 @@ formatters and publishers must not mutate them.
 """
 from dataclasses import dataclass, field, asdict
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 
 @dataclass(frozen=True)
@@ -40,6 +40,9 @@ class Pick:
     realization: int = 47
     game_id: Optional[str] = None
     event_time: Optional[str] = None
+    decay_halflife_days: Optional[Decimal] = None
+    hfa_value: Optional[Decimal] = None
+    kelly_breakdown: Optional[Dict[str, Any]] = None
     metadata: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
@@ -56,5 +59,8 @@ class Pick:
             "realization": self.realization,
             "game_id": self.game_id,
             "event_time": self.event_time,
+            "decay_halflife_days": str(self.decay_halflife_days) if self.decay_halflife_days is not None else None,
+            "hfa_value": str(self.hfa_value) if self.hfa_value is not None else None,
+            "kelly_breakdown": dict(self.kelly_breakdown) if self.kelly_breakdown is not None else None,
             "metadata": dict(self.metadata),
         }
