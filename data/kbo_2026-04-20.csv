@@ -1,0 +1,11 @@
+league,game_id,start_time,home_team,away_team,market_type,selection,line,odds
+KBO,KBO-2026-04-20-LG-DB,2026-04-20T18:30:00+09:00,Doosan Bears,LG Twins,ML,Doosan Bears,,-140
+KBO,KBO-2026-04-20-LG-DB,2026-04-20T18:30:00+09:00,Doosan Bears,LG Twins,ML,LG Twins,,+120
+KBO,KBO-2026-04-20-LG-DB,2026-04-20T18:30:00+09:00,Doosan Bears,LG Twins,Total,Over 9.5,9.5,-115
+KBO,KBO-2026-04-20-LG-DB,2026-04-20T18:30:00+09:00,Doosan Bears,LG Twins,Total,Under 9.5,9.5,-105
+KBO,KBO-2026-04-20-LG-DB,2026-04-20T18:30:00+09:00,Doosan Bears,LG Twins,Run_Line,Doosan Bears -1.5,-1.5,+150
+KBO,KBO-2026-04-20-LG-DB,2026-04-20T18:30:00+09:00,Doosan Bears,LG Twins,Run_Line,LG Twins +1.5,1.5,-170
+KBO,KBO-2026-04-20-SSG-KIA,2026-04-20T18:30:00+09:00,KIA Tigers,SSG Landers,ML,KIA Tigers,,+105
+KBO,KBO-2026-04-20-SSG-KIA,2026-04-20T18:30:00+09:00,KIA Tigers,SSG Landers,ML,SSG Landers,,-125
+KBO,KBO-2026-04-20-SSG-KIA,2026-04-20T18:30:00+09:00,KIA Tigers,SSG Landers,Total,Over 8.5,8.5,-110
+KBO,KBO-2026-04-20-SSG-KIA,2026-04-20T18:30:00+09:00,KIA Tigers,SSG Landers,Total,Under 8.5,8.5,-110

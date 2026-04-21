@@ -1,0 +1,7 @@
+league,game_id,start_time,home_team,away_team,market_type,selection,line,odds
+NPB,NPB-2026-04-20-YKT-HNS,2026-04-20T18:00:00+09:00,Hanshin Tigers,Yakult Swallows,ML,Hanshin Tigers,,-130
+NPB,NPB-2026-04-20-YKT-HNS,2026-04-20T18:00:00+09:00,Hanshin Tigers,Yakult Swallows,ML,Yakult Swallows,,+110
+NPB,NPB-2026-04-20-YKT-HNS,2026-04-20T18:00:00+09:00,Hanshin Tigers,Yakult Swallows,Total,Over 7.5,7.5,-110
+NPB,NPB-2026-04-20-YKT-HNS,2026-04-20T18:00:00+09:00,Hanshin Tigers,Yakult Swallows,Total,Under 7.5,7.5,-110
+NPB,NPB-2026-04-20-RKT-SFB,2026-04-20T18:00:00+09:00,Softbank Hawks,Rakuten Eagles,ML,Softbank Hawks,,-145
+NPB,NPB-2026-04-20-RKT-SFB,2026-04-20T18:00:00+09:00,Softbank Hawks,Rakuten Eagles,ML,Rakuten Eagles,,+125
