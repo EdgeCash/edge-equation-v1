@@ -30,31 +30,31 @@ def test_publish_evening_edge_dry_run_returns_three_results():
         assert r.message_id == "dry-run"
 
 
-def test_publish_daily_edge_non_dry_run_simulates(tmp_path, monkeypatch):
-    # Redirect the X failsafe file output to tmp_path so the test never
-    # writes under the repo's data/ directory.
+def test_publish_daily_edge_non_dry_run_without_creds_routes_to_failsafe(tmp_path, monkeypatch):
+    # Redirect every failsafe to tmp_path so the test never writes under the
+    # repo's data/ directory, and disable auto-SMTP failsafe.
     monkeypatch.setenv("EDGE_EQUATION_FAILSAFE_DIR", str(tmp_path))
-    # Prevent SMTP from being auto-configured
-    monkeypatch.delenv("SMTP_HOST", raising=False)
-    monkeypatch.delenv("SMTP_FROM", raising=False)
-    monkeypatch.delenv("SMTP_TO", raising=False)
+    for v in ("SMTP_HOST", "SMTP_FROM", "SMTP_TO", "DISCORD_WEBHOOK_URL",
+              "X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET",
+              "EMAIL_TO"):
+        monkeypatch.delenv(v, raising=False)
 
     results = publish_daily_edge(dry_run=False, run_datetime=RUN)
     assert len(results) == 3
     by_target = {r.target: r for r in results}
 
-    # X fails because no real credentials are present, but the failsafe
-    # captures the intended post to a local file.
-    x = by_target["x"]
-    assert x.success is False
-    assert x.failsafe_triggered is True
-    assert x.failsafe_detail and "file=" in x.failsafe_detail
-
-    # Discord and Email are still stubs that simulate success.
-    for target in ("discord", "email"):
+    # Every target fails (no real credentials available) but each failsafe
+    # captures the intended post to disk so nothing is lost.
+    for target in ("x", "discord", "email"):
         r = by_target[target]
-        assert r.success is True
-        assert r.message_id and r.message_id.startswith(f"{target}-")
+        assert r.success is False
+        assert r.failsafe_triggered is True
+        assert r.failsafe_detail and "file=" in r.failsafe_detail
+
+    # One failsafe file per target should now be on disk.
+    files = list(tmp_path.iterdir())
+    targets_written = {f.name.split("-")[0] for f in files}
+    assert targets_written == {"x", "discord", "email"}
 
 
 def test_publish_card_accepts_arbitrary_payload():
