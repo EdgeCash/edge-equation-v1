@@ -1,0 +1,19 @@
+{
+  "_comment": "Template vercel.json for an API-only Vercel project rooted at the repo root. Copy to the repo root ONLY for a separate Vercel project whose UI Root Directory is '/' (not 'website'). See docs/deployment.md.",
+  "version": 2,
+  "crons": [
+    {
+      "path": "/cron/daily",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/cron/evening",
+      "schedule": "0 22 * * *"
+    }
+  ],
+  "functions": {
+    "api/main.py": {
+      "runtime": "python3.11"
+    }
+  }
+}

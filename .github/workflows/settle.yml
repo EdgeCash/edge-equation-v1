@@ -1,0 +1,46 @@
+name: Settle Outcomes
+
+# Manually triggered when you have a CSV of game outcomes to record.
+# Upload the CSV as an artifact in a prior step or commit it to the repo
+# and pass the path via the `outcomes_path` input.
+on:
+  workflow_dispatch:
+    inputs:
+      outcomes_path:
+        description: "Path to outcomes CSV (in repo, e.g. data/outcomes_2026-04-20.csv)"
+        required: true
+      slate_id:
+        description: "Optional slate_id to scope the settle to"
+        required: false
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Restore SQLite from cache
+        uses: actions/cache@v4
+        with:
+          path: edge_equation.db
+          key: edge-equation-db-${{ github.ref_name }}
+          restore-keys: |
+            edge-equation-db-
+
+      - name: Settle outcomes
+        run: |
+          SLATE_ARG=""
+          if [ -n "${{ inputs.slate_id }}" ]; then
+            SLATE_ARG="--slate-id ${{ inputs.slate_id }}"
+          fi
+          python -m edge_equation settle "${{ inputs.outcomes_path }}" $SLATE_ARG
