@@ -14,8 +14,8 @@ on:
   workflow_dispatch:
     inputs:
       leagues:
-        description: "Comma-separated league codes"
-        default: "MLB,NFL,NHL,NBA,KBO,NPB"
+        description: "US-majors leagues (premium pulls from the domestic slate; overseas is a separate path)"
+        default: "MLB,NFL,NHL,NBA"
       prefer_mock:
         description: "Use mock ingestion sources (skip the odds API)"
         default: "true"

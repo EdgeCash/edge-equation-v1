@@ -59,8 +59,27 @@ VALID_CARD_TYPES = (
     CARD_TYPE_OVERSEAS_EDGE,
 )
 
-DEFAULT_LEAGUES = ("MLB", "NFL", "NHL", "NBA", "KBO", "NPB")
+# Slate separation: US-majors slate feeds the 9a Ledger, 11a Daily Edge,
+# 4p Spotlight and 6p Evening Edge cards. International slate feeds only
+# the 11p Overseas Edge. Keeping the lists disjoint is a brand rule --
+# KBO / NPB / soccer never appear in the Daily Edge or Spotlight text.
+DOMESTIC_LEAGUES = ("MLB", "NFL", "NHL", "NBA")
 OVERSEAS_LEAGUES = ("KBO", "NPB", "EPL", "UCL")
+
+# Back-compat alias: callers that imported DEFAULT_LEAGUES (legacy tests
+# / notebooks) now get the domestic list. New code should prefer the
+# explicit slate-specific constant so intent stays obvious.
+DEFAULT_LEAGUES = DOMESTIC_LEAGUES
+
+# Map each public card type -> the leagues slate it draws from. The CLI
+# uses this table as the fallback when --leagues isn't explicitly set.
+LEAGUES_FOR_CARD_TYPE = {
+    CARD_TYPE_LEDGER: DOMESTIC_LEAGUES,
+    CARD_TYPE_DAILY: DOMESTIC_LEAGUES,
+    CARD_TYPE_SPOTLIGHT: DOMESTIC_LEAGUES,
+    CARD_TYPE_EVENING: DOMESTIC_LEAGUES,
+    CARD_TYPE_OVERSEAS_EDGE: OVERSEAS_LEAGUES,
+}
 
 
 @dataclass(frozen=True)
@@ -164,6 +183,8 @@ def _build_card(
     public_mode: bool = False,
     ledger_stats: Optional[LedgerStats] = None,
     prior_picks: Optional[List[Pick]] = None,
+    daily_recap: Optional[dict] = None,
+    daily_recap_text: Optional[str] = None,
 ) -> dict:
     return PostingFormatter.build_card(
         card_type=card_type,
@@ -172,6 +193,8 @@ def _build_card(
         public_mode=public_mode,
         ledger_stats=ledger_stats,
         prior_picks=prior_picks,
+        daily_recap=daily_recap,
+        daily_recap_text=daily_recap_text,
     )
 
 
@@ -240,15 +263,41 @@ class ScheduledRunner:
         prior_picks: Optional[List[Pick]] = None,
         force: bool = False,
         cached_only: bool = False,
+        daily_recap: Optional[dict] = None,
+        daily_recap_text: Optional[str] = None,
     ) -> RunSummary:
         if card_type not in VALID_CARD_TYPES:
             raise ValueError(
                 f"card_type must be one of {VALID_CARD_TYPES}, got {card_type!r}"
             )
         run_dt = run_datetime or datetime.utcnow()
-        leagues_list = list(leagues) if leagues is not None else list(DEFAULT_LEAGUES)
+        default_leagues = LEAGUES_FOR_CARD_TYPE.get(card_type, DOMESTIC_LEAGUES)
+        leagues_list = list(leagues) if leagues is not None else list(default_leagues)
         if not leagues_list:
             raise ValueError("at least one league required")
+
+        # Brand rule: Domestic cadence cards (Ledger / Daily / Spotlight /
+        # Evening) MUST NOT surface overseas content; Overseas Edge is the
+        # inverse. Silently filter rather than raise so a misconfigured
+        # --leagues flag can't accidentally push KBO/NPB into the Daily
+        # Edge post. _logger call documents the strip in audit trails.
+        if card_type == CARD_TYPE_OVERSEAS_EDGE:
+            allowed = set(OVERSEAS_LEAGUES)
+        else:
+            allowed = set(DOMESTIC_LEAGUES)
+        filtered = [lg for lg in leagues_list if lg in allowed]
+        if filtered != leagues_list:
+            dropped = [lg for lg in leagues_list if lg not in allowed]
+            _logger.info(
+                f"ScheduledRunner: card_type={card_type!r} -> dropped "
+                f"leagues {dropped} (off-slate). Kept {filtered}."
+            )
+            leagues_list = filtered
+        if not leagues_list:
+            raise ValueError(
+                f"No leagues left for card_type={card_type!r} after slate "
+                f"separation. Check --leagues input."
+            )
 
         slate_id = _slate_id_for(card_type, run_dt, leagues_list)
         existing = SlateStore.get(conn, slate_id)
@@ -320,6 +369,8 @@ class ScheduledRunner:
                 public_mode=public_mode,
                 ledger_stats=ledger_stats,
                 prior_picks=resolved_prior,
+                daily_recap=daily_recap,
+                daily_recap_text=daily_recap_text,
             )
             publish_results = tuple(_publish_card(card, dry_run=dry_run, publishers=publishers))
 

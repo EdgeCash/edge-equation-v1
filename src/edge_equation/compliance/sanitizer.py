@@ -33,8 +33,15 @@ FORBIDDEN_SUMMARY_FIELDS = (
 # word-boundary (case-insensitive) to avoid false positives like
 # "wedge" -> "edge".
 _LEAK_PATTERNS = [
-    re.compile(r"\bedge\s*[:=]?\s*[-+]?\d", re.IGNORECASE),   # "edge 0.049" / "edge: 0.05"
-    re.compile(r"\bedge\s*[-+]?\d*\.\d+%", re.IGNORECASE),    # "edge 4.92%"
+    # "edge 0.049" / "edge: 0.05" / "edge 4.92%" / "edge 5%". Requires a
+    # DECIMAL or PERCENT after "edge" so the Phase 24 Ledger recap's
+    # "Daily Edge: 3 projections posted" section-label line doesn't
+    # false-positive as a leak. A plain integer next to "edge" isn't
+    # realistic premium-numbers leakage in our rendered output.
+    re.compile(
+        r"\bedge\s*[:=]?\s*[-+]?(?:\d+\.\d+%?|\d+%)",
+        re.IGNORECASE,
+    ),
     re.compile(r"\bhalf[- ]?kelly\b", re.IGNORECASE),
     re.compile(r"\bkelly\b", re.IGNORECASE),
     re.compile(r"\+EV\b", re.IGNORECASE),

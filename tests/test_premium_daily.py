@@ -179,11 +179,14 @@ def test_format_premium_daily_includes_all_sections():
         generated_at="2026-04-22T11:00:00",
     )
     body = format_premium_daily(card)
+    # Phase 24 renamed "FULL SLATE" -> "DAILY EDGE", replaced the
+    # DFS/TOP PROPS block with "PLAYER PROP PROJECTIONS", and added
+    # YESTERDAY'S LEDGER + SPOTLIGHT sections.
     assert "PREMIUM DAILY EDGE" in body
     assert "2026-04-22" in body
-    assert "FULL SLATE" in body
+    assert "DAILY EDGE" in body
+    assert "SPOTLIGHT" in body
     assert "PARLAY OF THE DAY" in body
-    assert "TOP" in body and "DFS" in body
     assert "ENGINE HEALTH" in body
     assert "Hit rate:  60.0%" in body
 
@@ -191,11 +194,14 @@ def test_format_premium_daily_includes_all_sections():
 def test_format_premium_daily_empty_slate_still_renders():
     card = PostingFormatter.build_card(card_type="premium_daily", picks=[])
     body = format_premium_daily(card)
-    # All four sections render their empty-state messages.
-    assert "FULL SLATE" in body
+    # Every always-rendered section still appears -- empty states
+    # included. Player Prop Projections is OPT-IN: if no props
+    # qualify, the section is omitted rather than showing a
+    # near-empty table. That's part of the "no forcing content" rule.
+    assert "DAILY EDGE" in body
+    assert "SPOTLIGHT" in body
     assert "no qualifying picks" in body
     assert "no parlay legs" in body
-    assert "no prop picks" in body
 
 
 # ------------------------------------------- CLI integration
@@ -245,5 +251,5 @@ def test_premium_daily_cli_emails_to_professor_default(tmp_path, monkeypatch, ca
     assert "[Premium]" in msg["Subject"]
     body = msg.get_content()
     assert "PREMIUM DAILY EDGE" in body
-    assert "FULL SLATE" in body
+    assert "DAILY EDGE" in body
     assert "ENGINE HEALTH" in body
