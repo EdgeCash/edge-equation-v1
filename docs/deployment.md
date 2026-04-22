@@ -32,9 +32,58 @@ Actions tab → Daily Edge / Evening Edge → Run workflow. Override `leagues`, 
 
 ### State persistence
 
-GitHub Actions runners are ephemeral, but each workflow caches `edge_equation.db` under `actions/cache@v4` keyed on the branch. This preserves `slate_id` idempotency and realization history across runs. Cache entries are evicted after 7 days of inactivity — for a durable store, migrate to a hosted SQLite (Turso, Cloudflare D1) or Postgres in a later phase.
+GitHub Actions runners are ephemeral. Two storage modes are supported:
+
+1. **Cached SQLite file (default)** — `actions/cache@v4` holds `edge_equation.db` keyed on the branch. Preserves `slate_id` idempotency and realization history across runs. Entries evict after 7 days of inactivity.
+2. **Hosted Turso (recommended for durable state)** — see [Hosted database](#hosted-database-turso) below. Set `EDGE_EQUATION_DB` to a `libsql://` URL and `TURSO_AUTH_TOKEN` to a valid bearer. The cache step becomes a no-op; all state lives in Turso.
 
 Failsafe artifacts are uploaded after every run and retained for 14 days.
+
+## Hosted database (Turso)
+
+The persistence layer dispatches on the URL scheme of `EDGE_EQUATION_DB`:
+
+| `EDGE_EQUATION_DB` | Backend |
+| --- | --- |
+| Plain path (e.g. `./edge_equation.db`, `/var/lib/edge/edge.db`) | stdlib `sqlite3` |
+| `file://...` | stdlib `sqlite3` |
+| `libsql://...`, `wss://...`, `https://...`, `http://...` | Turso HTTP pipeline adapter |
+
+### Setup
+
+1. Create a free Turso account and a database (≤9 GB, 1 B reads / 25 M writes / month).
+2. `turso db show <name>` gives the URL (e.g. `libsql://edge-equation-prod-yourorg.turso.io`).
+3. `turso db tokens create <name>` gives a bearer token.
+4. In your deploy environment (GitHub Actions secrets, Vercel, local `.env`):
+   ```
+   EDGE_EQUATION_DB=libsql://edge-equation-prod-yourorg.turso.io
+   TURSO_AUTH_TOKEN=<paste>
+   ```
+5. Run `python -m edge_equation daily` once. `Database.migrate()` creates every table in Turso automatically — the same `MIGRATIONS` tuple runs verbatim.
+
+### How the adapter works
+
+- `Database.open(url)` returns a `TursoConnection` that implements just enough of `sqlite3.Connection` for the rest of the codebase (`execute`, `executescript`, `cursor`, `commit`, `close`, `row_factory`).
+- Each `conn.execute()` is one POST to `{url}/v2/pipeline` via `httpx` (already a project dependency). Turso autocommits each request.
+- Stores (`PickStore`, `SlateStore`, `OddsCache`, `RealizationStore`, `GameResultsStore`) are unchanged. The `tests/test_turso_integration.py` suite proves every round-trip works against a SQLite-backed emulator that speaks the Turso wire protocol.
+
+### Limitations (documented, non-blocking for current usage)
+
+- **No multi-statement transactions.** `conn.commit()` is a no-op — every pipeline execute commits on its own. All existing stores commit immediately after their single INSERT/UPDATE, so this is fine.
+- **Positional params only.** Named params (`:x`) raise `NotImplementedError` — none of the stores use them.
+- **Typed args round-trip as strings.** Integer, float, text, blob, and null are supported. Decimals are stored as text (as they are on SQLite) so precision is preserved.
+
+### Migration from existing SQLite
+
+```bash
+# Dump your local database
+sqlite3 edge_equation.db .dump > edge.sql
+
+# Apply to Turso
+turso db shell <db-name> < edge.sql
+```
+
+Then flip `EDGE_EQUATION_DB` to the Turso URL and redeploy. No code changes required.
 
 ## Option 2 — Vercel Cron
 

@@ -14,11 +14,26 @@ Never edit a shipped migration -- append only.
 """
 import os
 import sqlite3
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
+
+from edge_equation.persistence.turso import TursoConnection
 
 
 DEFAULT_DB_ENV_VAR = "EDGE_EQUATION_DB"
 DEFAULT_DB_PATH = "edge_equation.db"
+TURSO_AUTH_TOKEN_ENV_VAR = "TURSO_AUTH_TOKEN"
+
+# URL-scheme prefixes that route to the Turso HTTP adapter instead of
+# stdlib sqlite3. Plain paths (relative or absolute) and file:// URLs
+# stay on sqlite3.
+_TURSO_SCHEMES = ("libsql://", "wss://", "https://", "http://")
+
+
+def _is_turso_path(path: str) -> bool:
+    return any(path.startswith(s) for s in _TURSO_SCHEMES)
+
+
+DbConnection = Union[sqlite3.Connection, TursoConnection]
 
 
 MIGRATIONS: Tuple[Tuple[int, str], ...] = (
@@ -114,10 +129,14 @@ MIGRATIONS: Tuple[Tuple[int, str], ...] = (
 class Database:
     """
     Connection factory plus migration runner:
-    - open(path)            -> sqlite3.Connection
+    - open(path)            -> sqlite3.Connection or TursoConnection
     - resolve_path(override) -> str (env var or default if override is None)
     - migrate(conn)         -> number of migrations applied
     - current_version(conn) -> int (0 if no schema_migrations table)
+
+    URL dispatch:
+    - libsql://, wss://, https://, http://   -> TursoConnection (HTTP pipeline)
+    - anything else (paths, file://, :memory:) -> sqlite3.connect
     """
 
     @staticmethod
@@ -127,15 +146,34 @@ class Database:
         return os.environ.get(DEFAULT_DB_ENV_VAR, DEFAULT_DB_PATH)
 
     @staticmethod
-    def open(path: Optional[str] = None) -> sqlite3.Connection:
+    def resolve_auth_token(override: Optional[str] = None) -> Optional[str]:
+        if override is not None:
+            return override
+        return os.environ.get(TURSO_AUTH_TOKEN_ENV_VAR)
+
+    @staticmethod
+    def open(
+        path: Optional[str] = None,
+        auth_token: Optional[str] = None,
+        http_client=None,
+    ) -> DbConnection:
         resolved = Database.resolve_path(path)
+        if _is_turso_path(resolved):
+            token = Database.resolve_auth_token(auth_token)
+            conn = TursoConnection(
+                url=resolved,
+                auth_token=token,
+                http_client=http_client,
+            )
+            conn.row_factory = sqlite3.Row
+            return conn
         conn = sqlite3.connect(resolved)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
         return conn
 
     @staticmethod
-    def current_version(conn: sqlite3.Connection) -> int:
+    def current_version(conn: DbConnection) -> int:
         cur = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations'"
         )
@@ -145,7 +183,7 @@ class Database:
         return int(row["v"])
 
     @staticmethod
-    def migrate(conn: sqlite3.Connection) -> int:
+    def migrate(conn: DbConnection) -> int:
         current = Database.current_version(conn)
         applied = 0
         for version, sql in MIGRATIONS:
