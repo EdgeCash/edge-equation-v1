@@ -420,11 +420,18 @@ def format_premium_daily(card: dict) -> str:
 
     # 2b. Grade Track Record -- per-(sport, grade) historical hit rate
     # so every downstream grade label is backed by a real base rate.
-    # The section is skipped when the DB has no settled picks yet
-    # (fresh-deploy days).
+    # Renders the header even when empty so subscribers always see
+    # the slot exists -- "(building -- first settled picks will land
+    # here)" beats having the section silently vanish.
     if track_record_section:
         out.append(track_record_section.rstrip())
-        out.append("")
+    else:
+        out.append("=== GRADE TRACK RECORD ===")
+        out.append(
+            "  (building -- per-sport hit rate populates once the "
+            "settler has finalized yesterday's picks)"
+        )
+    out.append("")
 
     # 3. Daily Edge: all A+ / A / A- picks, grouped by grade tier,
     # rendered as deep blocks with fair/implied/edge/Kelly/HFA/decay
@@ -459,10 +466,18 @@ def format_premium_daily(card: dict) -> str:
     # as the free Daily Edge prop block, no DFS mentions, no Top-N
     # language. Edge + Kelly stay on adjacent sections (full slate +
     # parlay) so premium remains richer without renaming the section.
+    # Always renders the section header -- when nothing qualified we
+    # show an explicit empty-state line rather than omit the section
+    # entirely, so subscribers always see the slot exists.
+    out.append("=== PLAYER PROP PROJECTIONS ===")
     if prop_section:
-        out.append("=== PLAYER PROP PROJECTIONS ===")
         out.append(prop_section.rstrip())
-        out.append("")
+    else:
+        out.append(
+            "  (no qualifying props today -- threshold is Grade A+, A, "
+            "or A- with positive edge)"
+        )
+    out.append("")
 
     # 6. Parlay of the Day.
     out.append("=== PARLAY OF THE DAY ===")
