@@ -264,6 +264,38 @@ def _cmd_overseas(args: argparse.Namespace) -> int:
     return _run_slate(args, CARD_TYPE_OVERSEAS_EDGE)
 
 
+def _cmd_refresh_data(args: argparse.Namespace) -> int:
+    """Warm the OddsCache so every downstream cadence run reads locally
+    instead of burning a live Odds API credit. Intended to run 2-3x
+    daily via the data-refresher workflow. Credentials come from the
+    ambient env (THE_ODDS_API_KEY)."""
+    from edge_equation.data_fetcher import SLATE_SPORTS, fetch_daily_data
+    conn = _open_db(args.db)
+    summary: dict = {"slates": {}}
+    try:
+        slates_raw = (args.slates or "domestic,overseas").split(",")
+        slates = [s.strip() for s in slates_raw if s.strip() in SLATE_SPORTS]
+        for slate in slates:
+            bundle = fetch_daily_data(
+                conn,
+                slate=slate,
+                public_mode=False,
+                scrape=True,
+                cached_only=False,
+            )
+            summary["slates"][slate] = {
+                "odds_leagues": sorted(bundle.odds.keys()),
+                "schedule_leagues": sorted(bundle.schedules.keys()),
+                "scraper_leagues": sorted(bundle.scrapers.keys()),
+                "odds_total_games": sum(len(v) for v in bundle.odds.values()),
+                "schedule_total_events": sum(len(v) for v in bundle.schedules.values()),
+            }
+    finally:
+        conn.close()
+    print(json.dumps(summary, indent=2, default=str))
+    return 0
+
+
 def _cmd_premium_daily(args: argparse.Namespace) -> int:
     """
     Build the Premium Daily email: every A+ / A / A- pick, parlay of
@@ -483,6 +515,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _add_slate_flags(p_prem)
     p_prem.set_defaults(func=_cmd_premium_daily)
+
+    p_refresh = sub.add_parser(
+        "refresh-data",
+        help="Pull live odds + schedules + scrapers into the OddsCache. "
+             "Runs 2-3x/day; cadence workflows read from this cache.",
+    )
+    p_refresh.add_argument("--db", type=str, default=None)
+    p_refresh.add_argument(
+        "--slates", type=str, default="domestic,overseas",
+        help="Comma-separated slate names to refresh (default: domestic,overseas)",
+    )
+    p_refresh.set_defaults(func=_cmd_refresh_data)
 
     p_settle = sub.add_parser("settle", help="Record outcomes and settle picks")
     p_settle.add_argument("outcomes_csv")
