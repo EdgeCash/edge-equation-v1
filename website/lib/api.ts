@@ -6,6 +6,7 @@
 
 import type {
   HitRateReport,
+  MeResponse,
   SlateDetail,
   SlateSummary,
 } from "./types";
@@ -29,6 +30,11 @@ async function getJson<T>(path: string): Promise<T> {
   }
   return resp.json() as Promise<T>;
 }
+
+
+// Public API base — exposed so pages that need server-to-server fetch with
+// the caller's cookie header can build the same URL.
+export const apiBase = (): string => API_BASE;
 
 
 export const api = {
@@ -62,6 +68,22 @@ export const api = {
   async hitRate(sport?: string): Promise<HitRateReport> {
     const suffix = sport ? `?sport=${encodeURIComponent(sport)}` : "";
     return getJson<HitRateReport>(`/archive/hit-rate${suffix}`);
+  },
+
+  // Auth calls need the session cookie, which only exists in the browser
+  // context (client-side) or must be forwarded explicitly from a server
+  // request. `me(cookie)` takes an optional Cookie header string so
+  // getServerSideProps can proxy the incoming cookie.
+  async me(cookieHeader?: string): Promise<MeResponse | null> {
+    const url = `${API_BASE}/auth/me`;
+    const headers: Record<string, string> = { "Accept": "application/json" };
+    if (cookieHeader) headers["Cookie"] = cookieHeader;
+    const resp = await fetch(url, { headers, cache: "no-store" });
+    if (resp.status === 401) return null;
+    if (!resp.ok) {
+      throw new Error(`API ${resp.status} on /auth/me`);
+    }
+    return resp.json() as Promise<MeResponse>;
   },
 };
 

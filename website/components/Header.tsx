@@ -7,7 +7,7 @@ const nav = [
   { href: "/grade-history", label: "Grades" },
   { href: "/premium-edge", label: "Premium" },
   { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
+  { href: "/account", label: "Account" },
 ];
 
 export default function Header() {

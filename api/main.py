@@ -6,7 +6,17 @@ Run locally with:
 """
 from fastapi import FastAPI
 
-from api.routers import archive, cards, cron, health, picks, premium, slate
+from api.routers import (
+    archive,
+    auth,
+    cards,
+    cron,
+    health,
+    picks,
+    premium,
+    slate,
+    stripe_router,
+)
 
 
 def create_app() -> FastAPI:
@@ -22,6 +32,8 @@ def create_app() -> FastAPI:
     app.include_router(slate.router)
     app.include_router(cron.router)
     app.include_router(archive.router)
+    app.include_router(auth.router)
+    app.include_router(stripe_router.router)
     return app
 
 
