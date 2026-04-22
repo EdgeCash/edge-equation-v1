@@ -131,6 +131,47 @@ class AdaptiveKelly:
         return k.quantize(Decimal('0.000001'))
 
     @staticmethod
+    def from_mc(
+        edge: Decimal,
+        decimal_odds: Decimal,
+        mc_result: dict,
+        sample_size: int = 0,
+        portfolio_size: int = 1,
+        max_sibling_corr: Decimal = Decimal('0'),
+    ) -> "KellyResult":
+        """
+        Convenience constructor: pull a standard-deviation-as-stderr out of a
+        MonteCarloSimulator result dict and feed it into compute(). MC output
+        shape:
+            {"p10": D, "p50": D, "p90": D, "mean": D, "stdev": D}
+        We use stdev as fair_prob_stderr (for binary ML simulations it's the
+        Bernoulli sample stdev, which is exactly what the uncertainty-factor
+        formula expects). If the MC result lacks stdev, fall back to
+        (p90 - p10) / 2.56 as a rough normal-equivalent.
+        """
+        stdev_raw = mc_result.get("stdev")
+        if stdev_raw is not None:
+            stdev = Decimal(str(stdev_raw))
+        else:
+            p10 = mc_result.get("p10")
+            p90 = mc_result.get("p90")
+            if p10 is None or p90 is None:
+                stdev = Decimal('0')
+            else:
+                stdev = (Decimal(str(p90)) - Decimal(str(p10))) / Decimal('2.56')
+                if stdev < Decimal('0'):
+                    stdev = Decimal('0')
+        inputs = KellyInputs(
+            edge=edge if isinstance(edge, Decimal) else Decimal(str(edge)),
+            decimal_odds=decimal_odds if isinstance(decimal_odds, Decimal) else Decimal(str(decimal_odds)),
+            fair_prob_stderr=stdev,
+            sample_size=sample_size,
+            portfolio_size=portfolio_size,
+            max_sibling_corr=max_sibling_corr,
+        )
+        return AdaptiveKelly.compute(inputs)
+
+    @staticmethod
     def compute(inputs: KellyInputs) -> KellyResult:
         if inputs.edge < EDGE_FLOOR:
             zero = Decimal('0').quantize(Decimal('0.000001'))

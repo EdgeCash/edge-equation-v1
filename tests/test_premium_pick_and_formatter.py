@@ -79,7 +79,9 @@ def test_format_premium_pick_returns_expected_keys():
     assert set(out.keys()) == expected_keys
     assert out["selection"] == "BOS"
     assert out["market_type"] == "ML"
-    assert out["grade"] == "A"
+    # Phase 18 tightened grade thresholds: this fixture's edge
+    # (0.049167) now lands in the B tier.
+    assert out["grade"] == "B"
     assert out["p50"] == "0.620000"
     assert out["notes"] == "Deterministic MC with 1000 iterations."
 
