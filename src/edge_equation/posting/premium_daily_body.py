@@ -80,7 +80,23 @@ def _decimal_from_american(odds) -> Optional[Decimal]:
     return Decimal("1") + Decimal("100") / Decimal(-n)
 
 
+def _implied_prob_from_american(odds) -> Optional[Decimal]:
+    """American odds -> market-implied probability (no-vig would also
+    need the opposite side; we report raw implied for a "why this pick"
+    context)."""
+    try:
+        n = int(odds)
+    except (TypeError, ValueError):
+        return None
+    if n > 0:
+        return Decimal("100") / (Decimal(n) + Decimal("100"))
+    return Decimal(-n) / (Decimal(-n) + Decimal("100"))
+
+
 def _render_pick_line(p: dict) -> str:
+    """Compact one-line pick summary. Used by the Spotlight section
+    (and as a fallback for any caller that doesn't need the deep
+    block)."""
     sport = p.get("sport") or ""
     market = p.get("market_type") or ""
     selection = p.get("selection") or "?"
@@ -100,6 +116,88 @@ def _render_pick_line(p: dict) -> str:
     if stat_bits:
         parts.append(" · ".join(stat_bits))
     return "  ".join(parts)
+
+
+def _render_pick_block(p: dict) -> List[str]:
+    """Premium deep-dive rendering for one pick. Shows every input the
+    subscriber needs to audit WHY the engine flagged it:
+
+      [A+]  MLB · ML · LAA @ NYY
+             Consensus: NYY (-115)
+             Fair 58.2% · Implied 53.5% · Edge +4.7% · Kelly 2.8%
+             HFA +0.062 · Decay tau/2 26d
+             Read: [analytical read from metadata, or baseline context]
+
+    "cannot-miss" premium feel comes from the density + honesty --
+    every number is auditable against the engine's own output.
+    """
+    sport = p.get("sport") or ""
+    market = p.get("market_type") or ""
+    selection = p.get("selection") or "?"
+    grade = p.get("grade") or "?"
+    line = p.get("line") or {}
+    odds_int = line.get("odds")
+    odds_str = _american(odds_int)
+    number = line.get("number")
+    line_str = f"{number} @ {odds_str}" if number not in (None, "") else odds_str
+    meta = p.get("metadata") or {}
+    away = meta.get("away_team") or ""
+    home = meta.get("home_team") or ""
+    matchup = f"{away} @ {home}".strip(" @") or meta.get("game_id") or (p.get("game_id") or "")
+
+    header = f"  [{grade}]  {sport} · {market}"
+    if matchup:
+        header = f"{header} · {matchup}"
+
+    lines: List[str] = ["  " + "-" * 56, header]
+    lines.append(f"     Consensus: {selection}  ({line_str})")
+
+    # Math row -- fair probability, market-implied probability, edge,
+    # Kelly sizing.
+    fair = p.get("fair_prob")
+    edge = p.get("edge")
+    kelly = p.get("kelly")
+    expected = p.get("expected_value")
+    implied = _implied_prob_from_american(odds_int) if odds_int is not None else None
+    math_bits: List[str] = []
+    if fair is not None:
+        math_bits.append(f"Fair {_pct(fair, places=1)}")
+    if implied is not None:
+        math_bits.append(f"Implied {_pct(implied, places=1)}")
+    if edge is not None:
+        edge_dec = _dec(edge)
+        sign = "+" if edge_dec is not None and edge_dec >= 0 else ""
+        math_bits.append(f"Edge {sign}{_pct(edge, places=1)}")
+    if kelly is not None:
+        math_bits.append(f"Kelly {_pct(kelly, places=1)}")
+    if expected is not None and not math_bits:
+        math_bits.append(f"Expected {expected}")
+    if math_bits:
+        lines.append("     " + " · ".join(math_bits))
+
+    # Context row -- HFA + decay half-life when present.
+    ctx_bits: List[str] = []
+    hfa = p.get("hfa_value")
+    decay = p.get("decay_halflife_days")
+    if hfa is not None:
+        hfa_dec = _dec(hfa)
+        sign = "+" if hfa_dec is not None and hfa_dec >= 0 else ""
+        ctx_bits.append(f"HFA {sign}{hfa_dec}" if hfa_dec is not None else f"HFA {hfa}")
+    if decay is not None:
+        ctx_bits.append(f"Decay tau/2 {decay}d")
+    if ctx_bits:
+        lines.append("     " + " · ".join(ctx_bits))
+
+    # Read -- the analytical "why" the subscriber's paying for. Falls
+    # back to a factual baseline when the engine didn't stash one.
+    read = (meta.get("read_notes") or meta.get("read") or "").strip()
+    if not read:
+        read = (
+            f"Engine flagged {selection} on price/probability delta; "
+            f"no narrative delta recorded."
+        )
+    lines.append(f"     Read: {read}")
+    return lines
 
 
 def _render_parlay_block(parlay: List[dict]) -> List[str]:
@@ -237,12 +335,28 @@ def format_premium_daily(card: dict) -> str:
         out.append(recap_section.rstrip())
         out.append("")
 
-    # 3. Daily Edge: all A+ / A / A- picks with edge + Kelly.
+    # 3. Daily Edge: all A+ / A / A- picks, grouped by grade tier,
+    # rendered as deep blocks with fair/implied/edge/Kelly/HFA/decay
+    # + analytical read. Grouping by tier gives the subscriber an
+    # at-a-glance sense of confidence density per day.
     out.append(f"=== DAILY EDGE · A+ / A / A- ({len(picks)}) ===")
     if not picks:
         out.append("  (no qualifying picks today)")
-    for p in picks:
-        out.append(f"  {_render_pick_line(p)}")
+    else:
+        buckets = {"A+": [], "A": [], "B": []}
+        for p in picks:
+            g = p.get("grade") or ""
+            if g in buckets:
+                buckets[g].append(p)
+        tier_label = {"A+": "A+ TIER", "A": "A TIER", "B": "A- TIER"}
+        for g in ("A+", "A", "B"):
+            bucket = buckets[g]
+            if not bucket:
+                continue
+            out.append(f"  -- {tier_label[g]} ({len(bucket)}) --")
+            for p in bucket:
+                out.extend(_render_pick_block(p))
+            out.append("")
     out.append("")
 
     # 4. Spotlight deep dive.

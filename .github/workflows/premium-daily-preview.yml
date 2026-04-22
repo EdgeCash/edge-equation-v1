@@ -1,21 +1,25 @@
-name: Premium Daily Preview
+name: Premium Daily (10am CT)
 
-# Manual-only: builds the Premium Daily card (every A+/A/A- pick, parlay
-# of the day, top 6 DFS props, yesterday's engine hit rate) and emails
-# it to ProfessorEdgeCash@gmail.com for review before going live to
-# paying subscribers. Zero X exposure.
+# Premium-subscriber daily email. Scheduled for 10:00 CT so subscribers
+# receive the full analytical read (yesterday's Ledger + every A+/A/A-
+# projection across every sport + Spotlight + top-10 Player Prop
+# Projections + 3-6 leg Parlay of the Day + engine health) BEFORE the
+# 11:00 CT free Daily Edge lands publicly. Early-access is the core
+# subscription value prop.
 #
-# Usage:
-#   gh workflow run premium-daily-preview.yml -f leagues=MLB,NHL,KBO,NPB
+# DST-aware: dual cron pair (one UTC hour for CDT, one for CST) with
+# a stdlib-zoneinfo CT-hour guard picking exactly one line per day.
 #
-# Requires SMTP secrets only. No X credentials used.
+# Beta-test distribution: EMAIL_TO defaults to ProfessorEdgeCash@gmail.com
+# until we point it at a transactional sender / list relay. No code
+# change needed to broaden.
 
 on:
+  schedule:
+    - cron: "0 15 * * *"   # 10:00 CT during CDT (Mar-Nov)
+    - cron: "0 16 * * *"   # 10:00 CT during CST (Nov-Mar)
   workflow_dispatch:
     inputs:
-      leagues:
-        description: "US-majors leagues (premium pulls from the domestic slate; overseas is a separate path)"
-        default: "MLB,NFL,NHL,NBA"
       prefer_mock:
         description: "Use mock ingestion sources (skip the odds API)"
         default: "true"
@@ -43,12 +47,32 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: CT-hour guard
+        id: guard
+        shell: bash
+        run: |
+          # Manual dispatches always run; scheduled dual-cron picks the
+          # line that matches the current CT hour (10).
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          expected = 10
+          now = datetime.now(ZoneInfo("America/Chicago"))
+          print(f"should_run={'true' if now.hour == expected else 'false'}")
+          print(f"ct_hour={now.hour}")
+          PY
+
       - name: Install package
+        if: steps.guard.outputs.should_run == 'true'
         run: |
           python -m pip install --upgrade pip
           pip install -e .
 
       - name: Restore SQLite from cache
+        if: steps.guard.outputs.should_run == 'true'
         uses: actions/cache@v4
         with:
           path: edge_equation.db
@@ -57,20 +81,25 @@ jobs:
             edge-equation-db-
 
       - name: Build and email premium daily card
+        if: steps.guard.outputs.should_run == 'true'
         run: |
           mkdir -p data/failsafes
           MOCK_FLAG=""
           if [ "${{ inputs.prefer_mock }}" = "true" ]; then
             MOCK_FLAG="--prefer-mock"
           fi
+          # --cached-only: the 7am data-refresher is the sole live-API
+          # consumer, so premium reads from the morning-refreshed cache
+          # and never burns its own Odds API credits.
+          # --force: manual / scheduled reruns on the same day rebuild
+          # cleanly instead of short-circuiting on the idempotency guard.
           python -m edge_equation premium-daily \
-            --leagues "${{ inputs.leagues }}" \
             --publish --no-dry-run \
-            --force \
+            --cached-only --force \
             $MOCK_FLAG
 
       - name: Upload failsafe files (SMTP errors only)
-        if: always()
+        if: always() && steps.guard.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: failsafes-premium-${{ github.run_id }}
