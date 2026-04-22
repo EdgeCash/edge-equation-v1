@@ -1,0 +1,161 @@
+EDGE EQUATION — SESSION SUMMARY FOR AI COLLABORATOR
+====================================================
+
+Started this session at ~50-55% complete (math + engine scaffolded; everything
+else mocked). Shipped 12 phases end-to-end. Repo is now feature-complete
+against the original spec. All work merged to main.
+
+
+MERGED TODAY (PRs #7 -> #18)
+----------------------------
+
+7a  Math core refinements
+    decay.py, hfa.py, rho.py (Dixon-Coles), kelly_adaptive.py
+    (multiplicative shrinkage) + wired into pick_schema / feature_builder.
+
+7b  Context + backtesting
+    context/ (rest/travel/weather/officials/situational/injuries +
+    registry) and backtest/ (walk-forward, bankroll, calibration with
+    Murphy decomposition, quantile grading).
+
+8   SQLite persistence
+    persistence/ package: db.py with versioned migrations, SlateStore,
+    PickStore, OddsCache, RealizationStore + engine/realization.py
+    RealizationTracker.
+
+9   Real ingestion
+    TheOddsApiClient (cache-first httpx) + TheOddsApiSource +
+    ManualCsvSource for KBO/NPB weekly drops; designed CSV schema.
+
+10  X publisher
+    Real OAuth 1.0a POST, 25K-char PremiumFormatter, file + SMTP
+    failsafe (no-retry-after-failsafe guarantee).
+
+11  Discord + Email publishers
+    Real webhook + real SMTP, same failsafe contract as X.
+
+12  Scheduled runner + CLI
+    ScheduledRunner (idempotent slate_id), SourceFactory
+    (CSV -> Odds API -> mock),
+    `python -m edge_equation {daily,evening,settle,load-results}`.
+
+13  Scheduler glue
+    .github/workflows/{tests,daily-edge,evening-edge,settle}.yml +
+    FastAPI /cron/* with bearer auth + deployment/vercel-api.json
+    template + docs/deployment.md.
+
+14  Stats layer
+    stats/ package: GameResultsStore, EloCalculator (per-sport K + HFA),
+    rolling TeamStats (shrinkage), FeatureComposer that fills missing
+    meta.inputs; CSV slates finally produce picks.
+
+15  Website pages
+    /archive/* + /archive/hit-rate API endpoints; rewrote /daily-edge
+    + new /grade-history + /archive + /archive/[slateId]; PickRow,
+    StatTile, GradeBadge components.
+
+16  Hosted DB (Turso)
+    TursoConnection + TursoCursor implementing enough of
+    sqlite3.Connection to be a drop-in; Database.open dispatches by URL
+    scheme; SQLite-backed emulator transport tests.
+
+17  Auth + Stripe
+    Migration v3 (users, auth_tokens, sessions, subscriptions),
+    magic-link flow, stdlib SMTP sender, StripeClient (httpx, no SDK
+    dep) with HMAC-SHA256 webhook verification, PREMIUM_AUTH_REQUIRED
+    flag gates /premium/*, /login + /account + paywall on
+    /premium-edge.
+
+
+DESIGN DISCIPLINE (MAINTAINED THROUGHOUT)
+-----------------------------------------
+
+- Zero new runtime deps beyond httpx (already in pyproject). Stripe
+  done without the stripe SDK; Turso done without libsql-client.
+- @dataclass(frozen=True) from stdlib everywhere. No Pydantic for
+  domain types.
+- Decimal throughout; .quantize(Decimal('0.000001')) for probabilities,
+  string storage for DB round-trips.
+- All tests flat in tests/ / tests_api/. No subfolders.
+- Append-only migrations -- never edited a shipped migration.
+- Every external service has a failsafe path -- every publisher falls
+  through to file/email when creds missing; every HTTP client is
+  test-mocked via httpx.MockTransport.
+
+
+TEST COUNTS
+-----------
+
+- Start of session: 113 collected, 12 errors on main (2 pre-existing
+  broken imports fixed in Phase 7a).
+- End of session: 845 tests, all green on main.
+
+
+INCIDENTAL FIXES ALONG THE WAY
+------------------------------
+
+- Added missing NormalizedFrame stub to ingestion/normalizer.py (broke
+  every engine-touching test on main).
+- Added missing __init__.py to src/edge_equation/config/ (the sibling
+  config.py file was shadowing the package and breaking SPORT_CONFIG
+  imports).
+- Both fixed in Phase 7a.
+
+
+OPERATIONAL STATE AFTER THIS SESSION
+------------------------------------
+
+Scheduler: GitHub Actions workflows ready; cron at 13:00 / 22:00 UTC;
+DB cached per branch OR piped to Turso.
+
+Credentials the user still needs to add as repo/Vercel secrets to go
+live:
+  - THE_ODDS_API_KEY
+  - X API quartet
+      (X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET)
+  - DISCORD_WEBHOOK_URL
+  - SMTP septet
+      (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM,
+       SMTP_TO, EMAIL_TO)
+  - TURSO_AUTH_TOKEN (optional; for hosted DB)
+  - STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID
+  - PREMIUM_AUTH_REQUIRED=true
+  - WEBSITE_BASE_URL
+  - CRON_SECRET
+
+Known limitation documented: Turso adapter autocommits each statement
+(no multi-statement txns); all existing stores commit per-statement so
+this is compatible.
+
+Known limitation documented: CSV-only slates produce picks only after
+at least ~10-15 games of results history has been loaded (Elo
+convergence + shrinkage).
+
+
+WHAT'S EXPLICITLY NOT DONE (OUT OF SCOPE / FUTURE)
+--------------------------------------------------
+
+- Player-level stats feed for prop markets (rate inputs currently
+  hand-supplied or fall back to shrinkage).
+- Monitoring / observability (Sentry, structured logs).
+- README polish + landing page copy.
+- Rate limiting on /auth/request-link.
+
+
+HONEST CAVEATS FOR THE NEXT SESSION
+-----------------------------------
+
+- The website/package.json has next@14.2.5 which npm flags as having
+  a security vulnerability. Should be bumped before production
+  traffic.
+- Cookie tests emit deprecation warnings (starlette.testclient
+  per-request cookie syntax). Works fine, just noisy.
+- The Turso adapter doesn't support named SQL params -- if any future
+  store adds :param style it'll NotImplementedError. All current
+  stores use positional only, verified by tests.
+- Several test_cli.py tests depend on real-clock date (2026-04-21 vs
+  2026-04-22 shifted mid-session); they still pass by checking
+  structure (slate_id.startswith("daily_edge_")) rather than exact
+  dates.
+
+Ready to hand off.
