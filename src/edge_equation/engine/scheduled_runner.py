@@ -165,6 +165,30 @@ def _build_card(
     )
 
 
+def load_prior_daily_edge_picks(
+    conn: sqlite3.Connection,
+    before: Optional[datetime] = None,
+) -> List[Pick]:
+    """
+    Look up the most recently persisted daily_edge slate (excluding any
+    slate whose generated_at is at-or-after `before`) and return its
+    picks. Used by the Evening Edge card to detect whether the engine
+    has moved since the morning run.
+
+    Returns [] if no prior slate exists (fresh deploy or first run).
+    """
+    slates = SlateStore.list_by_card_type(conn, card_type=CARD_TYPE_DAILY, limit=10)
+    if not slates:
+        return []
+    cutoff_iso: Optional[str] = before.isoformat() if before is not None else None
+    for slate in slates:
+        if cutoff_iso is not None and slate.generated_at >= cutoff_iso:
+            continue
+        records = PickStore.list_by_slate(conn, slate.slate_id)
+        return [r.to_pick() for r in records]
+    return []
+
+
 def _publish_card(
     card: dict,
     dry_run: bool,
@@ -255,11 +279,14 @@ class ScheduledRunner:
 
         publish_results: tuple = ()
         if publish:
+            resolved_prior = prior_picks
+            if card_type == CARD_TYPE_EVENING and resolved_prior is None:
+                resolved_prior = load_prior_daily_edge_picks(conn, before=run_dt)
             card = _build_card(
                 card_type, picks, run_dt,
                 public_mode=public_mode,
                 ledger_stats=ledger_stats,
-                prior_picks=prior_picks,
+                prior_picks=resolved_prior,
             )
             publish_results = tuple(_publish_card(card, dry_run=dry_run, publishers=publishers))
 

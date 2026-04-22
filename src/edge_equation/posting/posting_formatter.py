@@ -159,18 +159,36 @@ class PostingFormatter:
     ) -> bool:
         """
         Phase 20: Evening Edge posts only when something material shifted
-        since the prior slate. If the set of (game_id, market_type,
-        selection, grade) tuples is unchanged, skip and emit the short
-        stable-state note instead.
+        since the prior slate. "Material" means any of:
+          - the set of (game_id, market_type, selection) rows changed
+          - the grade on any identical row changed
+          - the priced line moved (American odds or the point number)
+          - an injury / rest flag surfaced in the pick metadata
+
+        Returns True iff NONE of those changed -> the card short-circuits
+        to the "engine stable" note. A missing baseline (prior_picks is
+        None) is always treated as a material update so the first-ever
+        evening run always posts.
         """
         if prior_picks is None:
-            return False  # no baseline -> treat as a material update
-        def _key(p):
+            return False
+
+        def _key(p: Pick):
+            line = p.line
+            odds = int(line.odds) if line is not None and line.odds is not None else None
+            number = str(line.number) if line is not None and line.number is not None else None
+            meta = p.metadata or {}
+            injury_flag = bool(meta.get("injury")) or bool(meta.get("injury_flag"))
+            rest_flag = bool(meta.get("rest_flag")) or bool(meta.get("bullpen_fatigue"))
             return (
                 p.game_id or "",
                 p.market_type or "",
                 p.selection or "",
                 p.grade or "C",
+                odds,
+                number,
+                injury_flag,
+                rest_flag,
             )
         current = {_key(p) for p in current_picks}
         prior = {_key(p) for p in prior_picks}
@@ -228,6 +246,12 @@ class PostingFormatter:
             picks_list = PostingFormatter.filter_daily_edge(picks_list)
         elif card_type == "overseas_edge" and not skip_filter:
             picks_list = PostingFormatter.filter_overseas(picks_list)
+        elif card_type == "spotlight" and not skip_filter:
+            from edge_equation.posting.spotlight import select_spotlight_game
+            selection = select_spotlight_game(picks_list)
+            picks_list = list(selection.picks)
+            if not picks_list:
+                subhead_final = "No single game crossed the Spotlight bar today."
         elif card_type == "evening_edge":
             if PostingFormatter.evening_edge_is_stable(picks_list, prior_picks):
                 picks_list = []

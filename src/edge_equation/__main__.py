@@ -50,11 +50,14 @@ from edge_equation.engine.scheduled_runner import (
     DEFAULT_LEAGUES,
     OVERSEAS_LEAGUES,
     ScheduledRunner,
+    load_prior_daily_edge_picks,
 )
 from edge_equation.persistence.db import Database
+from edge_equation.persistence.pick_store import PickStore
 from edge_equation.persistence.realization_store import RealizationStore
 from edge_equation.posting.ledger import LedgerStore
 from edge_equation.posting.posting_formatter import PostingFormatter
+from edge_equation.publishing.x_formatter import format_card as format_x_text
 from edge_equation.utils.logging import get_logger
 
 
@@ -142,6 +145,27 @@ def _run_slate(args: argparse.Namespace, card_type: str) -> int:
             public_mode=public_mode,
             ledger_stats=ledger_stats,
         )
+
+        preview_dir = getattr(args, "preview_dir", None)
+        if preview_dir:
+            from pathlib import Path
+            picks_records = PickStore.list_by_slate(conn, summary.slate_id)
+            built_picks = [r.to_pick() for r in picks_records]
+            resolved_prior = None
+            if card_type == CARD_TYPE_EVENING:
+                resolved_prior = load_prior_daily_edge_picks(conn, before=run_dt)
+            preview_card = PostingFormatter.build_card(
+                card_type=card_type,
+                picks=built_picks,
+                generated_at=run_dt.isoformat(),
+                public_mode=public_mode,
+                ledger_stats=ledger_stats,
+                prior_picks=resolved_prior,
+            )
+            preview_text = format_x_text(preview_card)
+            out_dir = Path(preview_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            (out_dir / f"{card_type}.txt").write_text(preview_text, encoding="utf-8")
     finally:
         conn.close()
     print(json.dumps(summary.to_dict(), indent=2, default=str))
@@ -261,6 +285,9 @@ def _add_slate_flags(p: argparse.ArgumentParser) -> None:
                         help="Strip edge/kelly and inject disclaimer + Ledger footer (default ON)")
     public.add_argument("--no-public-mode", dest="public_mode", action="store_false",
                         help="Disable public-mode sanitization (premium / internal use only)")
+    p.add_argument("--preview-dir", type=str, default=None,
+                   help="Directory to write the rendered X text for the built card. "
+                        "Use with --no-publish for offline review of what would post.")
 
 
 def build_parser() -> argparse.ArgumentParser:
