@@ -29,6 +29,8 @@ from edge_equation.ingestion.odds_api_client import TheOddsApiClient
 
 ODDS_API_SPORT_MAP = {
     "baseball_mlb": "MLB",
+    "baseball_kbo": "KBO",
+    "baseball_npb": "NPB",
     "basketball_nba": "NBA",
     "basketball_ncaab": "NCAAB",
     "americanfootball_nfl": "NFL",
@@ -38,6 +40,8 @@ ODDS_API_SPORT_MAP = {
 
 MARKET_KEY_MAP = {
     "MLB":   {"h2h": "ML", "spreads": "Run_Line", "totals": "Total"},
+    "KBO":   {"h2h": "ML", "spreads": "Run_Line", "totals": "Total"},
+    "NPB":   {"h2h": "ML", "spreads": "Run_Line", "totals": "Total"},
     "NBA":   {"h2h": "ML", "spreads": "Spread",   "totals": "Total"},
     "NCAAB": {"h2h": "ML", "spreads": "Spread",   "totals": "Total"},
     "NFL":   {"h2h": "ML", "spreads": "Spread",   "totals": "Total"},
@@ -71,7 +75,18 @@ class TheOddsApiSource:
         TheOddsApiSource.league_from_sport_key(sport_key)  # validates
         self.conn = conn
         self.sport_key = sport_key
-        self.markets = list(markets) if markets is not None else ["h2h", "totals"]
+        # Default markets MUST match the refresher's list
+        # (data_fetcher._league_odds) so both sides compute the same
+        # OddsCache key. A mismatch produces a silent cache miss: the
+        # refresher writes fresh data under a key the cadence never
+        # reads, and cadence's cached_only=True read returns empty ->
+        # 0 picks in the email. Spreads covers Run_Line (MLB),
+        # Puck_Line (NHL), and point Spread (NFL/NBA); soccer (SOC)
+        # has no spreads mapping but the Odds API tolerates the extra
+        # market param and the MARKET_KEY_MAP ignores unmapped keys.
+        self.markets = (
+            list(markets) if markets is not None else ["h2h", "totals", "spreads"]
+        )
         self.regions = regions
         self.preferred_bookmaker = preferred_bookmaker
         self.ttl_seconds = ttl_seconds

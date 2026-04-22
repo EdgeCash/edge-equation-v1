@@ -32,11 +32,21 @@ from edge_equation.ingestion.soccer_source import SoccerSource
 # to the mock source; KBO and NPB live there (the free tier doesn't cover them).
 # NCAAB / NCAAF are supported by the API but lack a local mock source -- add
 # one before enabling them here so the factory can always degrade gracefully.
+# Must match the sport_key set that the Data Refresher actually
+# fetches for (data_fetcher.ODDS_API_SPORT_KEY). If an entry is
+# missing here, cadence for that league silently falls back to mock
+# sources (or raises for leagues without a mock), so the premium
+# email shows 0 overseas picks even when the refresher has real KBO /
+# NPB / soccer data sitting in the cache.
 LEAGUE_TO_ODDS_API_SPORT_KEY = {
     "MLB": "baseball_mlb",
     "NFL": "americanfootball_nfl",
     "NHL": "icehockey_nhl",
     "NBA": "basketball_nba",
+    "KBO": "baseball_kbo",
+    "NPB": "baseball_npb",
+    "EPL": "soccer_epl",
+    "UCL": "soccer_uefa_champs_league",
 }
 
 
