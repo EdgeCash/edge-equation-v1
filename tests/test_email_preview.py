@@ -20,7 +20,9 @@ class _FakeSmtp:
     """Collect sent messages without touching the network."""
     sent = []
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, **kwargs):
+        # Accept and ignore stdlib smtplib kwargs (timeout, local_hostname)
+        # so the fake stays signature-compatible with both SMTP and SMTP_SSL.
         self.host = host
         self.port = port
 

@@ -202,7 +202,7 @@ def test_format_premium_daily_empty_slate_still_renders():
 
 class _FakeSmtp:
     sent = []
-    def __init__(self, host, port): self.host, self.port = host, port
+    def __init__(self, host, port, **kwargs): self.host, self.port = host, port
     def __enter__(self): return self
     def __exit__(self, *a): return False
     def ehlo(self): pass

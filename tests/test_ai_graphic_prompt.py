@@ -187,7 +187,7 @@ def test_prompt_header_carries_date_and_algo_version():
 
 class _FakeSmtp:
     sent = []
-    def __init__(self, host, port): self.host = host; self.port = port
+    def __init__(self, host, port, **kwargs): self.host = host; self.port = port
     def __enter__(self): return self
     def __exit__(self, *a): return False
     def ehlo(self): pass

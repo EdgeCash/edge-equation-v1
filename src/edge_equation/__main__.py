@@ -137,12 +137,19 @@ def _email_preview_publisher(card_type: str) -> EmailPublisher:
     --email-preview so you can audit every cadence card in your inbox
     before flipping X credentials on. For daily / evening / overseas
     cards the body also carries an AI-graphic prompt the operator can
-    paste into an image generator for manual posting."""
+    paste into an image generator for manual posting.
+
+    Deliberately uses a FILE-ONLY failsafe (not the default composite)
+    because the primary leg here IS SMTP -- if the SMTP send fails,
+    retrying the same SMTP via the composite's SMTP leg would just fail
+    again. The file failsafe preserves the rendered post text so an
+    operator can see what would have gone out.
+    """
+    from edge_equation.publishing.failsafe import FileFailsafe
     return EmailPublisher(
         body_formatter=_email_preview_body,
         subject_prefix="[X-PREVIEW]",
-        # Intentionally leave failsafe=None -> default composite, so any
-        # SMTP blip still hits the local file failsafe.
+        failsafe=FileFailsafe(),
     )
 
 
@@ -308,9 +315,14 @@ def _cmd_premium_daily(args: argparse.Namespace) -> int:
             engine_health=health,
         )
 
+        # File-only failsafe: the primary leg here is SMTP, so routing
+        # through the composite's SMTP leg on failure would just fail
+        # again. A file artifact still preserves the rendered post text.
+        from edge_equation.publishing.failsafe import FileFailsafe
         publisher = EmailPublisher(
             body_formatter=format_premium_daily,
             subject_prefix="[Premium]",
+            failsafe=FileFailsafe(),
         )
         if args.email_preview or args.publish:
             result = publisher.publish_card(card, dry_run=False)
