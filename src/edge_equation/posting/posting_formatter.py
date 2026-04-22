@@ -314,6 +314,12 @@ class PostingFormatter:
                 f"Valid: {sorted(CARD_TEMPLATES.keys())}"
             )
         picks_list = list(picks)
+        # Snapshot the UNFILTERED input so the Player Prop Projections
+        # section (daily_edge + spotlight only) can surface prop-market
+        # picks that wouldn't otherwise survive the Top-5 or trending-
+        # game filters. This keeps team plays and player projections
+        # as parallel sections rather than competing for the same slots.
+        unfiltered_picks_for_props: List[Pick] = list(picks_list)
         template = CARD_TEMPLATES[card_type]
         subhead_final = subhead_override or template["subhead"]
         parlay_legs: List[Pick] = []
@@ -372,6 +378,21 @@ class PostingFormatter:
             card["top_props"] = [p.to_dict() for p in top_props]
             if engine_health is not None:
                 card["engine_health"] = dict(engine_health)
+
+        # Player Prop Projections section for the 4pm Spotlight and 11am
+        # Daily Edge public cards. Falls out to an empty section (and
+        # therefore renders nothing) when no prop pick clears the A+/A
+        # bar -- no forcing content.
+        if card_type in ("daily_edge", "spotlight") and not skip_filter:
+            from edge_equation.posting.player_props import (
+                render_prop_section, select_prop_projections,
+            )
+            prop_picks = select_prop_projections(unfiltered_picks_for_props)
+            if prop_picks:
+                card["player_prop_projections"] = {
+                    "picks": [p.to_dict() for p in prop_picks],
+                    "text": render_prop_section(prop_picks, date_str=generated_at),
+                }
 
         if public_mode:
             card = PublicModeSanitizer.sanitize_card(card)
