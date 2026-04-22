@@ -107,6 +107,7 @@ def _collect_slate(
     csv_dir: Optional[str] = None,
     api_key: Optional[str] = None,
     prefer_mock: bool = False,
+    cached_only: bool = False,
 ) -> Slate:
     """
     Walk the leagues, resolve a source for each, and merge into one Slate.
@@ -115,6 +116,10 @@ def _collect_slate(
     block (CSV slates, odds-API slates) gets enriched by FeatureComposer
     using the game-results history already stored in SQLite. Markets that
     arrive with inputs already set (the mock sources) pass through untouched.
+
+    cached_only=True flips the Odds API sources into cache-only mode so
+    cadence workflows never burn free-tier credits -- only the data-
+    refresher job does. A cache miss returns an empty slate.
     """
     all_games: list = []
     all_markets: list = []
@@ -126,6 +131,7 @@ def _collect_slate(
             csv_dir=csv_dir,
             api_key=api_key,
             prefer_mock=prefer_mock,
+            cached_only=cached_only,
         )
         league_games = source.get_raw_games(run_datetime)
         league_markets = source.get_raw_markets(run_datetime)
@@ -233,6 +239,7 @@ class ScheduledRunner:
         ledger_stats: Optional[LedgerStats] = None,
         prior_picks: Optional[List[Pick]] = None,
         force: bool = False,
+        cached_only: bool = False,
     ) -> RunSummary:
         if card_type not in VALID_CARD_TYPES:
             raise ValueError(
@@ -286,6 +293,7 @@ class ScheduledRunner:
             csv_dir=csv_dir,
             api_key=api_key,
             prefer_mock=prefer_mock,
+            cached_only=cached_only,
         )
         picks = _picks_from_slate(slate, leagues_list)
 

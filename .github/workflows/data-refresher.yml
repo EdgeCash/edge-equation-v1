@@ -2,21 +2,23 @@ name: Data Refresher (odds + schedules + scrapers)
 
 # Warms the OddsCache so the five cadence workflows read from local
 # cache instead of burning The Odds API credits on every run. Two
-# refreshes per day (8:00 CT and 15:00 CT) align the cache with the
-# morning slate and mid-afternoon line movement.
+# refreshes per day: 07:00 CT (morning slate) and 15:00 CT (mid-
+# afternoon line movement, feeds the 16:00 Spotlight and 18:00
+# Evening Edge with fresh data).
 #
-# Free-tier Odds API ~500 credits/month. Cadence workflows with
-# per-slot fetches: ~600+/month (blows the quota). With this refresher
-# + cached_only=True on cadence reads: ~60-120/month (comfortable).
+# Free-tier Odds API ~500 credits/month. Cadence is now strictly
+# cache-only; this workflow is the sole live-API consumer.
+# ~8 calls per refresh x 2 refreshes/day x 30 days = ~480/month.
+# Fits inside the free tier.
 #
 # DST-aware: dual cron pair per slot (one UTC hour for CDT, one for
 # CST) with a stdlib-zoneinfo CT-hour guard picking exactly one line
 # per day.
 on:
   schedule:
-    # 08:00 CT morning refresh: UTC 13 (CDT) / UTC 14 (CST)
+    # 07:00 CT morning refresh: UTC 12 (CDT) / UTC 13 (CST)
+    - cron: "0 12 * * *"
     - cron: "0 13 * * *"
-    - cron: "0 14 * * *"
     # 15:00 CT afternoon refresh: UTC 20 (CDT) / UTC 21 (CST)
     - cron: "0 20 * * *"
     - cron: "0 21 * * *"
@@ -51,9 +53,9 @@ jobs:
           python - <<'PY' >> "$GITHUB_OUTPUT"
           from datetime import datetime
           from zoneinfo import ZoneInfo
-          # Either morning (08 CT) or afternoon (15 CT).
+          # Either morning (07 CT) or afternoon (15 CT).
           now = datetime.now(ZoneInfo("America/Chicago"))
-          should = now.hour in (8, 15)
+          should = now.hour in (7, 15)
           print(f"should_run={'true' if should else 'false'}")
           print(f"ct_hour={now.hour}")
           PY

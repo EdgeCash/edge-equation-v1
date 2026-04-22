@@ -90,7 +90,8 @@ jobs:
             [ "${{ inputs.dry_run }}" = "false" ] || DRY_RUN_FLAG="--dry-run"
             FORCE_FLAG="--force"
           fi
-          python -m edge_equation ledger $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode $FORCE_FLAG
+          # --cached-only: data-refresher is the sole live-API consumer.
+          python -m edge_equation ledger $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode --cached-only $FORCE_FLAG
 
       - name: Upload failsafe files
         if: always() && steps.guard.outputs.should_run == 'true'
