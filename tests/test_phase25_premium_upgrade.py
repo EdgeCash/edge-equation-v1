@@ -128,11 +128,14 @@ def test_parlay_caps_at_max_six_legs_by_default():
 
 
 def test_parlay_uses_distinct_games():
+    # Phase 28 trust restoration: parlay legs are A+ ONLY (not A or
+    # below) until the post-fix grades earn back trust over a settled-
+    # results sample. The two A picks below are now ineligible.
     picks = [
         _team(game_id="SAME", grade="A+", selection="NYY"),
         _team(game_id="SAME", grade="A+", selection="NYY Over 8.5", market="Total"),
-        _team(game_id="OTHER-1", grade="A"),
-        _team(game_id="OTHER-2", grade="A"),
+        _team(game_id="OTHER-1", grade="A+"),
+        _team(game_id="OTHER-2", grade="A+"),
     ]
     legs = PostingFormatter.select_parlay_of_day(picks)
     assert len(legs) == 3

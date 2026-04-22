@@ -9,6 +9,9 @@ from edge_equation.premium.premium_formatter import format_premium_pick
 
 
 def _make_ml_pick():
+    # Phase 28: home_team / away_team metadata is required so the
+    # engine can flip fair_prob for the away selection. "BOS" is the
+    # home team in this fixture (game_id reads as DET-at-BOS).
     bundle = FeatureBuilder.build(
         sport="MLB",
         market_type="ML",
@@ -16,6 +19,7 @@ def _make_ml_pick():
         universal_features={"home_edge": 0.085},
         game_id="MLB-2026-04-20-DET-BOS",
         selection="BOS",
+        metadata={"home_team": "BOS", "away_team": "DET"},
     )
     return BettingEngine.evaluate(bundle, Line(odds=-132))
 

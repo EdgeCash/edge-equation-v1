@@ -195,10 +195,18 @@ class PostingFormatter:
         n: Optional[int] = None,
         min_legs: int = 3,
         max_legs: int = 6,
+        max_leg_edge: Decimal = Decimal("0.20"),
     ) -> List[Pick]:
         """Pick 3 - 6 legs from distinct games, ranked by grade * edge
         (via the Spotlight trend-score). Backwards-compat: when `n` is
         passed it overrides both bounds to that single value.
+
+        Phase 28 trust restoration: legs MUST be Grade A+ AND edge <=
+        max_leg_edge (default 20%). The base ML logic just shipped a
+        critical fix for the both-sides-A+ overconfidence bug; until
+        the post-fix grades earn back trust over a settled-results
+        sample, parlays stay narrow and refuse any leg with the
+        signature of the old bug (huge implausible edge).
 
         Returns an empty list when fewer than min_legs distinct-game
         picks qualify -- premium renders "no parlay legs qualified
@@ -207,7 +215,14 @@ class PostingFormatter:
         if n is not None:
             min_legs = max_legs = n
         from edge_equation.posting.spotlight import _pick_contribution
-        ranked = sorted(picks, key=_pick_contribution, reverse=True)
+        # Phase 28: A+ only AND edge <= max_leg_edge (default 20%).
+        eligible = [
+            p for p in picks
+            if (p.grade or "") == "A+"
+            and p.edge is not None
+            and p.edge <= max_leg_edge
+        ]
+        ranked = sorted(eligible, key=_pick_contribution, reverse=True)
         legs: List[Pick] = []
         seen_games: set = set()
         for p in ranked:
