@@ -121,13 +121,16 @@ def test_mock_used_when_no_conn_even_if_api_key_set(tmp_path, monkeypatch):
     assert isinstance(src, MlbLikeSource)
 
 
-def test_mock_used_when_league_not_in_odds_api_map(tmp_path, conn, monkeypatch):
-    # KBO isn't in the Odds API map -> always falls through to the mock even
-    # with an API key.
+def test_mock_used_for_league_without_odds_api_mapping(tmp_path, conn, monkeypatch):
+    # Hypothetical league not in the Odds API map -> always falls
+    # through to the mock. (Phase 26d added KBO / NPB / EPL / UCL to
+    # the real-API map; this test now exercises a league that is still
+    # API-less to keep the mock-fallback path covered.)
     monkeypatch.setenv(API_KEY_ENV_VAR, "envkey")
-    src = SourceFactory.for_league("KBO", RUN_DATE, conn=conn, csv_dir=str(tmp_path))
-    assert isinstance(src, MlbLikeSource)
-    assert src.league == "KBO"
+    src = SourceFactory.for_league("SOC", RUN_DATE, conn=conn, csv_dir=str(tmp_path))
+    # SoccerSource is the mock for the "SOC" generic league code.
+    from edge_equation.ingestion.source_factory import SoccerSource
+    assert isinstance(src, SoccerSource)
 
 
 def test_prefer_mock_forces_mock(tmp_path, conn, monkeypatch):
@@ -146,7 +149,11 @@ def test_unknown_league_without_source_raises(tmp_path, conn, monkeypatch):
 
 
 def test_odds_api_map_matches_known_sports():
-    # Every mapped league has a corresponding mock fallback (so we can always
-    # degrade gracefully).
+    # Every US-majors + KBO/NPB league has a mock fallback for
+    # offline dev. EPL / UCL are real-API-only (no mock source
+    # ships) so they're allowed to have None here; the factory still
+    # raises a clear ValueError when both API and mock are unavailable.
+    mockable = {"MLB", "NFL", "NHL", "NBA", "KBO", "NPB"}
     for league in LEAGUE_TO_ODDS_API_SPORT_KEY:
-        assert _mock_source_for_league(league) is not None, league
+        if league in mockable:
+            assert _mock_source_for_league(league) is not None, league

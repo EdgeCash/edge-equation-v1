@@ -81,9 +81,13 @@ def test_odds_api_source_cached_only_serves_prior_cache_entry(conn):
             "bookmakers": [],
         }])
     client = httpx.Client(transport=httpx.MockTransport(handler))
+    # Prime the cache using the SAME markets list TheOddsApiSource
+    # (and the Data Refresher) use by default. If these drift apart,
+    # cache keys mismatch and cached_only reads return empty -- the
+    # Phase 26d bug.
     TheOddsApiClient.fetch_odds(
         conn, sport_key="baseball_mlb",
-        markets=["h2h", "totals"], regions="us",
+        markets=["h2h", "totals", "spreads"], regions="us",
         http_client=client, api_key="k",
     )
     # Now a cached_only source reads the prior write without touching
