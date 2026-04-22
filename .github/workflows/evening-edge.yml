@@ -90,12 +90,17 @@ jobs:
           PUBLISH_FLAG="--publish"
           DRY_RUN_FLAG="--no-dry-run"
           LEAGUES=""
+          # Manual dispatches always --force (rebuild + republish even if
+          # the cached DB already has today's slate). Scheduled cron runs
+          # leave force OFF so double-posting stays prevented.
+          FORCE_FLAG=""
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             [ "${{ inputs.publish }}" = "true" ] || PUBLISH_FLAG="--no-publish"
             [ "${{ inputs.dry_run }}" = "false" ] || DRY_RUN_FLAG="--dry-run"
             LEAGUES="--leagues ${{ inputs.leagues }}"
+            FORCE_FLAG="--force"
           fi
-          python -m edge_equation evening $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode $LEAGUES
+          python -m edge_equation evening $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode $LEAGUES $FORCE_FLAG
 
       - name: Upload failsafe files
         if: always() && steps.guard.outputs.should_run == 'true'

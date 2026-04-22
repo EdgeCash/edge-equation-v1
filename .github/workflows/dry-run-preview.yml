@@ -63,7 +63,9 @@ jobs:
           fi
           LEAGUES="--leagues ${{ inputs.leagues }}"
           OVERSEAS="--leagues ${{ inputs.overseas_leagues }}"
-          COMMON="--no-publish --dry-run --public-mode --preview-dir previews $MOCK_FLAG"
+          # --force so a cached DB's idempotency check doesn't silently
+          # skip every card type when this workflow is re-run the same day.
+          COMMON="--no-publish --dry-run --public-mode --preview-dir previews --force $MOCK_FLAG"
 
           set -x
           python -m edge_equation ledger   $COMMON $LEAGUES

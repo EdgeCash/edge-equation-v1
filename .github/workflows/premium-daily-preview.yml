@@ -66,6 +66,7 @@ jobs:
           python -m edge_equation premium-daily \
             --leagues "${{ inputs.leagues }}" \
             --publish --no-dry-run \
+            --force \
             $MOCK_FLAG
 
       - name: Upload failsafe files (SMTP errors only)

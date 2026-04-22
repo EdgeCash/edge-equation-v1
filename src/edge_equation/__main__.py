@@ -211,6 +211,7 @@ def _run_slate(args: argparse.Namespace, card_type: str) -> int:
             public_mode=public_mode,
             ledger_stats=ledger_stats,
             publishers=runner_publishers,
+            force=getattr(args, "force", False),
         )
 
         preview_dir = getattr(args, "preview_dir", None)
@@ -281,10 +282,12 @@ def _cmd_premium_daily(args: argparse.Namespace) -> int:
         # premium email can be rebuilt on demand.
         slate_id = f"premium_daily_{run_dt.date().isoformat().replace('-', '')}"
         # If today's premium slate already exists, re-use its picks so the
-        # email is idempotent within the day.
+        # email is idempotent within the day -- unless --force was passed,
+        # in which case we rebuild.
         from edge_equation.persistence.slate_store import SlateStore
         existing = SlateStore.get(conn, slate_id)
-        if existing is None:
+        force = getattr(args, "force", False)
+        if existing is None or force:
             summary = ScheduledRunner.run(
                 card_type=CARD_TYPE_DAILY,    # reuse the daily engine path
                 conn=conn,
@@ -295,6 +298,7 @@ def _cmd_premium_daily(args: argparse.Namespace) -> int:
                 csv_dir=args.csv_dir,
                 prefer_mock=args.prefer_mock,
                 public_mode=False,
+                force=force,
             )
             picks_slate_id = summary.slate_id
         else:
@@ -436,6 +440,12 @@ def _add_slate_flags(p: argparse.ArgumentParser) -> None:
     p.add_argument("--preview-dir", type=str, default=None,
                    help="Directory to write the rendered X text for the built card. "
                         "Use with --no-publish for offline review of what would post.")
+    p.add_argument("--force", action="store_true", default=False,
+                   help="Rebuild + republish even if a slate with the same id "
+                        "already exists in the DB. Manual dispatches set this "
+                        "so a cached DB doesn't block a second same-day run; "
+                        "scheduled cron jobs leave it OFF so double-posts are "
+                        "prevented.")
     p.add_argument("--email-preview", dest="email_preview",
                    action="store_true", default=False,
                    help="Route every would-be publish to email instead of X/Discord. "

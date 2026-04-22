@@ -72,7 +72,10 @@ jobs:
           fi
           LEAGUES="--leagues ${{ inputs.leagues }}"
           OVERSEAS="--leagues ${{ inputs.overseas_leagues }}"
-          COMMON="--email-preview --public-mode $MOCK_FLAG"
+          # --force: preview workflow is workflow_dispatch only. We always
+          # want to rebuild + resend so a cached DB from the prior run
+          # doesn't silently short-circuit on the slate-exists idempotency.
+          COMMON="--email-preview --public-mode --force $MOCK_FLAG"
 
           set -x
           python -m edge_equation ledger    $COMMON $LEAGUES
