@@ -121,6 +121,8 @@ def test_context_bundle_builds_all_the_way_to_pick():
         rest=RestContext(sport="NBA", home_rest_days=2, away_rest_days=0),
         travel=TravelContext(sport="NBA", away_travel_miles=1800.0, timezone_change_hours=3),
     )
+    # Phase 28: BettingEngine flips fair_prob for away selections, so
+    # it needs home_team / away_team in metadata to disambiguate.
     bundle = FeatureBuilder.build(
         sport="NCAA_Basketball",
         market_type="ML",
@@ -128,6 +130,7 @@ def test_context_bundle_builds_all_the_way_to_pick():
         universal_features={},
         selection="HOME",
         context_bundle=cb,
+        metadata={"home_team": "HOME", "away_team": "AWAY"},
     )
     pick = BettingEngine.evaluate(bundle, Line(odds=-120))
     assert pick.fair_prob is not None

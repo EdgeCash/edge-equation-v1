@@ -139,9 +139,18 @@ def test_stronger_home_team_gets_home_prob_above_half(conn, tmp_path):
     picks = PickStore.list_by_slate(conn, summary.slate_id)
     ml_picks = [p for p in picks if p.market_type == "ML"]
     assert ml_picks, "expected at least one ML pick"
-    # fair_prob is the home (Doosan) win probability for every ML pick in
-    # this game; Doosan was built stronger so it should exceed 0.5.
-    assert all(p.fair_prob > Decimal('0.5') for p in ml_picks)
+    # Phase 28: pick.fair_prob is now the SELECTION's win probability
+    # (the engine flips the home-centric prob for away selections).
+    # Doosan is the stronger home team here, so the Doosan pick's
+    # fair_prob > 0.5 and the LG (away) pick's fair_prob < 0.5.
+    home_picks = [p for p in ml_picks if p.selection == "Doosan Bears"]
+    away_picks = [p for p in ml_picks if p.selection == "LG Twins"]
+    assert home_picks, "expected the home (Doosan) ML pick to be present"
+    assert all(p.fair_prob > Decimal("0.5") for p in home_picks)
+    if away_picks:
+        assert all(p.fair_prob < Decimal("0.5") for p in away_picks), (
+            "away (LG) pick must carry the COMPLEMENT of home win prob"
+        )
 
 
 # --------------------------------------------------- shipped sample CSV

@@ -67,6 +67,8 @@ def test_filter_premium_daily_sorts_grade_then_edge():
 
 
 def test_select_parlay_of_day_uses_distinct_games():
+    # Phase 28 trust restoration: parlays admit A+ only. Fixture
+    # picks default to A+ here so the grade gate passes.
     g1a = _pick(game_id="G1", market="ML")
     g1b = _pick(game_id="G1", market="Total", selection="Over 9")
     g2 = _pick(game_id="G2", edge="0.08")
@@ -113,10 +115,13 @@ def test_select_top_props_caps_at_n():
 # ------------------------------------------- build_card integration
 
 def test_build_card_premium_daily_emits_parlay_and_top_props():
+    # Phase 28: parlay needs >=3 distinct A+ legs (each with edge in
+    # the trustworthy range). Bumping all three to A+ since the
+    # parlay-of-the-day rule no longer admits A or A-/B legs.
     picks = [
         _pick(grade="A+", market="ML", game_id="G1", edge="0.12"),
-        _pick(grade="A", market="HR", game_id="G2", edge="0.09"),
-        _pick(grade="B", market="K", game_id="G3", edge="0.05"),
+        _pick(grade="A+", market="HR", game_id="G2", edge="0.09"),
+        _pick(grade="A+", market="K", game_id="G3", edge="0.05"),
     ]
     card = PostingFormatter.build_card(
         card_type="premium_daily",

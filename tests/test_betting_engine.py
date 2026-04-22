@@ -10,6 +10,11 @@ from edge_equation.math.scoring import ConfidenceScorer
 
 
 def _make_ml_bundle_det_at_bos():
+    # Phase 28: BettingEngine now requires home_team/away_team in
+    # metadata so it can flip the home-centric fair_prob when grading
+    # the away selection. The test selection "BOS" is the home team
+    # here (game_id "...-DET-BOS" reads as DET-at-BOS), so fair_prob
+    # should pass through unchanged.
     return FeatureBuilder.build(
         sport="MLB",
         market_type="ML",
@@ -17,6 +22,7 @@ def _make_ml_bundle_det_at_bos():
         universal_features={"home_edge": 0.085},
         game_id="MLB-2026-04-20-DET-BOS",
         selection="BOS",
+        metadata={"home_team": "BOS", "away_team": "DET"},
     )
 
 

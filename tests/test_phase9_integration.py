@@ -113,6 +113,8 @@ def test_engine_consumes_odds_api_slate(conn):
     markets = source.get_raw_markets(now=NOW)
     # Synthesize inputs for the engine; real pipeline has a feature-building step.
     home_ml = next(m for m in markets if m["market_type"] == "ML" and "Boston" in m["selection"])
+    # Phase 28: BettingEngine flips fair_prob for the away selection,
+    # so it needs home_team / away_team in metadata.
     bundle = FeatureBuilder.build(
         sport="MLB",
         market_type="ML",
@@ -120,6 +122,7 @@ def test_engine_consumes_odds_api_slate(conn):
         universal_features={"home_edge": 0.085},
         selection=home_ml["selection"],
         game_id=home_ml["game_id"],
+        metadata={"home_team": "Boston Red Sox", "away_team": "Detroit Tigers"},
     )
     pick = BettingEngine.evaluate(bundle, Line(odds=home_ml["odds"]))
     assert pick.fair_prob is not None
@@ -141,7 +144,9 @@ def test_manual_csv_source_feeds_engine(conn, tmp_path):
     assert slate.games[0].league == "KBO"
     assert slate.games[0].sport == "KBO"
 
-    # Build + evaluate one of the markets via the engine
+    # Build + evaluate one of the markets via the engine. Phase 28:
+    # home_team / away_team metadata required for the engine to flip
+    # fair_prob on away selections.
     bundle = FeatureBuilder.build(
         sport="KBO",
         market_type="ML",
@@ -149,6 +154,7 @@ def test_manual_csv_source_feeds_engine(conn, tmp_path):
         universal_features={"home_edge": 0.04},
         selection="Doosan Bears",
         game_id="KBO-2026-04-20-LG-DB",
+        metadata={"home_team": "Doosan Bears", "away_team": "LG Twins"},
     )
     pick = BettingEngine.evaluate(bundle, Line(odds=-140))
     assert pick.sport == "KBO"
