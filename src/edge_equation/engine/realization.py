@@ -99,6 +99,47 @@ class RealizationTracker:
         return {"matched": matched, "updated": updated}
 
     @staticmethod
+    def hit_rate_since(
+        conn: sqlite3.Connection,
+        since_iso: str,
+        sport: Optional[str] = None,
+    ) -> Dict[str, float]:
+        """
+        Aggregate hit rate across every pick whose recorded_at is at-or-
+        after the given ISO timestamp. Returns a scalar summary rather
+        than a per-grade breakdown -- used by the premium daily email to
+        render yesterday's engine health.
+        """
+        base = """
+            SELECT
+                COUNT(*) AS n,
+                SUM(CASE WHEN realization = 100 THEN 1 ELSE 0 END) AS wins,
+                SUM(CASE WHEN realization = 0   THEN 1 ELSE 0 END) AS losses,
+                SUM(CASE WHEN realization = 50  THEN 1 ELSE 0 END) AS pushes
+            FROM picks
+            WHERE realization IN (0, 50, 100)
+              AND recorded_at >= ?
+        """
+        args = [since_iso]
+        if sport is not None:
+            base += " AND sport = ?"
+            args.append(sport)
+        row = conn.execute(base, args).fetchone()
+        n = int(row["n"] or 0)
+        wins = int(row["wins"] or 0)
+        losses = int(row["losses"] or 0)
+        pushes = int(row["pushes"] or 0)
+        denom = wins + losses
+        hit = (wins / denom) if denom > 0 else 0.0
+        return {
+            "n": n,
+            "wins": wins,
+            "losses": losses,
+            "pushes": pushes,
+            "hit_rate": hit,
+        }
+
+    @staticmethod
     def hit_rate_by_grade(
         conn: sqlite3.Connection,
         sport: Optional[str] = None,

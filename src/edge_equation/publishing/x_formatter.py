@@ -4,17 +4,28 @@ X (Twitter) post formatters.
 Two styles:
 - StandardFormatter: 280-char hard cap (for fallback, non-Premium accounts,
   or cross-posting to 280-char platforms).
-- PremiumFormatter: long-form, rich formatting that takes advantage of the
-  X Premium 25,000-character ceiling. Every pick gets its own multi-line
-  block; edges and Kelly are rendered as percentages; grades get badges;
-  section dividers separate headline / picks / footer.
+- PremiumFormatter: long-form rendering for X Premium accounts (25K char
+  ceiling). In public_mode (detected by the presence of DISCLAIMER_TEXT
+  in the card's tagline) the formatter renders picks in the exact Phase
+  20 brand format -- four lines per play, analytical only, no edge / no
+  Kelly -- and appends the two allowed hashtags (#FactsNotFeelings and
+  #EdgeEquation). In non-public mode (premium subscribers, internal
+  runs) the richer divider / summary layout is used so edges + Kelly +
+  HFA are visible.
 
 Both formatters are pure functions of the card dict produced by
-posting.posting_formatter. They emit plain UTF-8 text -- X renders the
-emoji and box-drawing characters without any special handling.
+posting.posting_formatter. They emit plain UTF-8 text.
 """
 from decimal import Decimal
 from typing import List, Optional
+
+from edge_equation.compliance.disclaimer import DISCLAIMER_TEXT
+from edge_equation.posting.play_text import MARKET_LABEL
+
+
+# Phase 20 hashtag whitelist: exactly these two, in this order, and only
+# in public_mode. Free posts never carry anything else.
+PUBLIC_HASHTAGS = ("#FactsNotFeelings", "#EdgeEquation")
 
 
 STANDARD_MAX_LEN = 280
@@ -203,7 +214,74 @@ class PremiumFormatter:
         return lines
 
     @staticmethod
+    def _public_pick_block(pick: dict) -> List[str]:
+        """Phase 20 brand-exact 4-line play format for public posts."""
+        market_type = pick.get("market_type") or ""
+        market_label = MARKET_LABEL.get(market_type, market_type or "Market")
+        meta = pick.get("metadata") or {}
+        home = meta.get("home_team") or ""
+        away = meta.get("away_team") or ""
+        matchup = f"{away} @ {home}".strip(" @") or (home or away or "Matchup")
+
+        selection = pick.get("selection") or "?"
+        line = pick.get("line") or {}
+        number = line.get("number")
+        odds = line.get("odds")
+        consensus_parts = [selection]
+        if number not in (None, "") and str(number) not in selection:
+            consensus_parts[0] = f"{selection} {number}"
+        if odds not in (None, ""):
+            consensus_parts.append(f"({_american(odds)})")
+
+        grade = pick.get("grade") or "C"
+        read = (meta.get("read_notes") or "").strip()
+        if not read:
+            read = "No analytical delta recorded."
+        return [
+            f"{matchup} - {market_label}",
+            f"Market Consensus: {' '.join(consensus_parts)}",
+            f"EE Projection: Grade {grade}",
+            f"Read: {read}",
+        ]
+
+    @staticmethod
+    def _is_public_mode_card(card: dict) -> bool:
+        """Public-mode cards always carry the disclaimer in the tagline
+        (build_card injects it). Keying off the disclaimer keeps this
+        module independent of how the card was constructed."""
+        tagline = card.get("tagline") or ""
+        return DISCLAIMER_TEXT in tagline
+
+    @staticmethod
+    def _format_public(card: dict, max_len: int) -> str:
+        """Brand-exact renderer for free-content posts."""
+        headline = card.get("headline") or ""
+        subhead = card.get("subhead") or ""
+        picks = card.get("picks") or []
+        tagline = card.get("tagline") or ""
+
+        out: List[str] = []
+        out.append(headline.upper())
+        if subhead:
+            out.append(subhead)
+        out.append("")
+        for p in picks:
+            out.extend(PremiumFormatter._public_pick_block(p))
+            out.append("")
+        if tagline:
+            out.append(tagline)
+        out.append(" ".join(PUBLIC_HASHTAGS))
+
+        text = "\n".join(out).rstrip() + "\n"
+        if len(text) > max_len:
+            text = text[: max_len - 1].rstrip() + "…"
+        return text
+
+    @staticmethod
     def format_card(card: dict, max_len: int = PREMIUM_MAX_LEN) -> str:
+        if PremiumFormatter._is_public_mode_card(card):
+            return PremiumFormatter._format_public(card, max_len)
+
         icon = CARD_TYPE_ICON.get(card.get("card_type", ""), "🎯")
         headline = card.get("headline") or ""
         subhead = card.get("subhead") or ""

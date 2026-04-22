@@ -44,7 +44,9 @@ the build green. Wire real scraping endpoints in a follow-up.
 """
 from dataclasses import dataclass, field
 from datetime import date as _date, datetime
+from html.parser import HTMLParser
 import os
+import re
 import sqlite3
 import time
 from typing import Any, Dict, List, Optional
@@ -257,15 +259,255 @@ class TheSportsDBClient:
         return teams[0] if teams else None
 
 
-# ---------------------------------------------- scrapers (skeleton)
+# ---------------------------------------------- scrapers
+
+
+class _TableRowParser(HTMLParser):
+    """
+    Lightweight stdlib HTML scraper: collect one row of text cells per
+    `<tr>` inside EVERY matching `<table>` in the document. Tolerates
+    malformed markup -- anything that doesn't fit the table shape is
+    silently skipped, and we never raise out of the parser. Callers are
+    expected to map the resulting rows to domain dicts.
+
+    Table matching: if `table_class` is provided, only tables whose class
+    list contains that token participate. If None, every `<table>` does.
+    Row matching: if `row_class` is set, only <tr> tags carrying that
+    class are collected. If None, every <tr> inside a matching table is
+    collected. Nested tables are flattened -- we count table depth so
+    rows inside an inner table still resolve against the outer scope.
+    Rows with zero cells (header-only rows that render no <td>) are
+    dropped so malformed decorative rows don't pollute the output.
+    """
+
+    def __init__(
+        self,
+        table_class: Optional[str] = None,
+        row_class: Optional[str] = None,
+    ):
+        super().__init__(convert_charrefs=True)
+        self._want_table_cls = table_class
+        self._want_row_cls = row_class
+        self._table_depth = 0
+        self._in_row = False
+        self._in_cell = False
+        self._current_row: List[str] = []
+        self._cell_buf: List[str] = []
+        self.rows: List[List[str]] = []
+
+    @staticmethod
+    def _has_class(attrs: List, name: Optional[str]) -> bool:
+        if name is None:
+            return True
+        for k, v in attrs:
+            if k == "class" and v and name in v.split():
+                return True
+        return False
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "table":
+            if self._has_class(attrs, self._want_table_cls):
+                self._table_depth += 1
+            return
+        if self._table_depth <= 0:
+            return
+        if tag == "tr" and self._has_class(attrs, self._want_row_cls):
+            self._in_row = True
+            self._current_row = []
+            return
+        if self._in_row and tag in ("td", "th"):
+            self._in_cell = True
+            self._cell_buf = []
+
+    def handle_endtag(self, tag):
+        if tag == "table" and self._table_depth > 0:
+            self._table_depth -= 1
+            if self._table_depth == 0:
+                self._in_row = False
+            return
+        if tag == "tr" and self._in_row:
+            if self._current_row:
+                self.rows.append(self._current_row)
+            self._in_row = False
+            return
+        if tag in ("td", "th") and self._in_cell:
+            self._in_cell = False
+            cell_text = " ".join("".join(self._cell_buf).split())
+            self._current_row.append(cell_text)
+
+    def handle_data(self, data):
+        if self._in_cell:
+            self._cell_buf.append(data)
+
+
+def _parse_table_rows(
+    html: str,
+    table_class: Optional[str] = None,
+    row_class: Optional[str] = None,
+) -> List[List[str]]:
+    """Parse rows from the first matching table; returns [] on any error."""
+    try:
+        p = _TableRowParser(table_class=table_class, row_class=row_class)
+        p.feed(html)
+        p.close()
+        return p.rows
+    except Exception:
+        return []
+
+
+# mykbostats.com daily schedule renders two common shapes:
+#   (A) <tr class="game"><td>18:30</td><td>LG @ Doosan</td><td>Kelly / Raley</td></tr>
+#   (B) <tr><td>18:30</td><td>LG</td><td>@</td><td>Doosan</td><td>Kelly</td><td>/</td><td>Raley</td></tr>
+# Shape (A) puts the matchup in a single cell. Shape (B) spreads the
+# matchup across team/separator/team cells and the starters across
+# name/separator/name cells. Both shapes resolve to the same normalized
+# output dict below.
+_KBO_MATCHUP_SPLIT_RE = re.compile(r"\s+(?:@|vs\.?)\s+", re.IGNORECASE)
+_KBO_STARTERS_SPLIT_RE = re.compile(r"\s*(?:/|vs\.?)\s*", re.IGNORECASE)
+_TIME_CELL_RE = re.compile(r"^\d{1,2}:\d{2}(?:\s*(?:AM|PM))?$", re.IGNORECASE)
+
+
+def _kbo_row_to_game(row: List[str], day_iso: str) -> Optional[Dict[str, Any]]:
+    """Map one row of text cells to a game dict; return None if the row
+    isn't shaped like a game (headers, spacers, cancelled games)."""
+    if len(row) < 2:
+        return None
+    # Drop empty cells and surrounding whitespace; real HTML often has
+    # blank <td></td> separators we don't care about.
+    cells = [c.strip() for c in row if c and c.strip()]
+    if len(cells) < 2:
+        return None
+    start_time = cells[0]
+    if not _TIME_CELL_RE.match(start_time):
+        # Row doesn't start with a HH:MM time -> likely a header or label row.
+        return None
+
+    away_team = home_team = ""
+    away_starter = home_starter = ""
+
+    # Shape A: one matchup cell with embedded separator.
+    matchup_cell = cells[1] if len(cells) > 1 else ""
+    teams = _KBO_MATCHUP_SPLIT_RE.split(matchup_cell, maxsplit=1)
+    if len(teams) == 2:
+        away_team, home_team = teams[0].strip(), teams[1].strip()
+        starters_raw = cells[2] if len(cells) >= 3 else ""
+        if starters_raw:
+            parts = _KBO_STARTERS_SPLIT_RE.split(starters_raw, maxsplit=1)
+            if len(parts) == 2:
+                away_starter, home_starter = parts[0].strip(), parts[1].strip()
+    elif len(cells) >= 4 and cells[2] in ("@", "vs", "vs."):
+        # Shape B: team / separator / team across three cells.
+        away_team, home_team = cells[1], cells[3]
+        # Starters may span cells[4..] using the same pattern (name, sep, name)
+        if len(cells) >= 7 and cells[5] in ("/", "vs", "vs."):
+            away_starter, home_starter = cells[4], cells[6]
+        elif len(cells) >= 5:
+            starters_raw = " ".join(cells[4:])
+            parts = _KBO_STARTERS_SPLIT_RE.split(starters_raw, maxsplit=1)
+            if len(parts) == 2:
+                away_starter, home_starter = parts[0].strip(), parts[1].strip()
+    else:
+        return None
+
+    if not (away_team and home_team):
+        return None
+    return {
+        "league": "KBO",
+        "game_id": f"KBO-{day_iso}-{away_team}-{home_team}",
+        "start_time_local": start_time,
+        "home_team": home_team,
+        "away_team": away_team,
+        "home_starter": home_starter,
+        "away_starter": away_starter,
+    }
+
+
+def _parse_kbo_rows(rows: List[List[str]], day_iso: str) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    seen_ids: set = set()
+    for row in rows:
+        game = _kbo_row_to_game(row, day_iso)
+        if game is None:
+            continue
+        gid = game["game_id"]
+        if gid in seen_ids:
+            continue
+        seen_ids.add(gid)
+        out.append(game)
+    return out
+
+
+# npb.jp BIS English schedule: table order is
+# [time, away team, (score?), home team, (stadium?), starters]. Starters
+# may be blank for future games, or carry a single name with no separator
+# for completed games. Alternate pages render a stacked layout we don't
+# try to interpret -- those rows return None.
+_NPB_STARTERS_SPLIT_RE = re.compile(r"\s*(?:vs\.?|/|-)\s*", re.IGNORECASE)
+
+
+def _npb_row_to_game(row: List[str], day_iso: str) -> Optional[Dict[str, Any]]:
+    """Map one NPB BIS row to a game dict; drop headers/decorative rows."""
+    cells = [c.strip() for c in row if c and c.strip()]
+    if len(cells) < 3:
+        return None
+    start_time = cells[0]
+    if not _TIME_CELL_RE.match(start_time):
+        return None
+    # Try the full six-cell layout first (time, away, score, home, stadium?, starters).
+    away_team = cells[1] if len(cells) > 1 else ""
+    home_team = ""
+    starters_raw = ""
+    if len(cells) >= 4:
+        # Cell 2 is often the score for completed games ("5-3") or "-" for
+        # scheduled games. Cell 3 is the home team.
+        home_team = cells[3]
+        starters_raw = cells[-1] if len(cells) >= 5 and cells[-1] != home_team else ""
+    elif len(cells) == 3:
+        # Compact layout: time / away / home.
+        home_team = cells[2]
+    if not (away_team and home_team):
+        return None
+    away_starter, home_starter = "", ""
+    if starters_raw and not _TIME_CELL_RE.match(starters_raw):
+        parts = _NPB_STARTERS_SPLIT_RE.split(starters_raw, maxsplit=1)
+        if len(parts) == 2:
+            away_starter, home_starter = parts[0].strip(), parts[1].strip()
+    return {
+        "league": "NPB",
+        "game_id": f"NPB-{day_iso}-{away_team}-{home_team}",
+        "start_time_local": start_time,
+        "home_team": home_team,
+        "away_team": away_team,
+        "home_starter": home_starter,
+        "away_starter": away_starter,
+    }
+
+
+def _parse_npb_rows(rows: List[List[str]], day_iso: str) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    seen_ids: set = set()
+    for row in rows:
+        game = _npb_row_to_game(row, day_iso)
+        if game is None:
+            continue
+        gid = game["game_id"]
+        if gid in seen_ids:
+            continue
+        seen_ids.add(gid)
+        out.append(game)
+    return out
 
 
 class KboStatsScraper:
     """
-    Scraper wrapper for mykbostats.com (KBO). Phase 20 ships the cached
-    interface; the HTML parsing itself is intentionally stubbed so the
-    build stays green without a live target page. When you wire a real
-    parser, do so inside _parse() and keep the cache/retry envelope.
+    Scraper wrapper for mykbostats.com. Targets the daily schedule page
+    (.../schedule/YYYY-MM-DD) and returns a list of per-game dicts with
+    teams, start time, and probable starters. Lightweight stdlib HTML
+    parsing only -- no bs4, no external deps.
+
+    On any parse failure the scraper returns an empty list so the rest
+    of the fetcher degrades gracefully. See _parse_kbo_rows for the
+    output shape.
     """
 
     BASE = "https://www.mykbostats.com"
@@ -310,12 +552,39 @@ class KboStatsScraper:
         OddsCache.put(conn, cache_key, {"html": html}, ttl_seconds=CACHE_TTL_SCRAPER, now=now)
         return html
 
+    # Known real-world table class variants in priority order. The
+    # scraper walks them top-to-bottom and uses the first that yields at
+    # least one valid game row. Keep the list tight so the first call
+    # doesn't waste work on layouts that never ship.
+    _TABLE_CLASS_CANDIDATES = (
+        "schedule",
+        "games-schedule",
+        "daily-schedule",
+        "game-list",
+        "table",   # generic; hit via fallback only when nothing else matched
+    )
+
     @staticmethod
-    def _parse(html: Optional[str]) -> List[Dict[str, Any]]:
-        # Intentional stub: parsing logic lives outside this commit until
-        # we have a real target page to validate against. Returns an
-        # empty list so callers degrade gracefully.
-        return []
+    def _parse(html: Optional[str], day_iso: str = "") -> List[Dict[str, Any]]:
+        """Parse mykbostats daily schedule HTML -> list of game dicts.
+
+        The scraper tries multiple table-class candidates because
+        mykbostats has shipped at least two distinct layouts. If none
+        match, it falls back to a blanket "every <table>" pass so a
+        simple unstyled table still parses. Row filtering by game/row
+        shape happens in _kbo_row_to_game -- the parser here is purely
+        a structural dragnet.
+        """
+        if not html:
+            return []
+        for cls in KboStatsScraper._TABLE_CLASS_CANDIDATES:
+            rows = _parse_table_rows(html, table_class=cls)
+            games = _parse_kbo_rows(rows, day_iso=day_iso)
+            if games:
+                return games
+        # Final fallback: scan every <table> in the document.
+        rows = _parse_table_rows(html)
+        return _parse_kbo_rows(rows, day_iso=day_iso)
 
     def starters_for_day(
         self,
@@ -323,18 +592,22 @@ class KboStatsScraper:
         day: _date,
         now: Optional[datetime] = None,
     ) -> List[Dict[str, Any]]:
-        """Returns a list of starter records for the day (empty in the
-        stub)."""
+        """Return a list of starter records for the day (empty on any
+        network or parse failure)."""
         path = f"/schedule/{day.isoformat()}"
         html = self._fetch(conn, path, now=now)
-        return KboStatsScraper._parse(html)
+        return KboStatsScraper._parse(html, day_iso=day.isoformat())
 
 
 class NpbStatsScraper:
     """
-    NPB stats/starters scraper wrapper. Same shape as KboStatsScraper --
-    cached + retried + rate-limited envelope; parsing is a stub until we
-    point it at a specific source.
+    NPB stats/starters scraper wrapper targeting npb.jp's English BIS
+    pages (.../bis/eng/YYYY/games/sMMDD.html). Returns a list of per-game
+    dicts identical in shape to KboStatsScraper output (game_id, teams,
+    starters, start_time). Lightweight stdlib HTML parsing only.
+
+    On any parse failure the scraper returns an empty list so the rest
+    of the fetcher degrades gracefully.
     """
 
     BASE = "https://npb.jp"
@@ -379,9 +652,32 @@ class NpbStatsScraper:
         OddsCache.put(conn, cache_key, {"html": html}, ttl_seconds=CACHE_TTL_SCRAPER, now=now)
         return html
 
+    _TABLE_CLASS_CANDIDATES = (
+        "schedule_table",
+        "teble",         # alt misspelled-class layout seen in the wild
+        "schedule",
+        "game_list",
+        "games",
+    )
+
     @staticmethod
-    def _parse(html: Optional[str]) -> List[Dict[str, Any]]:
-        return []
+    def _parse(html: Optional[str], day_iso: str = "") -> List[Dict[str, Any]]:
+        """Parse the NPB English BIS daily schedule -> list of game dicts.
+
+        NPB's BIS page has shipped multiple table shapes across seasons
+        (schedule_table, schedule, a misspelled "teble" class). We walk
+        the known candidates, then fall back to every <table>, and let
+        _npb_row_to_game filter header/decorative rows.
+        """
+        if not html:
+            return []
+        for cls in NpbStatsScraper._TABLE_CLASS_CANDIDATES:
+            rows = _parse_table_rows(html, table_class=cls)
+            games = _parse_npb_rows(rows, day_iso=day_iso)
+            if games:
+                return games
+        rows = _parse_table_rows(html)
+        return _parse_npb_rows(rows, day_iso=day_iso)
 
     def starters_for_day(
         self,
@@ -391,7 +687,7 @@ class NpbStatsScraper:
     ) -> List[Dict[str, Any]]:
         path = f"/bis/eng/{day.year}/games/s{day.strftime('%m%d')}.html"
         html = self._fetch(conn, path, now=now)
-        return NpbStatsScraper._parse(html)
+        return NpbStatsScraper._parse(html, day_iso=day.isoformat())
 
 
 # ---------------------------------------------- DataBundle + fetch_daily_data

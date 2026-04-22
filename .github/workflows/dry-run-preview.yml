@@ -1,0 +1,94 @@
+name: Dry-Run Preview (all five cadence slots)
+
+# Manual-only: runs every mandatory Phase-20 card generator end-to-end
+# with --no-publish so nothing ever hits X / Discord / Email, and writes
+# the rendered text for each card to an artifact for offline review.
+#
+# Usage:
+#   gh workflow run dry-run-preview.yml -f leagues=MLB,NHL,KBO,NPB
+# Artifact: preview-<run_id>/<card_type>.txt for each of:
+#   the_ledger.txt, daily_edge.txt, spotlight.txt, evening_edge.txt,
+#   overseas_edge.txt
+
+on:
+  workflow_dispatch:
+    inputs:
+      leagues:
+        description: "Comma-separated league codes for Ledger/Daily/Spotlight/Evening"
+        default: "MLB,NFL,NHL,NBA,KBO,NPB"
+      overseas_leagues:
+        description: "Overseas leagues (KBO/NPB/EPL/UCL)"
+        default: "KBO,NPB"
+      prefer_mock:
+        description: "Use mock ingestion sources (skip the odds API even if a key is set)"
+        default: "true"
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    env:
+      EDGE_EQUATION_DB:        ${{ secrets.EDGE_EQUATION_DB || 'edge_equation.db' }}
+      TURSO_AUTH_TOKEN:        ${{ secrets.TURSO_AUTH_TOKEN }}
+      THE_ODDS_API_KEY:        ${{ secrets.THE_ODDS_API_KEY }}
+      # Publisher creds are intentionally NOT exposed here -- --no-publish
+      # keeps them out of scope, and the failsafe dir is local.
+      EDGE_EQUATION_FAILSAFE_DIR: ${{ github.workspace }}/data/failsafes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Restore SQLite from cache
+        uses: actions/cache@v4
+        with:
+          path: edge_equation.db
+          key: edge-equation-db-${{ github.ref_name }}
+          restore-keys: |
+            edge-equation-db-
+
+      - name: Preview all five cadence cards
+        run: |
+          mkdir -p data/failsafes previews
+          MOCK_FLAG=""
+          if [ "${{ inputs.prefer_mock }}" = "true" ]; then
+            MOCK_FLAG="--prefer-mock"
+          fi
+          LEAGUES="--leagues ${{ inputs.leagues }}"
+          OVERSEAS="--leagues ${{ inputs.overseas_leagues }}"
+          # --force so a cached DB's idempotency check doesn't silently
+          # skip every card type when this workflow is re-run the same day.
+          COMMON="--no-publish --dry-run --public-mode --preview-dir previews --force $MOCK_FLAG"
+
+          set -x
+          python -m edge_equation ledger   $COMMON $LEAGUES
+          python -m edge_equation daily    $COMMON $LEAGUES
+          python -m edge_equation spotlight $COMMON $LEAGUES
+          python -m edge_equation evening  $COMMON $LEAGUES
+          python -m edge_equation overseas $COMMON $OVERSEAS
+          set +x
+
+      - name: Show rendered text (first 2000 chars each)
+        if: always()
+        run: |
+          for f in previews/*.txt; do
+            echo "================ $f ================"
+            head -c 2000 "$f" || true
+            echo
+            echo
+          done
+
+      - name: Upload preview artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-${{ github.run_id }}
+          path: previews/
+          retention-days: 30

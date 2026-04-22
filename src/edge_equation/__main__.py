@@ -2,17 +2,25 @@
 CLI entry point.
 
 Subcommands:
-  daily      Run the daily-edge slate (ingest -> engine -> persist -> publish).
-  evening    Run the evening-edge slate.
+  ledger     Run The Ledger card (9am CT) -- season record + model health.
+  daily      Run the Daily Edge slate (11am CT).
+  spotlight  Run the Spotlight card (4pm CT) -- deep dive on trending game.
+  evening    Run the Evening Edge slate (6pm CT) -- posts only on material changes.
+  overseas   Run the Overseas Edge slate (11pm CT) -- KBO/NPB/Soccer, no props.
   settle     Record outcomes from a CSV and settle stored picks.
   pipeline   Legacy Phase-1 pipeline demo (kept for backwards compat).
 
+Every free-content publish step is gated by compliance_test(
+require_ledger_footer=True); any violation aborts the publish and exits
+non-zero -- no post goes out without the mandatory footer + disclaimer.
+
 Invocation (any scheduler that can call Python works here):
 
+  python -m edge_equation ledger --publish
   python -m edge_equation daily --publish
+  python -m edge_equation spotlight --publish
   python -m edge_equation evening --publish --leagues MLB,NHL
-  python -m edge_equation settle data/outcomes_2026-04-20.csv
-  python -m edge_equation pipeline --mode daily
+  python -m edge_equation overseas --publish
 
 Common flags:
   --db PATH        SQLite DB path (default: env EDGE_EQUATION_DB or ./edge_equation.db)
@@ -22,6 +30,9 @@ Common flags:
   --leagues LIST   Comma-separated league codes (MLB,NFL,NHL,NBA,KBO,NPB)
   --csv-dir PATH   Directory containing manual-entry CSVs (default: data/)
   --prefer-mock    Skip the odds API and force the mock source (development)
+  --public-mode    Strip edge/kelly and inject disclaimer + Ledger footer (default ON)
+  --email-preview  Route every would-be publish to email only (requires SMTP env).
+                   Body is byte-identical to what XPublisher would post.
 """
 import argparse
 import csv
@@ -30,16 +41,55 @@ import sys
 from datetime import datetime
 from typing import List, Optional
 
+from edge_equation.compliance import compliance_test
 from edge_equation.engine.realization import RealizationTracker
 from edge_equation.engine.scheduled_runner import (
     CARD_TYPE_DAILY,
     CARD_TYPE_EVENING,
+    CARD_TYPE_LEDGER,
+    CARD_TYPE_OVERSEAS_EDGE,
+    CARD_TYPE_SPOTLIGHT,
     DEFAULT_LEAGUES,
+    OVERSEAS_LEAGUES,
     ScheduledRunner,
+    load_prior_daily_edge_picks,
 )
 from edge_equation.persistence.db import Database
+from edge_equation.persistence.pick_store import PickStore
 from edge_equation.persistence.realization_store import RealizationStore
+from edge_equation.posting.ai_graphic_prompt import build_ai_graphic_prompt
+from edge_equation.posting.ledger import LedgerStore
+from edge_equation.posting.posting_formatter import PostingFormatter
+from edge_equation.posting.premium_daily_body import format_premium_daily
+from edge_equation.publishing.email_publisher import EmailPublisher
+from edge_equation.publishing.x_formatter import format_card as format_x_text
 from edge_equation.utils.logging import get_logger
+
+
+# Cards that, when previewed via email, should include the AI graphic
+# prompt in the body so the user can paste it straight into an image
+# generator. Matches the user-facing spec for daily / evening / overseas.
+_AI_PROMPT_CARD_TYPES = frozenset({
+    "daily_edge", "evening_edge", "overseas_edge",
+})
+
+
+def _email_preview_body(card: dict) -> str:
+    """Email body for --email-preview. Section 1 is always the exact
+    X post text. Section 2 -- only for the three slate cards -- is a
+    copy-paste AI image-generation prompt."""
+    x_text = format_x_text(card)
+    if card.get("card_type") not in _AI_PROMPT_CARD_TYPES:
+        return x_text
+    prompt = build_ai_graphic_prompt(card)
+    separator = "\n" + ("=" * 64) + "\n"
+    return (
+        "=== TEXT OF WHAT WOULD POST TO X ===\n\n"
+        + x_text
+        + separator
+        + "=== AI GRAPHIC PROMPT -- paste into DALL-E / Midjourney / etc. ===\n\n"
+        + prompt
+    )
 
 
 logger = get_logger("edge-equation")
@@ -57,19 +107,133 @@ def _open_db(path: Optional[str]):
     return conn
 
 
+def _compliance_gate(card: dict, card_type: str) -> Optional[int]:
+    """
+    Pre-publish compliance check. Returns None on pass, an exit code on
+    fail (and prints the violations). Free-content cards must carry the
+    Season Ledger footer + disclaimer per Phase 20.
+    """
+    report = compliance_test(card, require_ledger_footer=True)
+    if report.ok:
+        return None
+    print(json.dumps({
+        "compliance_gate": "blocked",
+        "card_type": card_type,
+        "violations": report.violations,
+    }, indent=2), file=sys.stderr)
+    return 3
+
+
+def _default_leagues_for(card_type: str, explicit: Optional[str]) -> List[str]:
+    if explicit:
+        return _parse_leagues(explicit)
+    if card_type == CARD_TYPE_OVERSEAS_EDGE:
+        return list(OVERSEAS_LEAGUES)
+    return list(DEFAULT_LEAGUES)
+
+
+def _email_preview_publisher(card_type: str) -> EmailPublisher:
+    """Single-target publisher that emails the exact X post text. Used by
+    --email-preview so you can audit every cadence card in your inbox
+    before flipping X credentials on. For daily / evening / overseas
+    cards the body also carries an AI-graphic prompt the operator can
+    paste into an image generator for manual posting.
+
+    Deliberately uses a FILE-ONLY failsafe (not the default composite)
+    because the primary leg here IS SMTP -- if the SMTP send fails,
+    retrying the same SMTP via the composite's SMTP leg would just fail
+    again. The file failsafe preserves the rendered post text so an
+    operator can see what would have gone out.
+    """
+    from edge_equation.publishing.failsafe import FileFailsafe
+    return EmailPublisher(
+        body_formatter=_email_preview_body,
+        subject_prefix="[X-PREVIEW]",
+        failsafe=FileFailsafe(),
+    )
+
+
 def _run_slate(args: argparse.Namespace, card_type: str) -> int:
     conn = _open_db(args.db)
+    public_mode = getattr(args, "public_mode", True)
+    email_preview = getattr(args, "email_preview", False)
     try:
+        run_dt = datetime.utcnow()
+        leagues = _default_leagues_for(card_type, args.leagues)
+        ledger_stats = None
+        if card_type == CARD_TYPE_LEDGER:
+            # The Ledger post is purely season-record + model-health; it
+            # doesn't consult any slate. Compute from already-settled picks.
+            ledger_stats = LedgerStore.compute(conn)
+        elif public_mode:
+            # Every free-content card must carry the Season Ledger footer,
+            # so compute it up front and flow it into build_card.
+            ledger_stats = LedgerStore.compute(conn)
+
+        # --email-preview forces the publish path on with an email-only
+        # publisher, so the operator can audit every cadence card via SMTP
+        # before any X credential is provisioned. The CLI-level compliance
+        # gate is kept in play; the publisher-level gate is moot here
+        # (EmailPublisher doesn't run compliance_test).
+        if email_preview:
+            args.publish = True
+            args.dry_run = False
+
+        # Compliance gate: build the card once in-process (independent of
+        # any idempotency short-circuit inside ScheduledRunner) so we can
+        # block publishes that would fail the compliance rules.
+        if args.publish and public_mode:
+            preview_card = PostingFormatter.build_card(
+                card_type=card_type,
+                picks=[],
+                generated_at=run_dt.isoformat(),
+                public_mode=True,
+                ledger_stats=ledger_stats,
+                skip_filter=True,
+            )
+            blocked = _compliance_gate(preview_card, card_type)
+            if blocked is not None:
+                return blocked
+
+        runner_publishers = None
+        if email_preview:
+            runner_publishers = [_email_preview_publisher(card_type)]
+
         summary = ScheduledRunner.run(
             card_type=card_type,
             conn=conn,
-            run_datetime=datetime.utcnow(),
-            leagues=_parse_leagues(args.leagues),
+            run_datetime=run_dt,
+            leagues=leagues,
             publish=args.publish,
             dry_run=args.dry_run,
             csv_dir=args.csv_dir,
             prefer_mock=args.prefer_mock,
+            public_mode=public_mode,
+            ledger_stats=ledger_stats,
+            publishers=runner_publishers,
+            force=getattr(args, "force", False),
         )
+
+        preview_dir = getattr(args, "preview_dir", None)
+        if preview_dir:
+            from pathlib import Path
+            picks_records = PickStore.list_by_slate(conn, summary.slate_id)
+            built_picks = [r.to_pick() for r in picks_records]
+            resolved_prior = None
+            if card_type == CARD_TYPE_EVENING:
+                resolved_prior = load_prior_daily_edge_picks(conn, before=run_dt)
+            preview_card = PostingFormatter.build_card(
+                card_type=card_type,
+                picks=built_picks,
+                generated_at=run_dt.isoformat(),
+                public_mode=public_mode,
+                ledger_stats=ledger_stats,
+                prior_picks=resolved_prior,
+            )
+            preview_text = format_x_text(preview_card)
+            out_dir = Path(preview_dir)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            (out_dir / f"{card_type}.txt").write_text(preview_text, encoding="utf-8")
     finally:
         conn.close()
     print(json.dumps(summary.to_dict(), indent=2, default=str))
@@ -86,6 +250,102 @@ def _cmd_daily(args: argparse.Namespace) -> int:
 
 def _cmd_evening(args: argparse.Namespace) -> int:
     return _run_slate(args, CARD_TYPE_EVENING)
+
+
+def _cmd_ledger(args: argparse.Namespace) -> int:
+    return _run_slate(args, CARD_TYPE_LEDGER)
+
+
+def _cmd_spotlight(args: argparse.Namespace) -> int:
+    return _run_slate(args, CARD_TYPE_SPOTLIGHT)
+
+
+def _cmd_overseas(args: argparse.Namespace) -> int:
+    return _run_slate(args, CARD_TYPE_OVERSEAS_EDGE)
+
+
+def _cmd_premium_daily(args: argparse.Namespace) -> int:
+    """
+    Build the Premium Daily email: every A+ / A / A- pick, parlay of
+    the day, top 6 DFS props, yesterday's engine hit rate. Always sent
+    via email (never X). Subscriber-only content; not public_mode, so
+    edge + Kelly remain visible and the compliance gate does not apply.
+    """
+    from datetime import timedelta
+    conn = _open_db(args.db)
+    try:
+        run_dt = datetime.utcnow()
+        leagues = _parse_leagues(args.leagues) or list(DEFAULT_LEAGUES)
+
+        # Run the slate in premium mode: public_mode=False so edge/Kelly
+        # survive. Use a short-lived internal slate id so the same day's
+        # premium email can be rebuilt on demand.
+        slate_id = f"premium_daily_{run_dt.date().isoformat().replace('-', '')}"
+        # If today's premium slate already exists, re-use its picks so the
+        # email is idempotent within the day -- unless --force was passed,
+        # in which case we rebuild.
+        from edge_equation.persistence.slate_store import SlateStore
+        existing = SlateStore.get(conn, slate_id)
+        force = getattr(args, "force", False)
+        if existing is None or force:
+            summary = ScheduledRunner.run(
+                card_type=CARD_TYPE_DAILY,    # reuse the daily engine path
+                conn=conn,
+                run_datetime=run_dt,
+                leagues=leagues,
+                publish=False,
+                dry_run=True,
+                csv_dir=args.csv_dir,
+                prefer_mock=args.prefer_mock,
+                public_mode=False,
+                force=force,
+            )
+            picks_slate_id = summary.slate_id
+        else:
+            picks_slate_id = existing.slate_id
+
+        pick_records = PickStore.list_by_slate(conn, picks_slate_id)
+        all_picks = [r.to_pick() for r in pick_records]
+
+        # Yesterday's engine hit rate (UTC).
+        yesterday = (run_dt - timedelta(days=1)).date().isoformat()
+        health = RealizationTracker.hit_rate_since(conn, since_iso=yesterday)
+
+        card = PostingFormatter.build_card(
+            card_type="premium_daily",
+            picks=all_picks,
+            generated_at=run_dt.isoformat(),
+            public_mode=False,
+            engine_health=health,
+        )
+
+        # File-only failsafe: the primary leg here is SMTP, so routing
+        # through the composite's SMTP leg on failure would just fail
+        # again. A file artifact still preserves the rendered post text.
+        from edge_equation.publishing.failsafe import FileFailsafe
+        publisher = EmailPublisher(
+            body_formatter=format_premium_daily,
+            subject_prefix="[Premium]",
+            failsafe=FileFailsafe(),
+        )
+        if args.email_preview or args.publish:
+            result = publisher.publish_card(card, dry_run=False)
+        else:
+            result = publisher.publish_card(card, dry_run=True)
+    finally:
+        conn.close()
+
+    print(json.dumps({
+        "card_type": "premium_daily",
+        "n_picks": len(card.get("picks") or []),
+        "n_parlay_legs": len(card.get("parlay") or []),
+        "n_top_props": len(card.get("top_props") or []),
+        "engine_health": card.get("engine_health"),
+        "publish_result": result.to_dict() if hasattr(result, "to_dict") else str(result),
+    }, indent=2, default=str))
+    if hasattr(result, "success") and not result.success and not getattr(result, "failsafe_triggered", False):
+        return 1
+    return 0
 
 
 def _cmd_settle(args: argparse.Namespace) -> int:
@@ -172,19 +432,57 @@ def _add_slate_flags(p: argparse.ArgumentParser) -> None:
                      help="Actually post -- requires real credentials")
     p.add_argument("--prefer-mock", action="store_true", default=False,
                    help="Force the stubbed ingestion sources (dev/testing)")
+    public = p.add_mutually_exclusive_group()
+    public.add_argument("--public-mode", dest="public_mode", action="store_true", default=True,
+                        help="Strip edge/kelly and inject disclaimer + Ledger footer (default ON)")
+    public.add_argument("--no-public-mode", dest="public_mode", action="store_false",
+                        help="Disable public-mode sanitization (premium / internal use only)")
+    p.add_argument("--preview-dir", type=str, default=None,
+                   help="Directory to write the rendered X text for the built card. "
+                        "Use with --no-publish for offline review of what would post.")
+    p.add_argument("--force", action="store_true", default=False,
+                   help="Rebuild + republish even if a slate with the same id "
+                        "already exists in the DB. Manual dispatches set this "
+                        "so a cached DB doesn't block a second same-day run; "
+                        "scheduled cron jobs leave it OFF so double-posts are "
+                        "prevented.")
+    p.add_argument("--email-preview", dest="email_preview",
+                   action="store_true", default=False,
+                   help="Route every would-be publish to email instead of X/Discord. "
+                        "Body is the exact X post text. Forces --publish --no-dry-run "
+                        "and bypasses X credentials entirely. Requires SMTP env vars.")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="edge-equation")
     sub = parser.add_subparsers(dest="subcommand", required=False)
 
-    p_daily = sub.add_parser("daily", help="Run the daily-edge slate")
+    p_ledger = sub.add_parser("ledger", help="Run The Ledger card (9am CT)")
+    _add_slate_flags(p_ledger)
+    p_ledger.set_defaults(func=_cmd_ledger)
+
+    p_daily = sub.add_parser("daily", help="Run the Daily Edge slate (11am CT)")
     _add_slate_flags(p_daily)
     p_daily.set_defaults(func=_cmd_daily)
 
-    p_even = sub.add_parser("evening", help="Run the evening-edge slate")
+    p_spot = sub.add_parser("spotlight", help="Run the Spotlight card (4pm CT)")
+    _add_slate_flags(p_spot)
+    p_spot.set_defaults(func=_cmd_spotlight)
+
+    p_even = sub.add_parser("evening", help="Run the Evening Edge slate (6pm CT)")
     _add_slate_flags(p_even)
     p_even.set_defaults(func=_cmd_evening)
+
+    p_over = sub.add_parser("overseas", help="Run the Overseas Edge slate (11pm CT)")
+    _add_slate_flags(p_over)
+    p_over.set_defaults(func=_cmd_overseas)
+
+    p_prem = sub.add_parser(
+        "premium-daily",
+        help="Build and email the Premium Daily card (subscribers only)",
+    )
+    _add_slate_flags(p_prem)
+    p_prem.set_defaults(func=_cmd_premium_daily)
 
     p_settle = sub.add_parser("settle", help="Record outcomes and settle picks")
     p_settle.add_argument("outcomes_csv")

@@ -214,6 +214,27 @@ class XPublisher:
                 success=False, target="x",
                 error=f"text too long after truncation ({len(text)} chars)",
             )
+
+        # Phase 20 brand gate: every public-mode post (disclaimer already
+        # injected into the tagline by PostingFormatter.build_card) has to
+        # pass compliance_test with the Season Ledger footer required.
+        # Premium / internal posts (no public_mode -> no disclaimer) are
+        # not subject to this gate.
+        from edge_equation.compliance import compliance_test
+        from edge_equation.compliance.disclaimer import DISCLAIMER_TEXT
+        is_public = DISCLAIMER_TEXT in (card_payload.get("tagline") or "")
+        if is_public:
+            report = compliance_test(text, require_ledger_footer=True)
+            if not report.ok:
+                fired, detail = self._fire_failsafe(
+                    text, f"compliance violations: {report.violations}"
+                )
+                return PublishResult(
+                    success=False, target="x",
+                    error=f"compliance blocked: {report.violations}",
+                    failsafe_triggered=fired, failsafe_detail=detail,
+                )
+
         if dry_run:
             return PublishResult(success=True, target="x", message_id="dry-run")
 

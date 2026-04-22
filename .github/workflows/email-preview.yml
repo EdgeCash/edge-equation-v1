@@ -1,0 +1,95 @@
+name: Email Preview (all five cadence slots)
+
+# Manual-only: runs every mandatory Phase-20 card generator end-to-end
+# and routes EVERY would-be X/Discord post to email instead. Body is the
+# exact text XPublisher would have posted. Useful for:
+#   - auditing the full cadence before X credentials are provisioned
+#   - sanity-checking card content after a code change
+#   - seeing what a day's output looks like in your inbox
+#
+# Usage:
+#   gh workflow run email-preview.yml -f leagues=MLB,NHL,KBO,NPB
+#
+# Requires SMTP secrets (SMTP_HOST, SMTP_FROM, EMAIL_TO at a minimum).
+# NO X credentials needed; the X publisher is never instantiated here.
+
+on:
+  workflow_dispatch:
+    inputs:
+      leagues:
+        description: "Comma-separated league codes for Ledger/Daily/Spotlight/Evening"
+        default: "MLB,NFL,NHL,NBA,KBO,NPB"
+      overseas_leagues:
+        description: "Overseas leagues (KBO/NPB/EPL/UCL)"
+        default: "KBO,NPB"
+      prefer_mock:
+        description: "Use mock ingestion sources (skip the odds API even if a key is set)"
+        default: "true"
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    env:
+      EDGE_EQUATION_DB:        ${{ secrets.EDGE_EQUATION_DB || 'edge_equation.db' }}
+      TURSO_AUTH_TOKEN:        ${{ secrets.TURSO_AUTH_TOKEN }}
+      THE_ODDS_API_KEY:        ${{ secrets.THE_ODDS_API_KEY }}
+      # SMTP config: inbox where every preview lands.
+      SMTP_HOST:               ${{ secrets.SMTP_HOST }}
+      SMTP_PORT:               ${{ secrets.SMTP_PORT }}
+      SMTP_USER:               ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD:           ${{ secrets.SMTP_PASSWORD }}
+      SMTP_FROM:               ${{ secrets.SMTP_FROM }}
+      SMTP_TO:                 ${{ secrets.SMTP_TO || 'ProfessorEdgeCash@gmail.com' }}
+      EMAIL_TO:                ${{ secrets.EMAIL_TO || 'ProfessorEdgeCash@gmail.com' }}
+      EDGE_EQUATION_FAILSAFE_DIR: ${{ github.workspace }}/data/failsafes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Restore SQLite from cache
+        uses: actions/cache@v4
+        with:
+          path: edge_equation.db
+          key: edge-equation-db-${{ github.ref_name }}
+          restore-keys: |
+            edge-equation-db-
+
+      - name: Email every cadence card
+        run: |
+          mkdir -p data/failsafes
+          MOCK_FLAG=""
+          if [ "${{ inputs.prefer_mock }}" = "true" ]; then
+            MOCK_FLAG="--prefer-mock"
+          fi
+          LEAGUES="--leagues ${{ inputs.leagues }}"
+          OVERSEAS="--leagues ${{ inputs.overseas_leagues }}"
+          # --force: preview workflow is workflow_dispatch only. We always
+          # want to rebuild + resend so a cached DB from the prior run
+          # doesn't silently short-circuit on the slate-exists idempotency.
+          COMMON="--email-preview --public-mode --force $MOCK_FLAG"
+
+          set -x
+          python -m edge_equation ledger    $COMMON $LEAGUES
+          python -m edge_equation daily     $COMMON $LEAGUES
+          python -m edge_equation spotlight $COMMON $LEAGUES
+          python -m edge_equation evening   $COMMON $LEAGUES
+          python -m edge_equation overseas  $COMMON $OVERSEAS
+          set +x
+
+      - name: Upload failsafe files (SMTP errors only)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failsafes-email-preview-${{ github.run_id }}
+          path: data/failsafes/
+          if-no-files-found: ignore
+          retention-days: 14

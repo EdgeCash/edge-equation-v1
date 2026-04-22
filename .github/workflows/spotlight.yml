@@ -1,22 +1,14 @@
-name: Evening Edge (6pm CT)
+name: Spotlight (4pm CT)
 
-# Phase 20 cadence slot 4 of 5: 18:00 US/Central.
-# Dual cron to cover CST (UTC-6 -> 00:00 UTC next day) and CDT (UTC-5 -> 23:00 UTC same day).
+# Phase 20 cadence slot 3 of 5: 16:00 US/Central.
+# Dual cron to cover CST (UTC-6 -> 22:00 UTC) and CDT (UTC-5 -> 21:00 UTC).
 # CT-hour guard enforces exactly one run per day.
-#
-# Evening Edge is post-only-if-material: the card_type logic in
-# PostingFormatter.build_card emits an "engine stable" short card when
-# the slate hasn't moved since the Daily Edge, so this workflow always
-# runs and lets the engine decide whether to post or stay quiet.
 on:
   schedule:
-    - cron: "0 23 * * *"   # 18:00 CT during CDT (Mar-Nov)
-    - cron: "0 0 * * *"    # 18:00 CT during CST (Nov-Mar) -> 00:00 UTC next day
+    - cron: "0 21 * * *"   # 16:00 CT during CDT (Mar-Nov)
+    - cron: "0 22 * * *"   # 16:00 CT during CST (Nov-Mar)
   workflow_dispatch:
     inputs:
-      leagues:
-        description: "Comma-separated league codes"
-        default: "MLB,NFL,NHL,NBA,KBO,NPB"
       publish:
         description: "Invoke real publishers (X, Discord, Email)?"
         default: "true"
@@ -62,7 +54,7 @@ jobs:
           python - <<'PY' >> "$GITHUB_OUTPUT"
           from datetime import datetime
           from zoneinfo import ZoneInfo
-          expected = 18
+          expected = 16
           now = datetime.now(ZoneInfo("America/Chicago"))
           print(f"should_run={'true' if now.hour == expected else 'false'}")
           print(f"ct_hour={now.hour}")
@@ -83,30 +75,26 @@ jobs:
           restore-keys: |
             edge-equation-db-
 
-      - name: Run evening edge
+      - name: Run spotlight
         if: steps.guard.outputs.should_run == 'true'
         run: |
           mkdir -p data/failsafes
           PUBLISH_FLAG="--publish"
           DRY_RUN_FLAG="--no-dry-run"
-          LEAGUES=""
-          # Manual dispatches always --force (rebuild + republish even if
-          # the cached DB already has today's slate). Scheduled cron runs
-          # leave force OFF so double-posting stays prevented.
+          # Manual dispatches rebuild the slate unconditionally; cron stays idempotent.
           FORCE_FLAG=""
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             [ "${{ inputs.publish }}" = "true" ] || PUBLISH_FLAG="--no-publish"
             [ "${{ inputs.dry_run }}" = "false" ] || DRY_RUN_FLAG="--dry-run"
-            LEAGUES="--leagues ${{ inputs.leagues }}"
             FORCE_FLAG="--force"
           fi
-          python -m edge_equation evening $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode $LEAGUES $FORCE_FLAG
+          python -m edge_equation spotlight $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode $FORCE_FLAG
 
       - name: Upload failsafe files
         if: always() && steps.guard.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: failsafes-evening-${{ github.run_id }}
+          name: failsafes-spotlight-${{ github.run_id }}
           path: data/failsafes/
           if-no-files-found: ignore
           retention-days: 14

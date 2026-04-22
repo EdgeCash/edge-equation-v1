@@ -33,19 +33,34 @@ from edge_equation.ingestion.schema import LEAGUE_TO_SPORT, Slate
 from edge_equation.ingestion.source_factory import SourceFactory
 from edge_equation.persistence.pick_store import PickStore
 from edge_equation.persistence.slate_store import SlateRecord, SlateStore
+from edge_equation.posting.ledger import LedgerStats
 from edge_equation.posting.posting_formatter import PostingFormatter
 from edge_equation.publishing.discord_publisher import DiscordPublisher
 from edge_equation.publishing.email_publisher import EmailPublisher
 from edge_equation.publishing.x_publisher import XPublisher
 from edge_equation.stats.composer import FeatureComposer
 from edge_equation.stats.results import GameResultsStore
+from edge_equation.utils.logging import get_logger
+
+
+_logger = get_logger("edge-equation.runner")
 
 
 CARD_TYPE_DAILY = "daily_edge"
 CARD_TYPE_EVENING = "evening_edge"
-VALID_CARD_TYPES = (CARD_TYPE_DAILY, CARD_TYPE_EVENING)
+CARD_TYPE_LEDGER = "the_ledger"
+CARD_TYPE_SPOTLIGHT = "spotlight"
+CARD_TYPE_OVERSEAS_EDGE = "overseas_edge"
+VALID_CARD_TYPES = (
+    CARD_TYPE_DAILY,
+    CARD_TYPE_EVENING,
+    CARD_TYPE_LEDGER,
+    CARD_TYPE_SPOTLIGHT,
+    CARD_TYPE_OVERSEAS_EDGE,
+)
 
 DEFAULT_LEAGUES = ("MLB", "NFL", "NHL", "NBA", "KBO", "NPB")
+OVERSEAS_LEAGUES = ("KBO", "NPB", "EPL", "UCL")
 
 
 @dataclass(frozen=True)
@@ -140,12 +155,42 @@ def _build_card(
     card_type: str,
     picks: List[Pick],
     run_datetime: datetime,
+    public_mode: bool = False,
+    ledger_stats: Optional[LedgerStats] = None,
+    prior_picks: Optional[List[Pick]] = None,
 ) -> dict:
     return PostingFormatter.build_card(
         card_type=card_type,
         picks=picks,
         generated_at=run_datetime.isoformat(),
+        public_mode=public_mode,
+        ledger_stats=ledger_stats,
+        prior_picks=prior_picks,
     )
+
+
+def load_prior_daily_edge_picks(
+    conn: sqlite3.Connection,
+    before: Optional[datetime] = None,
+) -> List[Pick]:
+    """
+    Look up the most recently persisted daily_edge slate (excluding any
+    slate whose generated_at is at-or-after `before`) and return its
+    picks. Used by the Evening Edge card to detect whether the engine
+    has moved since the morning run.
+
+    Returns [] if no prior slate exists (fresh deploy or first run).
+    """
+    slates = SlateStore.list_by_card_type(conn, card_type=CARD_TYPE_DAILY, limit=10)
+    if not slates:
+        return []
+    cutoff_iso: Optional[str] = before.isoformat() if before is not None else None
+    for slate in slates:
+        if cutoff_iso is not None and slate.generated_at >= cutoff_iso:
+            continue
+        records = PickStore.list_by_slate(conn, slate.slate_id)
+        return [r.to_pick() for r in records]
+    return []
 
 
 def _publish_card(
@@ -184,6 +229,10 @@ class ScheduledRunner:
         api_key: Optional[str] = None,
         publishers: Optional[List[object]] = None,
         prefer_mock: bool = False,
+        public_mode: bool = False,
+        ledger_stats: Optional[LedgerStats] = None,
+        prior_picks: Optional[List[Pick]] = None,
+        force: bool = False,
     ) -> RunSummary:
         if card_type not in VALID_CARD_TYPES:
             raise ValueError(
@@ -197,18 +246,38 @@ class ScheduledRunner:
         slate_id = _slate_id_for(card_type, run_dt, leagues_list)
         existing = SlateStore.get(conn, slate_id)
         if existing is not None:
-            # Idempotent: return a summary of the already-persisted slate.
-            picks = PickStore.list_by_slate(conn, slate_id)
-            return RunSummary(
-                slate_id=slate_id,
-                card_type=card_type,
-                run_datetime=run_dt.isoformat(),
-                leagues=tuple(leagues_list),
-                n_games=0,
-                n_picks=len(picks),
-                new_slate=False,
-                publish_results=(),
-            )
+            if force:
+                # Manual / dispatch override: scrub the prior slate + its
+                # picks so the run builds a fresh card and actually
+                # invokes the publishers. The scheduled-cron path leaves
+                # force=False so double-posting is still prevented.
+                _logger.info(
+                    f"ScheduledRunner: force=True -> deleting existing "
+                    f"slate {slate_id!r} ({len(PickStore.list_by_slate(conn, slate_id))} picks) "
+                    f"before rebuild"
+                )
+                conn.execute("DELETE FROM picks WHERE slate_id = ?", (slate_id,))
+                SlateStore.delete(conn, slate_id)
+                conn.commit()
+            else:
+                # Idempotent: return a summary of the already-persisted slate.
+                picks = PickStore.list_by_slate(conn, slate_id)
+                _logger.info(
+                    f"ScheduledRunner: slate {slate_id!r} already persisted "
+                    f"({len(picks)} picks). Skipping rebuild + publish to "
+                    f"prevent double-post. Pass force=True (or --force on the "
+                    f"CLI) to rebuild."
+                )
+                return RunSummary(
+                    slate_id=slate_id,
+                    card_type=card_type,
+                    run_datetime=run_dt.isoformat(),
+                    leagues=tuple(leagues_list),
+                    n_games=0,
+                    n_picks=len(picks),
+                    new_slate=False,
+                    publish_results=(),
+                )
 
         slate = _collect_slate(
             leagues=leagues_list,
@@ -235,7 +304,15 @@ class ScheduledRunner:
 
         publish_results: tuple = ()
         if publish:
-            card = _build_card(card_type, picks, run_dt)
+            resolved_prior = prior_picks
+            if card_type == CARD_TYPE_EVENING and resolved_prior is None:
+                resolved_prior = load_prior_daily_edge_picks(conn, before=run_dt)
+            card = _build_card(
+                card_type, picks, run_dt,
+                public_mode=public_mode,
+                ledger_stats=ledger_stats,
+                prior_picks=resolved_prior,
+            )
             publish_results = tuple(_publish_card(card, dry_run=dry_run, publishers=publishers))
 
         return RunSummary(

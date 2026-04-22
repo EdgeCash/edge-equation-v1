@@ -249,4 +249,8 @@ def test_default_leagues_constant_is_reasonable():
 
 
 def test_valid_card_types_constant():
-    assert set(VALID_CARD_TYPES) == {"daily_edge", "evening_edge"}
+    # Phase 21 expands the runner to the full five-window daily cadence.
+    assert set(VALID_CARD_TYPES) == {
+        "daily_edge", "evening_edge", "the_ledger",
+        "spotlight", "overseas_edge",
+    }
