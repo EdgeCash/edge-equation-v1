@@ -68,13 +68,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
-      - name: Restore SQLite from cache
+      - name: Restore SQLite from cache (read-only)
         if: steps.guard.outputs.should_run == 'true'
-        uses: actions/cache@v4
+        # Read-only so cadence can't overwrite the refresher's fresh
+        # entry with its own empty-slate DB. Never-matching primary
+        # key forces fall-through to the restore-keys prefix match.
+        uses: actions/cache/restore@v4
         with:
           path: edge_equation.db
-          key: edge-equation-db-${{ github.ref_name }}
+          key: edge-equation-db-${{ github.ref_name }}-read-${{ github.run_id }}
           restore-keys: |
+            edge-equation-db-${{ github.ref_name }}-
             edge-equation-db-
 
       - name: Run the ledger

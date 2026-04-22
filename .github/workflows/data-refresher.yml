@@ -68,11 +68,18 @@ jobs:
 
       - name: Restore SQLite from cache
         if: steps.guard.outputs.should_run == 'true'
-        uses: actions/cache@v4
+        # Restore-only pass: read whatever the previous refresher wrote
+        # (via the restore-keys prefix fallback). We deliberately use
+        # a never-matching primary key so we don't land on a stale
+        # "edge-equation-db-main" entry that some old cadence run left
+        # behind -- that's the original cache-overwrite bug we're
+        # fixing here.
+        uses: actions/cache/restore@v4
         with:
           path: edge_equation.db
-          key: edge-equation-db-${{ github.ref_name }}
+          key: edge-equation-db-${{ github.ref_name }}-refresh-${{ github.run_id }}
           restore-keys: |
+            edge-equation-db-${{ github.ref_name }}-
             edge-equation-db-
 
       - name: Refresh odds + schedules + scrapers
@@ -81,9 +88,12 @@ jobs:
           SLATES="${{ inputs.slates || 'domestic,overseas' }}"
           python -m edge_equation refresh-data --slates "$SLATES"
 
-      - name: Save refreshed SQLite back to cache
-        # Cache is keyed by ref; the SAME key is used by all cadence
-        # workflows, so the next cadence run sees the fresh payload.
+      - name: Save refreshed SQLite to a unique cache key
+        # The refresher is the SOLE writer to the SQLite cache. Each
+        # run writes to a unique key so subsequent cadence runs pull
+        # the newest entry via their restore-keys prefix match. The
+        # old immutable "edge-equation-db-main" entry is never written
+        # to again and will evict naturally after 7 days unused.
         if: steps.guard.outputs.should_run == 'true'
         uses: actions/cache/save@v4
         with:
