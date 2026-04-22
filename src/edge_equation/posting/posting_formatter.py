@@ -80,6 +80,11 @@ CARD_TEMPLATES = {
         "headline": "Multi-Leg Projection",
         "subhead": "Rare multi-game analytical chain. 3 to 6 legs, posted only when the edge is real.",
     },
+    # --- Premium (subscriber email only; never posted to X)
+    "premium_daily": {
+        "headline": "Premium Daily Edge",
+        "subhead": "Full analytical read: every A+ / A / A- game, parlay of the day, top 6 DFS props, and yesterday's engine hit rate.",
+    },
 }
 
 
@@ -91,6 +96,22 @@ _OVERSEAS_EXCLUDED_MARKETS = frozenset({
 })
 
 _OVERSEAS_ALLOWED_SPORTS = frozenset({"KBO", "NPB", "Soccer"})
+
+# Premium Daily grade admission. Brand-intent "A-" maps to the engine's
+# Grade B tier (edge 0.03-0.05); the premium email surfaces it while
+# the free Daily Edge stays A+/A only.
+_PREMIUM_DAILY_ALLOWED_GRADES = frozenset({"A+", "A", "B"})
+
+# Prop markets surfaced in the premium DFS top-6 block. (These are the
+# same markets the Overseas Edge filter excludes from free content.)
+_PROP_MARKETS = frozenset({
+    "HR", "K", "Passing_Yards", "Rushing_Yards", "Receiving_Yards",
+    "Points", "Rebounds", "Assists", "SOG",
+})
+
+# Parlay-of-the-day: pick the N highest-trend picks that come from
+# distinct games so no two legs are correlated.
+_PREMIUM_PARLAY_SIZE = 3
 
 
 # Daily Edge cap and grade filter per Phase 20.
@@ -153,6 +174,60 @@ class PostingFormatter:
         ]
 
     @staticmethod
+    def filter_premium_daily(picks: Sequence[Pick]) -> List[Pick]:
+        """Premium email includes every A+ / A / A- pick, no cap. Sorted
+        grade-first (A+ highest) then by edge descending so the reader
+        sees the strongest plays at the top."""
+        qualifying = [p for p in picks if p.grade in _PREMIUM_DAILY_ALLOWED_GRADES]
+        order = {"A+": 2, "A": 1, "B": 0}
+        qualifying.sort(
+            key=lambda p: (
+                order.get(p.grade, 0),
+                p.edge if p.edge is not None else Decimal("0"),
+            ),
+            reverse=True,
+        )
+        return qualifying
+
+    @staticmethod
+    def select_parlay_of_day(
+        picks: Sequence[Pick],
+        n: int = _PREMIUM_PARLAY_SIZE,
+    ) -> List[Pick]:
+        """Pick N legs from distinct games, ranked by grade * edge. Does
+        NOT raise when fewer than N are available -- returns the best
+        feasible set so the premium email still renders a parlay block
+        on thin-slate days."""
+        from edge_equation.posting.spotlight import _pick_contribution
+        ranked = sorted(picks, key=_pick_contribution, reverse=True)
+        legs: List[Pick] = []
+        seen_games: set = set()
+        for p in ranked:
+            gid = p.game_id or ""
+            if not gid or gid in seen_games:
+                continue
+            seen_games.add(gid)
+            legs.append(p)
+            if len(legs) >= n:
+                break
+        return legs
+
+    @staticmethod
+    def select_top_props(picks: Sequence[Pick], n: int = 6) -> List[Pick]:
+        """Surface the N highest-edge prop-market picks for the DFS
+        subscriber section. Props are the markets Overseas Edge excludes
+        from free content. Picks with non-positive edge are dropped
+        (no-edge props are noise for DFS selection)."""
+        props = [
+            p for p in picks
+            if p.market_type in _PROP_MARKETS
+            and p.edge is not None
+            and p.edge > Decimal("0")
+        ]
+        props.sort(key=lambda p: p.edge, reverse=True)
+        return props[:n]
+
+    @staticmethod
     def evening_edge_is_stable(
         current_picks: Sequence[Pick],
         prior_picks: Optional[Sequence[Pick]] = None,
@@ -207,6 +282,7 @@ class PostingFormatter:
         ledger_stats: Optional[LedgerStats] = None,
         prior_picks: Optional[Sequence[Pick]] = None,
         skip_filter: bool = False,
+        engine_health: Optional[dict] = None,
     ) -> dict:
         """
         Build a card payload. Behavior by card_type:
@@ -240,6 +316,8 @@ class PostingFormatter:
         picks_list = list(picks)
         template = CARD_TEMPLATES[card_type]
         subhead_final = subhead_override or template["subhead"]
+        parlay_legs: List[Pick] = []
+        top_props: List[Pick] = []
 
         # --- Phase 20 card-specific filtering
         if card_type == "daily_edge" and not skip_filter:
@@ -262,6 +340,14 @@ class PostingFormatter:
                     f"multi_leg_projection requires {MULTI_LEG_MIN}-"
                     f"{MULTI_LEG_MAX} legs, got {len(picks_list)}"
                 )
+        elif card_type == "premium_daily" and not skip_filter:
+            full_pool = list(picks_list)
+            picks_list = PostingFormatter.filter_premium_daily(full_pool)
+            # Parlay + top props are selected from the FULL premium pool,
+            # not the already-sorted picks_list, so a high-edge prop that
+            # didn't sort to the top still surfaces in the DFS block.
+            parlay_legs = PostingFormatter.select_parlay_of_day(picks_list)
+            top_props = PostingFormatter.select_top_props(full_pool)
 
         summary = {
             "grade": PostingFormatter._best_grade(picks_list),
@@ -280,6 +366,12 @@ class PostingFormatter:
             "tagline": TAGLINE,
             "generated_at": generated_at,
         }
+
+        if card_type == "premium_daily":
+            card["parlay"] = [p.to_dict() for p in parlay_legs]
+            card["top_props"] = [p.to_dict() for p in top_props]
+            if engine_health is not None:
+                card["engine_health"] = dict(engine_health)
 
         if public_mode:
             card = PublicModeSanitizer.sanitize_card(card)

@@ -1,39 +1,32 @@
-name: Email Preview (all five cadence slots)
+name: Premium Daily Preview
 
-# Manual-only: runs every mandatory Phase-20 card generator end-to-end
-# and routes EVERY would-be X/Discord post to email instead. Body is the
-# exact text XPublisher would have posted. Useful for:
-#   - auditing the full cadence before X credentials are provisioned
-#   - sanity-checking card content after a code change
-#   - seeing what a day's output looks like in your inbox
+# Manual-only: builds the Premium Daily card (every A+/A/A- pick, parlay
+# of the day, top 6 DFS props, yesterday's engine hit rate) and emails
+# it to ProfessorEdgeCash@gmail.com for review before going live to
+# paying subscribers. Zero X exposure.
 #
 # Usage:
-#   gh workflow run email-preview.yml -f leagues=MLB,NHL,KBO,NPB
+#   gh workflow run premium-daily-preview.yml -f leagues=MLB,NHL,KBO,NPB
 #
-# Requires SMTP secrets (SMTP_HOST, SMTP_FROM, EMAIL_TO at a minimum).
-# NO X credentials needed; the X publisher is never instantiated here.
+# Requires SMTP secrets only. No X credentials used.
 
 on:
   workflow_dispatch:
     inputs:
       leagues:
-        description: "Comma-separated league codes for Ledger/Daily/Spotlight/Evening"
+        description: "Comma-separated league codes"
         default: "MLB,NFL,NHL,NBA,KBO,NPB"
-      overseas_leagues:
-        description: "Overseas leagues (KBO/NPB/EPL/UCL)"
-        default: "KBO,NPB"
       prefer_mock:
-        description: "Use mock ingestion sources (skip the odds API even if a key is set)"
+        description: "Use mock ingestion sources (skip the odds API)"
         default: "true"
 
 jobs:
-  email:
+  premium:
     runs-on: ubuntu-latest
     env:
       EDGE_EQUATION_DB:        ${{ secrets.EDGE_EQUATION_DB || 'edge_equation.db' }}
       TURSO_AUTH_TOKEN:        ${{ secrets.TURSO_AUTH_TOKEN }}
       THE_ODDS_API_KEY:        ${{ secrets.THE_ODDS_API_KEY }}
-      # SMTP config: inbox where every preview lands.
       SMTP_HOST:               ${{ secrets.SMTP_HOST }}
       SMTP_PORT:               ${{ secrets.SMTP_PORT }}
       SMTP_USER:               ${{ secrets.SMTP_USER }}
@@ -63,30 +56,23 @@ jobs:
           restore-keys: |
             edge-equation-db-
 
-      - name: Email every cadence card
+      - name: Build and email premium daily card
         run: |
           mkdir -p data/failsafes
           MOCK_FLAG=""
           if [ "${{ inputs.prefer_mock }}" = "true" ]; then
             MOCK_FLAG="--prefer-mock"
           fi
-          LEAGUES="--leagues ${{ inputs.leagues }}"
-          OVERSEAS="--leagues ${{ inputs.overseas_leagues }}"
-          COMMON="--email-preview --public-mode $MOCK_FLAG"
-
-          set -x
-          python -m edge_equation ledger    $COMMON $LEAGUES
-          python -m edge_equation daily     $COMMON $LEAGUES
-          python -m edge_equation spotlight $COMMON $LEAGUES
-          python -m edge_equation evening   $COMMON $LEAGUES
-          python -m edge_equation overseas  $COMMON $OVERSEAS
-          set +x
+          python -m edge_equation premium-daily \
+            --leagues "${{ inputs.leagues }}" \
+            --publish --no-dry-run \
+            $MOCK_FLAG
 
       - name: Upload failsafe files (SMTP errors only)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: failsafes-email-preview-${{ github.run_id }}
+          name: failsafes-premium-${{ github.run_id }}
           path: data/failsafes/
           if-no-files-found: ignore
           retention-days: 14

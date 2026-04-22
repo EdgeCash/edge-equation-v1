@@ -59,6 +59,7 @@ from edge_equation.persistence.pick_store import PickStore
 from edge_equation.persistence.realization_store import RealizationStore
 from edge_equation.posting.ledger import LedgerStore
 from edge_equation.posting.posting_formatter import PostingFormatter
+from edge_equation.posting.premium_daily_body import format_premium_daily
 from edge_equation.publishing.email_publisher import EmailPublisher
 from edge_equation.publishing.x_formatter import format_card as format_x_text
 from edge_equation.utils.logging import get_logger
@@ -226,6 +227,82 @@ def _cmd_overseas(args: argparse.Namespace) -> int:
     return _run_slate(args, CARD_TYPE_OVERSEAS_EDGE)
 
 
+def _cmd_premium_daily(args: argparse.Namespace) -> int:
+    """
+    Build the Premium Daily email: every A+ / A / A- pick, parlay of
+    the day, top 6 DFS props, yesterday's engine hit rate. Always sent
+    via email (never X). Subscriber-only content; not public_mode, so
+    edge + Kelly remain visible and the compliance gate does not apply.
+    """
+    from datetime import timedelta
+    conn = _open_db(args.db)
+    try:
+        run_dt = datetime.utcnow()
+        leagues = _parse_leagues(args.leagues) or list(DEFAULT_LEAGUES)
+
+        # Run the slate in premium mode: public_mode=False so edge/Kelly
+        # survive. Use a short-lived internal slate id so the same day's
+        # premium email can be rebuilt on demand.
+        slate_id = f"premium_daily_{run_dt.date().isoformat().replace('-', '')}"
+        # If today's premium slate already exists, re-use its picks so the
+        # email is idempotent within the day.
+        from edge_equation.persistence.slate_store import SlateStore
+        existing = SlateStore.get(conn, slate_id)
+        if existing is None:
+            summary = ScheduledRunner.run(
+                card_type=CARD_TYPE_DAILY,    # reuse the daily engine path
+                conn=conn,
+                run_datetime=run_dt,
+                leagues=leagues,
+                publish=False,
+                dry_run=True,
+                csv_dir=args.csv_dir,
+                prefer_mock=args.prefer_mock,
+                public_mode=False,
+            )
+            picks_slate_id = summary.slate_id
+        else:
+            picks_slate_id = existing.slate_id
+
+        pick_records = PickStore.list_by_slate(conn, picks_slate_id)
+        all_picks = [r.to_pick() for r in pick_records]
+
+        # Yesterday's engine hit rate (UTC).
+        yesterday = (run_dt - timedelta(days=1)).date().isoformat()
+        health = RealizationTracker.hit_rate_since(conn, since_iso=yesterday)
+
+        card = PostingFormatter.build_card(
+            card_type="premium_daily",
+            picks=all_picks,
+            generated_at=run_dt.isoformat(),
+            public_mode=False,
+            engine_health=health,
+        )
+
+        publisher = EmailPublisher(
+            body_formatter=format_premium_daily,
+            subject_prefix="[Premium]",
+        )
+        if args.email_preview or args.publish:
+            result = publisher.publish_card(card, dry_run=False)
+        else:
+            result = publisher.publish_card(card, dry_run=True)
+    finally:
+        conn.close()
+
+    print(json.dumps({
+        "card_type": "premium_daily",
+        "n_picks": len(card.get("picks") or []),
+        "n_parlay_legs": len(card.get("parlay") or []),
+        "n_top_props": len(card.get("top_props") or []),
+        "engine_health": card.get("engine_health"),
+        "publish_result": result.to_dict() if hasattr(result, "to_dict") else str(result),
+    }, indent=2, default=str))
+    if hasattr(result, "success") and not result.success and not getattr(result, "failsafe_triggered", False):
+        return 1
+    return 0
+
+
 def _cmd_settle(args: argparse.Namespace) -> int:
     conn = _open_db(args.db)
     recorded = 0
@@ -348,6 +425,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_over = sub.add_parser("overseas", help="Run the Overseas Edge slate (11pm CT)")
     _add_slate_flags(p_over)
     p_over.set_defaults(func=_cmd_overseas)
+
+    p_prem = sub.add_parser(
+        "premium-daily",
+        help="Build and email the Premium Daily card (subscribers only)",
+    )
+    _add_slate_flags(p_prem)
+    p_prem.set_defaults(func=_cmd_premium_daily)
 
     p_settle = sub.add_parser("settle", help="Record outcomes and settle picks")
     p_settle.add_argument("outcomes_csv")

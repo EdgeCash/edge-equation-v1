@@ -36,8 +36,8 @@ jobs:
       SMTP_USER:               ${{ secrets.SMTP_USER }}
       SMTP_PASSWORD:           ${{ secrets.SMTP_PASSWORD }}
       SMTP_FROM:               ${{ secrets.SMTP_FROM }}
-      SMTP_TO:                 ${{ secrets.SMTP_TO }}
-      EMAIL_TO:                ${{ secrets.EMAIL_TO }}
+      SMTP_TO:                 ${{ secrets.SMTP_TO || 'ProfessorEdgeCash@gmail.com' }}
+      EMAIL_TO:                ${{ secrets.EMAIL_TO || 'ProfessorEdgeCash@gmail.com' }}
       EDGE_EQUATION_FAILSAFE_DIR: ${{ github.workspace }}/data/failsafes
     steps:
       - uses: actions/checkout@v4
