@@ -3,16 +3,28 @@ Premium Daily email body renderer.
 
 Plain-text, multi-section, no emoji/divider flash. Sections:
   1. Header (date, tagline)
-  2. Full slate: every A+ / A / A- pick (edge + Kelly visible)
-  3. Parlay of the day (3 legs from distinct games; combined decimal odds)
-  4. Top 6 DFS props (highest edge across prop markets)
-  5. Engine health: yesterday's hit rate + win/loss/push count
+  2. Major Variance Signal banner (only when at least one Grade-A+
+     pick cleared the strict MVS thresholds)
+  3. Full slate: every A+ / A / A- pick (edge + Kelly visible)
+  4. Parlay of the day (3 legs from distinct games; combined decimal odds)
+  5. Top 6 DFS props (highest edge across prop markets)
+  6. Engine health: yesterday's hit rate + win/loss/push count
 
 This is a subscriber-only view. It is NEVER posted to X; the premium-
 daily CLI subcommand emails it via SMTP.
 """
 from decimal import Decimal
 from typing import Iterable, List, Optional
+
+from edge_equation.engine.major_variance import META_KEY as MVS_META_KEY, SIGNAL_LABEL as MVS_LABEL
+
+
+# Transparent one-time note the first occurrence of the MVS in any given
+# render. Keeps the tone factual / analytical, never tout-like.
+_MVS_INTRO = (
+    "This is a rare Major Variance Signal -- the model has detected an "
+    "unusually strong alignment between data and projection."
+)
 
 
 def _dec(v) -> Optional[Decimal]:
@@ -115,6 +127,51 @@ def _render_engine_health(health: Optional[dict]) -> List[str]:
     ]
 
 
+def _mvs_picks(picks: List[dict]) -> List[dict]:
+    """Return the subset of picks whose metadata carries the MVS flag."""
+    tagged: List[dict] = []
+    for p in picks:
+        meta = p.get("metadata") or {}
+        if meta.get(MVS_META_KEY):
+            tagged.append(p)
+    return tagged
+
+
+def _render_mvs_block(tagged: List[dict]) -> List[str]:
+    """Factual, non-tout rendering of each firing MVS pick. Includes the
+    one-time transparent intro note only on the first call per render
+    (caller passes tagged only when at least one fires)."""
+    lines: List[str] = []
+    lines.append("=== MAJOR VARIANCE SIGNAL ===")
+    lines.append(_MVS_INTRO)
+    lines.append("")
+    for p in tagged:
+        sport = p.get("sport") or ""
+        market = p.get("market_type") or ""
+        selection = p.get("selection") or "?"
+        line = p.get("line") or {}
+        odds = _american(line.get("odds"))
+        number = line.get("number")
+        line_part = f"{number} @ {odds}" if number not in (None, "") else odds
+        edge = p.get("edge")
+        kelly = p.get("kelly")
+        meta = p.get("metadata") or {}
+        read = (meta.get("read_notes") or "").strip()
+        if not read:
+            read = "No analytical delta recorded."
+        lines.append(f"  {MVS_LABEL}")
+        lines.append(f"    {sport} · {market}  ({selection}, {line_part})")
+        lines.append(
+            f"    EE Projection: Grade A+  (Edge +{_pct(edge)})"
+        )
+        lines.append(
+            f"    Kelly Suggestion: {_pct(kelly)} of bankroll (Half-Kelly)"
+        )
+        lines.append(f"    Read: {read}")
+        lines.append("")
+    return lines
+
+
 def format_premium_daily(card: dict) -> str:
     """Render the premium_daily card as a plain-text email body."""
     headline = card.get("headline") or "Premium Daily Edge"
@@ -135,6 +192,10 @@ def format_premium_daily(card: dict) -> str:
     if subhead:
         out.append(subhead)
     out.append("")
+
+    mvs_firing = _mvs_picks(picks)
+    if mvs_firing:
+        out.extend(_render_mvs_block(mvs_firing))
 
     out.append(f"=== FULL SLATE · A+ / A / A- ({len(picks)}) ===")
     if not picks:

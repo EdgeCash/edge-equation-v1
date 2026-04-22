@@ -101,6 +101,18 @@ LEDGER_FOOTER_RE = re.compile(
 # it anyway so future edits that do include one are safe by construction.
 
 
+# Player Prop Projections section: the user-facing column header row
+# contains the word "Value" ("Player | Market | Projected Value | Grade
+# | Key Read") as a structural table label, not a tout phrase. Strip
+# the exact header before scanning so it doesn't false-positive the
+# forbidden-terms check. Tout uses of "value" elsewhere in a post still
+# trip the check.
+PLAYER_PROP_HEADER_RE = re.compile(
+    r"Player\s*\|\s*Market\s*\|\s*Projected Value\s*\|\s*Grade\s*\|\s*Key Read",
+    re.IGNORECASE,
+)
+
+
 @dataclass(frozen=True)
 class ComplianceReport:
     ok: bool
@@ -127,14 +139,17 @@ def _collect_strings(obj: Union[str, dict, list, None]) -> Iterable[str]:
 
 
 def _strip_whitelisted(text: str) -> str:
-    """Remove the mandatory disclaimer + ledger-footer text so their
-    internal whitelisted words ("Bet within your means") don't trip the
-    forbidden-terms scanner."""
+    """Remove the mandatory disclaimer + ledger-footer text + the
+    Player Prop Projections table header so their internal whitelisted
+    words ("Bet within your means", "Projected Value") don't trip the
+    forbidden-terms scanner. All three whitelist rules are pattern-
+    anchored so a tout use of the same words elsewhere still fails."""
     if not text:
         return text or ""
     out = text
     # Ledger footer is dynamic -> regex strip. Disclaimer is literal.
     out = LEDGER_FOOTER_RE.sub("", out)
+    out = PLAYER_PROP_HEADER_RE.sub("", out)
     if DISCLAIMER_TEXT in out:
         out = out.replace(DISCLAIMER_TEXT, "")
     return out

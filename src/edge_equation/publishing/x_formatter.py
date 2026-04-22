@@ -254,11 +254,32 @@ class PremiumFormatter:
 
     @staticmethod
     def _format_public(card: dict, max_len: int) -> str:
-        """Brand-exact renderer for free-content posts."""
+        """Brand-exact renderer for free-content posts.
+
+        Layout:
+            HEADLINE (uppercase)
+            subhead
+            <blank>
+            pick block 1
+            <blank>
+            pick block 2
+            ...
+            <blank>
+            Player Prop Projections table (daily_edge / spotlight only,
+                when any A+/A prop picks are present)
+            <blank>
+            tagline (Facts Not Feelings + disclaimer + SINGLE Season Ledger
+                footer at the very bottom of the thread)
+            #FactsNotFeelings #EdgeEquation
+
+        Invariant: the disclaimer + ledger footer appear exactly once,
+        attached only to the tagline at the END of the text chain.
+        """
         headline = card.get("headline") or ""
         subhead = card.get("subhead") or ""
         picks = card.get("picks") or []
         tagline = card.get("tagline") or ""
+        prop_section = (card.get("player_prop_projections") or {}).get("text") or ""
 
         out: List[str] = []
         out.append(headline.upper())
@@ -267,6 +288,9 @@ class PremiumFormatter:
         out.append("")
         for p in picks:
             out.extend(PremiumFormatter._public_pick_block(p))
+            out.append("")
+        if prop_section:
+            out.append(prop_section)
             out.append("")
         if tagline:
             out.append(tagline)

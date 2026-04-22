@@ -1,0 +1,89 @@
+name: Data Refresher (odds + schedules + scrapers)
+
+# Warms the OddsCache so the five cadence workflows read from local
+# cache instead of burning The Odds API credits on every run. Two
+# refreshes per day (8:00 CT and 15:00 CT) align the cache with the
+# morning slate and mid-afternoon line movement.
+#
+# Free-tier Odds API ~500 credits/month. Cadence workflows with
+# per-slot fetches: ~600+/month (blows the quota). With this refresher
+# + cached_only=True on cadence reads: ~60-120/month (comfortable).
+#
+# DST-aware: dual cron pair per slot (one UTC hour for CDT, one for
+# CST) with a stdlib-zoneinfo CT-hour guard picking exactly one line
+# per day.
+on:
+  schedule:
+    # 08:00 CT morning refresh: UTC 13 (CDT) / UTC 14 (CST)
+    - cron: "0 13 * * *"
+    - cron: "0 14 * * *"
+    # 15:00 CT afternoon refresh: UTC 20 (CDT) / UTC 21 (CST)
+    - cron: "0 20 * * *"
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+    inputs:
+      slates:
+        description: "Comma-separated slate names"
+        default: "domestic,overseas"
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    env:
+      EDGE_EQUATION_DB:        ${{ secrets.EDGE_EQUATION_DB || 'edge_equation.db' }}
+      TURSO_AUTH_TOKEN:        ${{ secrets.TURSO_AUTH_TOKEN }}
+      THE_ODDS_API_KEY:        ${{ secrets.THE_ODDS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: CT-hour guard
+        id: guard
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          # Either morning (08 CT) or afternoon (15 CT).
+          now = datetime.now(ZoneInfo("America/Chicago"))
+          should = now.hour in (8, 15)
+          print(f"should_run={'true' if should else 'false'}")
+          print(f"ct_hour={now.hour}")
+          PY
+
+      - name: Install package
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Restore SQLite from cache
+        if: steps.guard.outputs.should_run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: edge_equation.db
+          key: edge-equation-db-${{ github.ref_name }}
+          restore-keys: |
+            edge-equation-db-
+
+      - name: Refresh odds + schedules + scrapers
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          SLATES="${{ inputs.slates || 'domestic,overseas' }}"
+          python -m edge_equation refresh-data --slates "$SLATES"
+
+      - name: Save refreshed SQLite back to cache
+        # Cache is keyed by ref; the SAME key is used by all cadence
+        # workflows, so the next cadence run sees the fresh payload.
+        if: steps.guard.outputs.should_run == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: edge_equation.db
+          key: edge-equation-db-${{ github.ref_name }}-${{ github.run_id }}

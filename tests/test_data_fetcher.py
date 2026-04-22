@@ -338,9 +338,14 @@ def test_public_mode_false_preserves_bookmakers(conn):
 
 
 def test_cache_ttl_constants_sensible():
+    # Phase 23: odds TTL widened to 6h so the daily cadence (9a / 11a /
+    # 4p / 6p / 11p CT) can read from a single morning+afternoon
+    # refresher pull instead of hitting the Odds API on every slot.
+    # Schedule + scraper TTLs are unchanged; they refresh on their own
+    # rhythm and don't need to track the odds TTL.
     assert CACHE_TTL_ODDS > 0
-    assert CACHE_TTL_SCHEDULE >= CACHE_TTL_ODDS
     assert CACHE_TTL_SCRAPER > 0
+    assert CACHE_TTL_SCHEDULE > 0
 
 
 def test_slate_sports_shape():

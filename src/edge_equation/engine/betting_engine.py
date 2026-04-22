@@ -14,6 +14,10 @@ from edge_equation.engine.feature_builder import (
     META_DECAY_HALFLIFE_KEY,
     META_HFA_VALUE_KEY,
 )
+from edge_equation.engine.major_variance import (
+    detect as detect_major_variance,
+    tag_pick as tag_major_variance,
+)
 from edge_equation.engine.pick_schema import Pick, Line
 
 
@@ -32,6 +36,7 @@ class BettingEngine:
         bundle: FeatureBundle,
         line: Line,
         public_mode: bool = False,
+        mc_stability: Optional[dict] = None,
     ) -> Pick:
         market = bundle.market_type
         sport = bundle.sport
@@ -77,7 +82,7 @@ class BettingEngine:
         decay_halflife_days = Decimal(halflife_raw) if halflife_raw is not None else None
         hfa_value = Decimal(hfa_raw) if hfa_raw is not None else None
 
-        return Pick(
+        pick = Pick(
             sport=sport,
             market_type=market,
             selection=selection,
@@ -98,3 +103,11 @@ class BettingEngine:
                 **dict(bundle.metadata),
             },
         )
+        # Major Variance Signal: runs in premium mode only. The detector
+        # is credibility-first -- if mc_stability is missing the signal
+        # silently does NOT fire. We still tag the reason into metadata
+        # so an auditor can see why.
+        if not public_mode:
+            signal = detect_major_variance(pick, mc_stability=mc_stability)
+            pick = tag_major_variance(pick, signal)
+        return pick

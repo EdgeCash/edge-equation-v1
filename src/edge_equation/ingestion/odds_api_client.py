@@ -70,10 +70,16 @@ class TheOddsApiClient:
         api_key: Optional[str] = None,
         endpoint: str = DEFAULT_ENDPOINT,
         http_client: Optional[httpx.Client] = None,
+        cached_only: bool = False,
     ) -> Dict[str, Any]:
         """
         Cache-first fetch. Returns {"games": [...]} where games mirrors the
         raw JSON array returned by The Odds API.
+
+        cached_only=True forbids any live API call. Miss -> returns
+        {"games": []}. Used by the cadence workflows so they read
+        whatever the dedicated data-refresher job wrote, and NEVER burn
+        free-tier Odds API credits on their own.
 
         If http_client is None, a short-lived httpx.Client is constructed and
         closed internally. Tests should pass an injected client (e.g. backed
@@ -83,6 +89,10 @@ class TheOddsApiClient:
         cached = OddsCache.get(conn, key, now=now)
         if cached is not None:
             return cached
+        if cached_only:
+            # Credit guardrail: no cache hit + cached-only mode -> return
+            # an empty slate so the caller degrades gracefully.
+            return {"games": []}
 
         url = f"{endpoint}/{sport_key}/odds"
         params = {

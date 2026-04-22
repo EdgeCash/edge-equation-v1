@@ -97,9 +97,12 @@ ODDS_API_SPORT_KEY = {
     "UCL": "soccer_uefa_champs_league",
 }
 
-# Cache TTLs per data class -- longer for semi-static metadata, shorter
-# for odds that move through the day.
-CACHE_TTL_ODDS = DEFAULT_TTL_SECONDS          # 15 minutes
+# Cache TTLs per data class. Odds TTL is 6h so the five cadence slots
+# across a typical posting day (9a / 11a / 4p / 6p / 11p CT) all read
+# from a single data-refresher pull rather than each one burning a
+# fresh Odds API call. The refresher job is responsible for writing
+# fresh payloads at least twice daily.
+CACHE_TTL_ODDS = 6 * 60 * 60                  # 6 hours
 CACHE_TTL_SCHEDULE = 4 * 60 * 60              # 4 hours
 CACHE_TTL_SCRAPER = 60 * 60                   # 1 hour
 
@@ -207,11 +210,16 @@ class TheSportsDBClient:
         path: str,
         ttl_seconds: int,
         now: Optional[datetime] = None,
+        cached_only: bool = False,
     ) -> Optional[Dict[str, Any]]:
         cache_key = self._cache_key(path)
         cached = OddsCache.get(conn, cache_key, now=now)
         if cached is not None:
             return cached
+        if cached_only:
+            # Cadence-read path: never hit the network. Return None so
+            # the caller degrades to an empty event list.
+            return None
 
         def _call() -> Dict[str, Any]:
             self._throttle.wait()
@@ -234,13 +242,17 @@ class TheSportsDBClient:
         day: _date,
         league_id: int,
         now: Optional[datetime] = None,
+        cached_only: bool = False,
     ) -> List[Dict[str, Any]]:
         """
         All events for a league on a given day. Returns a list of raw
         event dicts (empty list on failure / no events).
         """
         path = f"/eventsday.php?d={day.isoformat()}&l={league_id}"
-        payload = self._get(conn, path, ttl_seconds=CACHE_TTL_SCHEDULE, now=now)
+        payload = self._get(
+            conn, path, ttl_seconds=CACHE_TTL_SCHEDULE,
+            now=now, cached_only=cached_only,
+        )
         if not payload:
             return []
         return list(payload.get("events") or [])
@@ -534,11 +546,14 @@ class KboStatsScraper:
         conn: sqlite3.Connection,
         path: str,
         now: Optional[datetime] = None,
+        cached_only: bool = False,
     ) -> Optional[str]:
         cache_key = f"{self.CACHE_PREFIX}:{path}"
         cached = OddsCache.get(conn, cache_key, now=now)
         if cached is not None:
             return cached.get("html")
+        if cached_only:
+            return None
 
         def _call() -> str:
             self._throttle.wait()
@@ -591,11 +606,12 @@ class KboStatsScraper:
         conn: sqlite3.Connection,
         day: _date,
         now: Optional[datetime] = None,
+        cached_only: bool = False,
     ) -> List[Dict[str, Any]]:
         """Return a list of starter records for the day (empty on any
         network or parse failure)."""
         path = f"/schedule/{day.isoformat()}"
-        html = self._fetch(conn, path, now=now)
+        html = self._fetch(conn, path, now=now, cached_only=cached_only)
         return KboStatsScraper._parse(html, day_iso=day.isoformat())
 
 
@@ -634,11 +650,14 @@ class NpbStatsScraper:
         conn: sqlite3.Connection,
         path: str,
         now: Optional[datetime] = None,
+        cached_only: bool = False,
     ) -> Optional[str]:
         cache_key = f"{self.CACHE_PREFIX}:{path}"
         cached = OddsCache.get(conn, cache_key, now=now)
         if cached is not None:
             return cached.get("html")
+        if cached_only:
+            return None
 
         def _call() -> str:
             self._throttle.wait()
@@ -684,9 +703,10 @@ class NpbStatsScraper:
         conn: sqlite3.Connection,
         day: _date,
         now: Optional[datetime] = None,
+        cached_only: bool = False,
     ) -> List[Dict[str, Any]]:
         path = f"/bis/eng/{day.year}/games/s{day.strftime('%m%d')}.html"
-        html = self._fetch(conn, path, now=now)
+        html = self._fetch(conn, path, now=now, cached_only=cached_only)
         return NpbStatsScraper._parse(html, day_iso=day.isoformat())
 
 
@@ -739,6 +759,7 @@ def _league_odds(
     api_key: Optional[str],
     http_client: Optional[httpx.Client],
     now: Optional[datetime],
+    cached_only: bool = False,
 ) -> List[Dict[str, Any]]:
     sport_key = ODDS_API_SPORT_KEY.get(league)
     if sport_key is None:
@@ -746,6 +767,10 @@ def _league_odds(
     markets = ["h2h", "totals", "spreads"] if league != "Soccer" else ["h2h", "totals"]
 
     def _call() -> Dict[str, Any]:
+        # cached_only=True flows straight through to the cache-first
+        # Odds API client so the cadence workflows never hit the live
+        # API on a cold cache -- they degrade to empty and wait for
+        # the next data-refresher run.
         payload = TheOddsApiClient.fetch_odds(
             conn,
             sport_key=sport_key,
@@ -754,6 +779,7 @@ def _league_odds(
             ttl_seconds=CACHE_TTL_ODDS,
             now=now,
             http_client=http_client,
+            cached_only=cached_only,
         )
         return payload
 
@@ -775,6 +801,7 @@ def fetch_daily_data(
     npb_scraper: Optional[NpbStatsScraper] = None,
     now: Optional[datetime] = None,
     scrape: bool = True,
+    cached_only: bool = False,
 ) -> DataBundle:
     """
     One-stop safe-and-cached daily pull. Returns a DataBundle whose
@@ -808,6 +835,7 @@ def fetch_daily_data(
             api_key=api_key,
             http_client=http_client,
             now=now,
+            cached_only=cached_only,
         )
 
     sdb = sportsdb_client or TheSportsDBClient(http_client=http_client)
@@ -820,6 +848,7 @@ def fetch_daily_data(
                 continue
             schedules[league] = sdb.events_by_date(
                 conn, day=target_date, league_id=league_id, now=now,
+                cached_only=cached_only,
             )
     finally:
         if sportsdb_client is None:
@@ -830,14 +859,18 @@ def fetch_daily_data(
         if slate == "overseas" or "KBO" in leagues:
             scr = kbo_scraper or KboStatsScraper(http_client=http_client)
             try:
-                scrapers["KBO"] = scr.starters_for_day(conn, target_date, now=now)
+                scrapers["KBO"] = scr.starters_for_day(
+                    conn, target_date, now=now, cached_only=cached_only,
+                )
             finally:
                 if kbo_scraper is None:
                     scr.close()
         if slate == "overseas" or "NPB" in leagues:
             scr = npb_scraper or NpbStatsScraper(http_client=http_client)
             try:
-                scrapers["NPB"] = scr.starters_for_day(conn, target_date, now=now)
+                scrapers["NPB"] = scr.starters_for_day(
+                    conn, target_date, now=now, cached_only=cached_only,
+                )
             finally:
                 if npb_scraper is None:
                     scr.close()
