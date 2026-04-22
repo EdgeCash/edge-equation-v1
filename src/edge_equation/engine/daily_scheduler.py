@@ -68,10 +68,15 @@ def _pick_from_stub(stub: dict, public_mode: bool = False):
 
 def generate_daily_edge_card(run_datetime: datetime, public_mode: bool = False) -> dict:
     picks = [_pick_from_stub(s, public_mode=public_mode) for s in _MORNING_STUB]
+    # The legacy Phase-3 scheduler feeds mock stub picks whose grades
+    # won't clear the Phase-20 Grade A/A+ filter. Pass skip_filter=True
+    # so this development entry point keeps working; the Phase 12
+    # ScheduledRunner (production path) hits the filter naturally.
     return PostingFormatter.build_card(
         card_type="daily_edge",
         picks=picks,
         generated_at=run_datetime.isoformat(),
+        skip_filter=True,
     )
 
 

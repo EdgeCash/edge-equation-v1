@@ -52,10 +52,14 @@ def _slate_card():
         selection="Over 9.5",
     )
     pick_total = BettingEngine.evaluate(bundle2, Line(odds=-110, number=Decimal('9.5')))
+    # Integration test fixtures pre-date the Phase-20 Grade A/A+ filter,
+    # so we opt out to preserve pre-filter slate shape for the publisher
+    # round-trip assertions below.
     return PostingFormatter.build_card(
         card_type="daily_edge",
         picks=[pick_ml, pick_total],
         generated_at="2026-04-20T09:00:00",
+        skip_filter=True,
     )
 
 
