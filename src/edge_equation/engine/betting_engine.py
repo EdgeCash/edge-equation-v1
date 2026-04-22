@@ -8,6 +8,7 @@ from typing import Optional
 
 from edge_equation.math.probability import ProbabilityCalculator
 from edge_equation.math.ev import EVCalculator
+from edge_equation.math.monte_carlo import MonteCarloSimulator
 from edge_equation.math.scoring import ConfidenceScorer
 from edge_equation.engine.feature_builder import (
     FeatureBundle,
@@ -84,13 +85,15 @@ def _baseline_read(
     edge: Optional[Decimal],
     hfa_value: Optional[Decimal],
     decay_halflife_days: Optional[Decimal],
+    mc_stability: Optional[dict] = None,
 ) -> str:
-    """Compose a factual one-line read from whatever feature inputs are
-    on hand. Premium subscribers see this verbatim under "Read:" --
-    Facts Not Feelings, no hype, no tout language. Returns "" when
-    we can't say anything honest."""
+    """Compose a factual multi-sentence read from whatever feature
+    inputs are on hand. Premium subscribers see this verbatim under
+    "Read:" -- Facts Not Feelings, no hype, no tout language. Returns
+    "" when we can't say anything honest."""
     bits = []
     inputs = bundle.inputs or {}
+    meta = bundle.metadata or {}
     if market_type == "ML":
         sh = inputs.get("strength_home")
         sa = inputs.get("strength_away")
@@ -103,19 +106,65 @@ def _baseline_read(
                         f"Composer strength differential favors {side} "
                         f"({float(sh):.2f} vs {float(sa):.2f})."
                     )
+                else:
+                    bits.append(
+                        f"Strengths within noise ({float(sh):.2f} vs "
+                        f"{float(sa):.2f}); edge lives in the price."
+                    )
+            except (TypeError, ValueError):
+                pass
+        elo_diff = meta.get("elo_diff")
+        if elo_diff is not None:
+            try:
+                ed = float(elo_diff)
+                if abs(ed) >= 25:
+                    side = "home" if ed > 0 else "away"
+                    bits.append(f"Elo gap {ed:+.0f} to {side}.")
             except (TypeError, ValueError):
                 pass
     if market_type in ("Total", "Game_Total"):
         pace = inputs.get("pace")
         off = inputs.get("off_env")
-        if pace is not None and off is not None:
+        dfn = inputs.get("def_env")
+        env_bits = []
+        if pace is not None:
             try:
-                bits.append(
-                    f"Run environment pace={float(pace):.2f} "
-                    f"off={float(off):.2f}."
-                )
+                env_bits.append(f"pace={float(pace):.2f}")
             except (TypeError, ValueError):
                 pass
+        if off is not None:
+            try:
+                env_bits.append(f"off={float(off):.2f}")
+            except (TypeError, ValueError):
+                pass
+        if dfn is not None:
+            try:
+                env_bits.append(f"def={float(dfn):.2f}")
+            except (TypeError, ValueError):
+                pass
+        if env_bits:
+            bits.append("Run environment " + " ".join(env_bits) + ".")
+    # Rest / travel context if the composer surfaced it.
+    rest_home = meta.get("rest_days_home")
+    rest_away = meta.get("rest_days_away")
+    if rest_home is not None and rest_away is not None:
+        try:
+            rh, ra = float(rest_home), float(rest_away)
+            if abs(rh - ra) >= 1.0:
+                side = "home" if rh > ra else "away"
+                bits.append(
+                    f"Rest edge to {side} ({rh:.0f}d vs {ra:.0f}d)."
+                )
+        except (TypeError, ValueError):
+            pass
+    travel_miles = meta.get("travel_miles_away")
+    if travel_miles is not None:
+        try:
+            tm = float(travel_miles)
+            if tm >= 1500:
+                bits.append(f"Away side traveling {tm:.0f} mi.")
+        except (TypeError, ValueError):
+            pass
     if hfa_value is not None:
         try:
             sign = "+" if float(hfa_value) >= 0 else ""
@@ -125,6 +174,19 @@ def _baseline_read(
     if decay_halflife_days is not None:
         try:
             bits.append(f"Form decay tau/2 {float(decay_halflife_days):.0f}d.")
+        except (TypeError, ValueError):
+            pass
+    # MC stability line -- gives the reader the uncertainty band on
+    # fair_prob directly. Only added when stdev is trustworthy.
+    if mc_stability:
+        try:
+            stdev = float(mc_stability.get("stdev", 0))
+            p10 = float(mc_stability.get("p10", 0))
+            p90 = float(mc_stability.get("p90", 0))
+            if stdev > 0 and p90 > p10:
+                bits.append(
+                    f"MC band {p10:.2f}-{p90:.2f} (sigma {stdev:.3f})."
+                )
         except (TypeError, ValueError):
             pass
     if not bits and fair_prob is not None and edge is not None:
@@ -155,6 +217,10 @@ class BettingEngine:
         expected_value: Optional[Decimal] = None
         edge: Optional[Decimal] = None
         kelly: Optional[Decimal] = None
+        # Phase 30: any caller-supplied mc_stability (from a higher-level
+        # orchestrator that's already run MC) wins. Otherwise the engine
+        # runs its own 10k MC in the PROB_MARKETS branch below. Stays
+        # None on EXPECTATION_MARKETS (no fair_prob -> nothing to sample).
         grade = "C"
         realization = 47
         sanity_reason: Optional[str] = None
@@ -191,6 +257,34 @@ class BettingEngine:
                     fair_prob = (Decimal("1") - fair_prob).quantize(
                         Decimal("0.000001")
                     )
+
+            # ----------------------------------------------------------
+            # Phase 30: 10k Monte Carlo around the fair-prob estimate.
+            # For ML we perturb the Bradley-Terry strengths (the true
+            # source of input uncertainty); for BTTS we fall back to
+            # a logit-space perturbation of the point estimate. The
+            # result (stdev / p10 / p90) is both stashed in metadata
+            # for audit and handed to the MVS detector later in this
+            # method. Deterministic: same game_id + inputs produce the
+            # same distribution across runs.
+            # ----------------------------------------------------------
+            if fair_prob is not None:
+                try:
+                    if market == "ML":
+                        mc_result = MonteCarloSimulator.simulate_ml(
+                            strength_home=float(bundle.inputs.get("strength_home", 1.0)),
+                            strength_away=float(bundle.inputs.get("strength_away", 1.0)),
+                            home_adv=float(bundle.inputs.get("home_adv", 0.0)),
+                            seed_key=f"{bundle.game_id or ''}:{selection}",
+                        )
+                    else:
+                        mc_result = MonteCarloSimulator.simulate_point_prob(
+                            fair_prob=fair_prob,
+                            seed_key=f"{bundle.game_id or ''}:{market}:{selection}",
+                        )
+                    mc_stability = mc_result.to_dict()
+                except (TypeError, ValueError):
+                    mc_stability = None
 
             calib = EVCalculator.calibrate(
                 public_mode,
@@ -257,6 +351,7 @@ class BettingEngine:
                 edge=edge,
                 hfa_value=hfa_value,
                 decay_halflife_days=decay_halflife_days,
+                mc_stability=mc_stability,
             )
 
         meta = {
@@ -277,6 +372,11 @@ class BettingEngine:
             meta["read_notes"] = existing_read
         if sanity_reason:
             meta["sanity_rejected_reason"] = sanity_reason
+        # Phase 30: stash MC stability into metadata so auditors (and
+        # the MVS detector on the far side of this call) can see the
+        # exact distribution numbers that gated this pick.
+        if mc_stability:
+            meta["mc_stability"] = dict(mc_stability)
 
         pick = Pick(
             sport=sport,

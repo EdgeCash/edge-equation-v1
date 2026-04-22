@@ -194,19 +194,25 @@ class PostingFormatter:
         picks: Sequence[Pick],
         n: Optional[int] = None,
         min_legs: int = 3,
-        max_legs: int = 6,
+        max_legs: int = 4,
         max_leg_edge: Decimal = Decimal("0.20"),
+        min_leg_edge: Decimal = Decimal("0.12"),
+        min_leg_kelly: Decimal = Decimal("0.04"),
     ) -> List[Pick]:
-        """Pick 3 - 6 legs from distinct games, ranked by grade * edge
+        """Pick 3 - 4 legs from distinct games, ranked by grade * edge
         (via the Spotlight trend-score). Backwards-compat: when `n` is
         passed it overrides both bounds to that single value.
 
-        Phase 28 trust restoration: legs MUST be Grade A+ AND edge <=
-        max_leg_edge (default 20%). The base ML logic just shipped a
-        critical fix for the both-sides-A+ overconfidence bug; until
-        the post-fix grades earn back trust over a settled-results
-        sample, parlays stay narrow and refuse any leg with the
-        signature of the old bug (huge implausible edge).
+        Phase 30 hardening: legs MUST be Grade A+ AND
+          min_leg_edge <= edge <= max_leg_edge   (default 12% - 20%)
+          kelly >= min_leg_kelly                 (default 4%)
+
+        The edge floor rejects borderline A+ legs that slipped in only
+        because of grader noise; the kelly floor ensures each leg has
+        enough stake size to be worth parlaying. The edge ceiling
+        rejects the both-sides-A+ overconfidence signature from the
+        pre-Phase-28 bug until post-fix grades accumulate a settled
+        track record.
 
         Returns an empty list when fewer than min_legs distinct-game
         picks qualify -- premium renders "no parlay legs qualified
@@ -215,12 +221,13 @@ class PostingFormatter:
         if n is not None:
             min_legs = max_legs = n
         from edge_equation.posting.spotlight import _pick_contribution
-        # Phase 28: A+ only AND edge <= max_leg_edge (default 20%).
         eligible = [
             p for p in picks
             if (p.grade or "") == "A+"
             and p.edge is not None
-            and p.edge <= max_leg_edge
+            and min_leg_edge <= p.edge <= max_leg_edge
+            and p.kelly is not None
+            and p.kelly >= min_leg_kelly
         ]
         ranked = sorted(eligible, key=_pick_contribution, reverse=True)
         legs: List[Pick] = []

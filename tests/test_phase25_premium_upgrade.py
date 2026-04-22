@@ -58,14 +58,14 @@ def _prop(player, market="HR", grade="A+", edge="0.09",
     )
 
 
-def _team(game_id="G1", grade="A+", edge="0.09", sport="MLB",
-          market="ML", selection="NYY"):
+def _team(game_id="G1", grade="A+", edge="0.13", kelly="0.05",
+          sport="MLB", market="ML", selection="NYY"):
     return Pick(
         sport=sport, market_type=market, selection=selection,
         line=Line(odds=-115),
         fair_prob=Decimal("0.62"),
         edge=Decimal(edge),
-        kelly=Decimal("0.04"),
+        kelly=Decimal(kelly),
         grade=grade,
         game_id=game_id,
         metadata={
@@ -118,11 +118,13 @@ def test_parlay_returns_empty_when_fewer_than_three_qualify():
     assert legs == []
 
 
-def test_parlay_caps_at_max_six_legs_by_default():
-    picks = [_team(game_id=f"G{i}", grade="A+", edge=f"0.{10 - i:02d}")
-             for i in range(10)]
+def test_parlay_caps_at_max_four_legs_by_default():
+    # Phase 30: tightened default from 6 to 4 legs. Edge must be >= 0.12
+    # so bumping the range up from 0.10 - 0.19 to 0.13 - 0.19.
+    picks = [_team(game_id=f"G{i}", grade="A+", edge=f"0.{13 + i:02d}")
+             for i in range(6)]
     legs = PostingFormatter.select_parlay_of_day(picks)
-    assert 3 <= len(legs) <= 6
+    assert 3 <= len(legs) <= 4
     # Distinct games only.
     assert len({p.game_id for p in legs}) == len(legs)
 
