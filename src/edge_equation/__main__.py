@@ -60,6 +60,10 @@ from edge_equation.persistence.db import Database
 from edge_equation.persistence.pick_store import PickStore
 from edge_equation.persistence.realization_store import RealizationStore
 from edge_equation.posting.ai_graphic_prompt import build_ai_graphic_prompt
+from edge_equation.posting.grade_track_record import (
+    compute_track_record,
+    format_track_record,
+)
 from edge_equation.posting.ledger import LedgerStore
 from edge_equation.posting.ledger_recap import (
     collect_yesterday_recap,
@@ -391,6 +395,17 @@ def _cmd_premium_daily(args: argparse.Namespace) -> int:
         recap_data = recap_to_public_dict(recap)
         recap_text = format_daily_recap(recap, run_dt)
 
+        # Grade Track Record: historical hit rate per-(sport, grade)
+        # scoped to whichever sports actually appear in today's picks.
+        # Shows subscribers the provable base rate behind each A+ / A /
+        # A- label on the day's slate. Empty on fresh-deploy days and
+        # the renderer skips the section gracefully.
+        today_sports = sorted({p.sport for p in all_picks if p.sport})
+        track_records = compute_track_record(
+            conn, sports=today_sports or None,
+        )
+        track_record_text = format_track_record(track_records)
+
         card = PostingFormatter.build_card(
             card_type="premium_daily",
             picks=all_picks,
@@ -399,6 +414,8 @@ def _cmd_premium_daily(args: argparse.Namespace) -> int:
             engine_health=health,
             daily_recap=recap_data,
             daily_recap_text=recap_text,
+            grade_track_record=[r.to_dict() for r in track_records],
+            grade_track_record_text=track_record_text,
         )
 
         # File-only failsafe: the primary leg here is SMTP, so routing

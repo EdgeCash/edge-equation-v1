@@ -63,10 +63,17 @@ class PublicModeSanitizer:
         if not pick:
             return {}
         out = {k: v for k, v in pick.items() if k not in FORBIDDEN_PICK_FIELDS}
-        # Remove the raw_universal_sum audit field from metadata in public mode.
+        # Strip internal audit fields from metadata in public mode:
+        #   raw_universal_sum -- pre-calibration composite, premium-only.
+        #   feature_inputs    -- the numeric inputs the engine consumed;
+        #                        premium subscribers see them as the
+        #                        "why this pick" receipt.
         meta = out.get("metadata")
         if isinstance(meta, dict):
-            scrubbed = {k: v for k, v in meta.items() if k != "raw_universal_sum"}
+            scrubbed = {
+                k: v for k, v in meta.items()
+                if k not in ("raw_universal_sum", "feature_inputs")
+            }
             out["metadata"] = scrubbed
         return out
 

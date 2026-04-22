@@ -118,6 +118,76 @@ def _render_pick_line(p: dict) -> str:
     return "  ".join(parts)
 
 
+# Keys inside pick.metadata["feature_inputs"] that should surface in
+# the premium "Inputs:" row. Order matters for the rendered string --
+# strength first, then pace / offensive / defensive, then home-field
+# or universal-feature extras. Any key not in this list falls through
+# to be rendered last in sorted order.
+_FEATURE_DISPLAY_ORDER = (
+    "strength_home", "strength_away",
+    "pace", "off_env", "def_env",
+    "home_adv", "dixon_coles_adj", "home_edge",
+    "rate", "matchup_exploit",
+)
+
+# Short, reader-friendly labels for the feature keys the engine uses.
+# Anything not mapped here falls back to the raw key.
+_FEATURE_LABEL = {
+    "strength_home": "str(H)",
+    "strength_away": "str(A)",
+    "pace": "pace",
+    "off_env": "off",
+    "def_env": "def",
+    "home_adv": "home_adv",
+    "dixon_coles_adj": "dc_adj",
+    "home_edge": "home_edge",
+    "rate": "rate",
+    "matchup_exploit": "matchup",
+}
+
+
+def _render_feature_inputs(meta: Optional[dict]) -> Optional[str]:
+    """Compact one-line render of a pick's feature_inputs dict:
+
+        Inputs: str(H) 1.32 · str(A) 1.15 · home_adv 0.115 · home_edge 0.085
+
+    Returns None when no feature_inputs exist (public-mode picks, or
+    legacy picks from before Phase 26 introduced the stash). Values
+    are rendered with 3 decimal places where possible and otherwise
+    passed through as strings.
+    """
+    if not meta:
+        return None
+    fi = meta.get("feature_inputs")
+    if not isinstance(fi, dict) or not fi:
+        return None
+
+    def _fmt(v) -> str:
+        try:
+            d = Decimal(str(v))
+            return str(d.quantize(Decimal("0.001")))
+        except Exception:
+            return str(v)
+
+    ordered_keys: List[str] = []
+    for k in _FEATURE_DISPLAY_ORDER:
+        if k in fi:
+            ordered_keys.append(k)
+    extras = sorted(set(fi.keys()) - set(ordered_keys))
+    ordered_keys.extend(extras)
+
+    bits: List[str] = []
+    for k in ordered_keys:
+        v = fi[k]
+        if v in (None, "", "None"):
+            continue
+        label = _FEATURE_LABEL.get(k, k)
+        bits.append(f"{label} {_fmt(v)}")
+    if not bits:
+        return None
+    return "Inputs: " + " · ".join(bits)
+
+
 def _render_pick_block(p: dict) -> List[str]:
     """Premium deep-dive rendering for one pick. Shows every input the
     subscriber needs to audit WHY the engine flagged it:
@@ -126,6 +196,7 @@ def _render_pick_block(p: dict) -> List[str]:
              Consensus: NYY (-115)
              Fair 58.2% · Implied 53.5% · Edge +4.7% · Kelly 2.8%
              HFA +0.062 · Decay tau/2 26d
+             Inputs: str(H) 1.320 · str(A) 1.150 · home_adv 0.115
              Read: [analytical read from metadata, or baseline context]
 
     "cannot-miss" premium feel comes from the density + honesty --
@@ -187,6 +258,13 @@ def _render_pick_block(p: dict) -> List[str]:
         ctx_bits.append(f"Decay tau/2 {decay}d")
     if ctx_bits:
         lines.append("     " + " · ".join(ctx_bits))
+
+    # Inputs -- the numeric feature contributions the engine consumed.
+    # This is the premium "show your work" row; absent on public_mode
+    # picks because the sanitizer strips feature_inputs.
+    inputs_line = _render_feature_inputs(meta)
+    if inputs_line:
+        lines.append(f"     {inputs_line}")
 
     # Read -- the analytical "why" the subscriber's paying for. Falls
     # back to a factual baseline when the engine didn't stash one.
@@ -313,6 +391,11 @@ def format_premium_daily(card: dict) -> str:
     spotlight = card.get("spotlight")
     prop_section = (card.get("player_prop_projections") or {}).get("text") or ""
     recap_section = (card.get("daily_recap") or {}).get("text") or ""
+    # Historical hit rate receipts, rendered at the top of the email so
+    # every grade label downstream carries its own audit trail.
+    track_record_section = (
+        (card.get("grade_track_record") or {}).get("text") or ""
+    )
 
     out: List[str] = []
     out.append(headline.upper())
@@ -333,6 +416,14 @@ def format_premium_daily(card: dict) -> str:
     if recap_section:
         out.append("=== YESTERDAY'S LEDGER ===")
         out.append(recap_section.rstrip())
+        out.append("")
+
+    # 2b. Grade Track Record -- per-(sport, grade) historical hit rate
+    # so every downstream grade label is backed by a real base rate.
+    # The section is skipped when the DB has no settled picks yet
+    # (fresh-deploy days).
+    if track_record_section:
+        out.append(track_record_section.rstrip())
         out.append("")
 
     # 3. Daily Edge: all A+ / A / A- picks, grouped by grade tier,
