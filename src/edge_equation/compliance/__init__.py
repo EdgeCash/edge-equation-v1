@@ -24,6 +24,7 @@ from edge_equation.compliance.checker import (
     ComplianceReport,
     compliance_test,
     FORBIDDEN_TERMS,
+    LEDGER_FOOTER_RE,
 )
 
 
@@ -34,4 +35,5 @@ __all__ = [
     "ComplianceReport",
     "compliance_test",
     "FORBIDDEN_TERMS",
+    "LEDGER_FOOTER_RE",
 ]

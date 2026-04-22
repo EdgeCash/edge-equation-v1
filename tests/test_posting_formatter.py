@@ -35,8 +35,11 @@ def _make_total_pick():
 
 
 def test_daily_edge_structure():
+    # Legacy structural test: uses mixed-grade fixtures that wouldn't
+    # pass Phase 20's Grade A/A+ filter. skip_filter=True preserves the
+    # pre-Phase-20 behavior for testing the card envelope shape.
     picks = [_make_ml_pick(), _make_total_pick()]
-    card = PostingFormatter.build_card("daily_edge", picks)
+    card = PostingFormatter.build_card("daily_edge", picks, skip_filter=True)
     assert card["card_type"] == "daily_edge"
     assert card["headline"] == CARD_TEMPLATES["daily_edge"]["headline"]
     assert card["subhead"] == CARD_TEMPLATES["daily_edge"]["subhead"]
@@ -51,10 +54,10 @@ def test_daily_edge_structure():
 def test_pick_order_preserved():
     pick1 = _make_ml_pick()
     pick2 = _make_total_pick()
-    card = PostingFormatter.build_card("daily_edge", [pick1, pick2])
+    card = PostingFormatter.build_card("daily_edge", [pick1, pick2], skip_filter=True)
     assert card["picks"][0]["market_type"] == "ML"
     assert card["picks"][1]["market_type"] == "Total"
-    card2 = PostingFormatter.build_card("daily_edge", [pick2, pick1])
+    card2 = PostingFormatter.build_card("daily_edge", [pick2, pick1], skip_filter=True)
     assert card2["picks"][0]["market_type"] == "Total"
     assert card2["picks"][1]["market_type"] == "ML"
 
@@ -62,7 +65,9 @@ def test_pick_order_preserved():
 def test_summary_reports_best_grade_and_max_edge():
     ml_pick = _make_ml_pick()
     total_pick = _make_total_pick()
-    card = PostingFormatter.build_card("daily_edge", [total_pick, ml_pick])
+    card = PostingFormatter.build_card(
+        "daily_edge", [total_pick, ml_pick], skip_filter=True,
+    )
     assert card["summary"]["grade"] in ("A+", "A", "B", "C")
     assert card["summary"]["edge"] == str(ml_pick.edge)
     assert card["summary"]["kelly"] == str(ml_pick.kelly)
@@ -71,7 +76,11 @@ def test_summary_reports_best_grade_and_max_edge():
 def test_all_card_types_buildable():
     pick = _make_ml_pick()
     for card_type in CARD_TEMPLATES.keys():
-        card = PostingFormatter.build_card(card_type, [pick])
+        # multi_leg_projection requires 3-6 legs; skip here (covered by
+        # test_posting_formatter_phase20).
+        if card_type == "multi_leg_projection":
+            continue
+        card = PostingFormatter.build_card(card_type, [pick], skip_filter=True)
         assert card["card_type"] == card_type
         assert card["headline"] == CARD_TEMPLATES[card_type]["headline"]
         assert card["tagline"] == TAGLINE
