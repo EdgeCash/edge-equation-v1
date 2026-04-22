@@ -1,0 +1,101 @@
+name: Results Settler (2am CT)
+
+# Nightly results job. Pulls completed-game scores from TheSportsDB
+# (free tier, no auth key) into GameResultsStore, then settles every
+# still-pending pick's realization against the new scores.
+#
+# Why 2am CT: every domestic slate (MLB/NBA/NFL/NHL) is over by
+# roughly midnight Eastern, and TheSportsDB typically finalizes
+# scores within a couple hours. 2am CT gives the provider a safe
+# margin without delaying the 7am CT refresher's strength ratings.
+#
+# DST-aware: dual cron pair + stdlib-zoneinfo CT-hour guard picks
+# exactly one line per day.
+#
+# The refresher's SQLite cache is READ-only in this job -- the
+# settler writes results locally then saves its own cache entry
+# with a unique key (Phase 26c pattern) so the next morning's
+# refresher and cadence reads pick it up.
+
+on:
+  schedule:
+    - cron: "0 7 * * *"    # 02:00 CT during CDT (Mar-Nov)
+    - cron: "0 8 * * *"    # 02:00 CT during CST (Nov-Mar)
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Days back to scan"
+        default: "1"
+      backfill:
+        description: "Seed mode -- scan N days historical (true/false)"
+        default: "false"
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    env:
+      EDGE_EQUATION_DB:        ${{ secrets.EDGE_EQUATION_DB || 'edge_equation.db' }}
+      TURSO_AUTH_TOKEN:        ${{ secrets.TURSO_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: CT-hour guard
+        id: guard
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          now = datetime.now(ZoneInfo("America/Chicago"))
+          print(f"should_run={'true' if now.hour == 2 else 'false'}")
+          print(f"ct_hour={now.hour}")
+          PY
+
+      - name: Install package
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Restore SQLite from cache (read-only)
+        if: steps.guard.outputs.should_run == 'true'
+        # Read-only restore with never-matching key + prefix fallback,
+        # matching the Phase 26c pattern. The settler then runs, then
+        # we save our own unique key below so the next morning's
+        # refresher + cadence runs see the fresh game_results.
+        uses: actions/cache/restore@v4
+        with:
+          path: edge_equation.db
+          key: edge-equation-db-${{ github.ref_name }}-settler-${{ github.run_id }}
+          restore-keys: |
+            edge-equation-db-${{ github.ref_name }}-
+            edge-equation-db-
+
+      - name: Settle completed games
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          DAYS_FLAG="--days ${{ inputs.days || 1 }}"
+          BACKFILL_FLAG=""
+          if [ "${{ inputs.backfill }}" = "true" ]; then
+            BACKFILL_FLAG="--backfill"
+          fi
+          python -m edge_equation auto-settle $DAYS_FLAG $BACKFILL_FLAG
+
+      - name: Save settled SQLite to a unique cache key
+        # Alongside the data-refresher, the settler is the SECOND writer
+        # to the shared SQLite cache. Both use unique per-run keys; all
+        # readers fall through to the restore-keys prefix match so they
+        # pick up whichever was most recent.
+        if: steps.guard.outputs.should_run == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: edge_equation.db
+          key: edge-equation-db-${{ github.ref_name }}-${{ github.run_id }}

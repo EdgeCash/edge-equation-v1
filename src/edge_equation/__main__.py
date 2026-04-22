@@ -328,6 +328,63 @@ def _cmd_refresh_data(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_auto_settle(args: argparse.Namespace) -> int:
+    """Nightly results job. Two things happen in lockstep:
+
+      1. Pull completed-game scores from TheSportsDB into
+         GameResultsStore so FeatureComposer has the history it needs
+         to produce strength ratings -- the engine is blind without
+         this, so every A+/A/A- grade depends on it.
+
+      2. Walk every still-pending pick and settle it against the
+         newly-ingested scores (ML, Total, Spread). Populates the
+         Season Ledger footer + Grade Track Record numbers.
+
+    --days controls how many days back to scan (default 1: just
+    yesterday). --backfill switches to seed mode (default 30 days).
+    """
+    from edge_equation.engine.realization import RealizationTracker
+    from edge_equation.stats.results import GameResultsStore
+    from edge_equation.stats.thesportsdb_ingest import (
+        TheSportsDBResultsIngestor,
+    )
+
+    conn = _open_db(args.db)
+    try:
+        days = int(args.days)
+        backfill = bool(args.backfill)
+        if backfill:
+            summary = TheSportsDBResultsIngestor.backfill(conn, days=days)
+        else:
+            from datetime import date as _date, timedelta
+            target = _date.today() - timedelta(days=1)
+            summary = TheSportsDBResultsIngestor.ingest_day(conn, day=target)
+
+        settle = RealizationTracker.settle_picks_from_game_results(conn)
+        totals_by_league = {}
+        for league in ("MLB", "NFL", "NHL", "NBA", "KBO", "NPB"):
+            totals_by_league[league] = GameResultsStore.count_by_league(conn, league)
+    finally:
+        conn.close()
+
+    print(json.dumps({
+        "mode": "backfill" if backfill else "nightly",
+        "ingest": summary.to_dict(),
+        "settled_picks": settle,
+        "game_results_by_league": totals_by_league,
+    }, indent=2, default=str))
+    return 0
+
+
+def _cmd_backfill_results(args: argparse.Namespace) -> int:
+    """One-shot seed of historical game results. Forwards to the
+    auto-settle machinery with backfill=True and a longer default
+    window so a fresh deploy can populate ~30 days of history in
+    a single run."""
+    args.backfill = True
+    return _cmd_auto_settle(args)
+
+
 def _cmd_premium_daily(args: argparse.Namespace) -> int:
     """
     Build the Premium Daily email: every A+ / A / A- pick, parlay of
@@ -601,6 +658,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma-separated slate names to refresh (default: domestic,overseas)",
     )
     p_refresh.set_defaults(func=_cmd_refresh_data)
+
+    p_auto = sub.add_parser(
+        "auto-settle",
+        help="Pull yesterday's completed scores from TheSportsDB -> "
+             "GameResultsStore, then settle matching picks' realization "
+             "by comparing scores to each pick's selection. Runs nightly.",
+    )
+    p_auto.add_argument("--db", type=str, default=None)
+    p_auto.add_argument("--days", type=int, default=1,
+                        help="Days back from today to scan (default 1).")
+    p_auto.add_argument("--backfill", action="store_true", default=False,
+                        help="Seed mode: scan --days days back (default 30 "
+                             "when used with backfill-results).")
+    p_auto.set_defaults(func=_cmd_auto_settle)
+
+    p_backfill = sub.add_parser(
+        "backfill-results",
+        help="One-time seed of historical game results (default 30 days).",
+    )
+    p_backfill.add_argument("--db", type=str, default=None)
+    p_backfill.add_argument("--days", type=int, default=30)
+    p_backfill.set_defaults(func=_cmd_backfill_results)
 
     p_settle = sub.add_parser("settle", help="Record outcomes and settle picks")
     p_settle.add_argument("outcomes_csv")
