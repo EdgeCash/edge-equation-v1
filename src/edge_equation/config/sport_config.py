@@ -33,6 +33,12 @@ SPORT_CONFIG = {
         "pitching_weight": Decimal('0.55'),
         "bullpen_weight": Decimal('0.20'),
         "home_adv": Decimal('0.115'),
+        "strength_blend": {
+            "pyth": Decimal('0.55'),
+            "form": Decimal('0.20'),
+            "elo": Decimal('0.15'),
+            "pitching": Decimal('0.10'),
+        },
     },
     "KBO": {
         "markets": ["ML", "Run_Line", "Total", "HR", "K", "NRFI", "YRFI"],
@@ -45,6 +51,12 @@ SPORT_CONFIG = {
         "pitching_weight": Decimal('0.55'),
         "bullpen_weight": Decimal('0.20'),
         "home_adv": Decimal('0.115'),
+        "strength_blend": {
+            "pyth": Decimal('0.55'),
+            "form": Decimal('0.20'),
+            "elo": Decimal('0.15'),
+            "pitching": Decimal('0.10'),
+        },
     },
     "NPB": {
         "markets": ["ML", "Run_Line", "Total", "HR", "K", "NRFI", "YRFI"],
@@ -57,6 +69,12 @@ SPORT_CONFIG = {
         "pitching_weight": Decimal('0.55'),
         "bullpen_weight": Decimal('0.20'),
         "home_adv": Decimal('0.115'),
+        "strength_blend": {
+            "pyth": Decimal('0.55'),
+            "form": Decimal('0.20'),
+            "elo": Decimal('0.15'),
+            "pitching": Decimal('0.10'),
+        },
     },
     "NFL": {
         "markets": ["ML", "Spread", "Total", "Passing_Yards", "Rushing_Yards", "Receiving_Yards"],
@@ -67,6 +85,12 @@ SPORT_CONFIG = {
         "decay_lambda": Decimal('0.92'),
         "form_window_games": 5,
         "home_adv": Decimal('0.150'),
+        "strength_blend": {
+            "pyth": Decimal('0.40'),
+            "form": Decimal('0.30'),
+            "elo": Decimal('0.30'),
+            "pitching": Decimal('0.00'),
+        },
     },
     "NCAA_Football": {
         "markets": ["ML", "Spread", "Total", "Passing_Yards", "Rushing_Yards"],
@@ -77,6 +101,12 @@ SPORT_CONFIG = {
         "decay_lambda": Decimal('0.92'),
         "form_window_games": 5,
         "home_adv": Decimal('0.160'),
+        "strength_blend": {
+            "pyth": Decimal('0.40'),
+            "form": Decimal('0.30'),
+            "elo": Decimal('0.30'),
+            "pitching": Decimal('0.00'),
+        },
     },
     "NCAA_Basketball": {
         "markets": ["ML", "Spread", "Total", "Points", "Rebounds", "Assists"],
@@ -87,6 +117,12 @@ SPORT_CONFIG = {
         "decay_lambda": Decimal('0.93'),
         "form_window_games": 10,
         "home_adv": Decimal('0.170'),
+        "strength_blend": {
+            "pyth": Decimal('0.45'),
+            "form": Decimal('0.25'),
+            "elo": Decimal('0.30'),
+            "pitching": Decimal('0.00'),
+        },
     },
     "Soccer": {
         "markets": ["ML", "Total", "BTTS"],
@@ -97,6 +133,12 @@ SPORT_CONFIG = {
         "decay_lambda": Decimal('0.94'),
         "form_window_games": 10,
         "home_adv": Decimal('0.130'),
+        "strength_blend": {
+            "pyth": Decimal('0.40'),
+            "form": Decimal('0.30'),
+            "elo": Decimal('0.30'),
+            "pitching": Decimal('0.00'),
+        },
     },
     "NHL": {
         "markets": ["ML", "Puck_Line", "Total", "SOG"],
@@ -107,6 +149,12 @@ SPORT_CONFIG = {
         "decay_lambda": Decimal('0.94'),
         "form_window_games": 10,
         "home_adv": Decimal('0.100'),
+        "strength_blend": {
+            "pyth": Decimal('0.40'),
+            "form": Decimal('0.30'),
+            "elo": Decimal('0.30'),
+            "pitching": Decimal('0.00'),
+        },
     },
 }
 
@@ -163,3 +211,14 @@ class SportConfig:
     @staticmethod
     def home_adv(sport: str):
         return SportConfig.require(sport, "home_adv")
+
+    @staticmethod
+    def strength_blend(sport: str) -> dict:
+        """
+        Component-weight dict for TeamStrengthBuilder:
+            {"pyth": D, "form": D, "elo": D, "pitching": D}
+        All values Decimal; sum to 1.0 per sport. For non-baseball sports
+        pitching is 0 (we don't have a pitching stats source yet and the
+        concept is baseball-family-specific).
+        """
+        return dict(SportConfig.require(sport, "strength_blend"))

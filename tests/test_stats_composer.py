@@ -72,14 +72,18 @@ def test_compose_scoped_to_league():
 
 
 def test_compose_supplied_elo_is_used():
+    # Phase 19: strength now blends Pythagorean + form + Elo + pitching.
+    # With empty results, Pythagorean/form are unavailable and the Elo
+    # component carries the full weight -> strength == rating_to_strength.
     elo = EloRatings(
         league="KBO",
         ratings={"A": Decimal('1700'), "B": Decimal('1500')},
         games_seen={"A": 10, "B": 10},
     )
     features = FeatureComposer.compose("A", "B", "KBO", [], elo=elo)
-    # 200 elo point favorite -> strength ~= e^0.5
-    assert abs(features.ml_inputs["strength_home"] - math.exp(0.5)) < 1e-9
+    assert abs(features.ml_inputs["strength_home"] - math.exp(0.5)) < 1e-4
+    # Away team at starting Elo -> strength 1.0.
+    assert abs(features.ml_inputs["strength_away"] - 1.0) < 1e-4
 
 
 def test_compose_to_dict_roundtrip():

@@ -73,3 +73,43 @@ def test_soccer_uses_low_pythagorean():
 def test_nba_family_uses_oliver_exponent():
     # Dean Oliver's ~13.91 for basketball scoring.
     assert SPORT_CONFIG["NCAA_Basketball"]["pythagorean_exponent"] > Decimal('10')
+
+
+# ------------------------------------------------ Phase 19: strength_blend
+
+
+def test_every_sport_has_strength_blend():
+    required = ("pyth", "form", "elo", "pitching")
+    for sport, cfg in SPORT_CONFIG.items():
+        blend = cfg.get("strength_blend")
+        assert blend is not None, f"{sport} missing strength_blend"
+        for key in required:
+            assert key in blend, f"{sport} blend missing {key}"
+
+
+def test_strength_blend_weights_sum_to_one():
+    for sport, cfg in SPORT_CONFIG.items():
+        blend = cfg["strength_blend"]
+        total = sum(blend.values())
+        assert abs(total - Decimal('1')) < Decimal('0.00001'), (
+            f"{sport} strength_blend sums to {total}, expected 1.0"
+        )
+
+
+def test_baseball_family_puts_pitching_nonzero():
+    for sport in ("MLB", "KBO", "NPB"):
+        assert SPORT_CONFIG[sport]["strength_blend"]["pitching"] > Decimal('0')
+
+
+def test_non_baseball_has_zero_pitching_weight():
+    for sport in ("NFL", "NCAA_Football", "NCAA_Basketball", "Soccer", "NHL"):
+        assert SPORT_CONFIG[sport]["strength_blend"]["pitching"] == Decimal('0')
+
+
+def test_sport_config_strength_blend_helper():
+    blend = SportConfig.strength_blend("MLB")
+    assert blend["pyth"] == Decimal('0.55')
+    assert blend["pitching"] == Decimal('0.10')
+    # Returned dict is a copy -- mutating it must not leak back.
+    blend["pyth"] = Decimal('99')
+    assert SPORT_CONFIG["MLB"]["strength_blend"]["pyth"] == Decimal('0.55')

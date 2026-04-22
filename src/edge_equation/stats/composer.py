@@ -67,23 +67,36 @@ class FeatureComposer:
         league: str,
         results: List[GameResult],
         elo: Optional[EloRatings] = None,
+        home_pitching=None,
+        away_pitching=None,
     ) -> ComposedFeatures:
+        """
+        Phase 19: runs the full TeamStrengthBuilder blend (Pythagorean +
+        decay-weighted form + Elo + optional pitching) instead of mapping
+        Elo straight to BT strength. Pure function of (home, away, league,
+        results, elo, pitching). home_adv comes from SPORT_CONFIG.
+        """
+        from edge_equation.config.sport_config import SportConfig
+        from edge_equation.stats.team_strength import TeamStrengthBuilder
+
         scoped = [r for r in results if r.league == league]
         if elo is None:
             elo = EloCalculator.replay(league, scoped)
         matchup = TeamStats.matchup_factors(home, away, league, scoped)
 
-        home_rating = elo.rating_for(home)
-        away_rating = elo.rating_for(away)
-        strength_home = FeatureComposer.rating_to_strength(home_rating)
-        strength_away = FeatureComposer.rating_to_strength(away_rating)
+        home_strength = TeamStrengthBuilder.build(
+            team=home, league=league, results=scoped, elo=elo,
+            pitching=home_pitching,
+        )
+        away_strength = TeamStrengthBuilder.build(
+            team=away, league=league, results=scoped, elo=elo,
+            pitching=away_pitching,
+        )
 
         ml_inputs = {
-            "strength_home": float(strength_home),
-            "strength_away": float(strength_away),
-            # home_adv is left to the HFA module / context layer to populate;
-            # we keep it at the engine's default here.
-            "home_adv": 0.115,
+            "strength_home": float(home_strength.strength),
+            "strength_away": float(away_strength.strength),
+            "home_adv": float(SportConfig.home_adv(league)),
         }
         totals_inputs = {
             "off_env": float(matchup.off_env),
