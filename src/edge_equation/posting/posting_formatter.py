@@ -295,6 +295,8 @@ class PostingFormatter:
         engine_health: Optional[dict] = None,
         daily_recap: Optional[dict] = None,
         daily_recap_text: Optional[str] = None,
+        grade_track_record: Optional[dict] = None,
+        grade_track_record_text: Optional[str] = None,
     ) -> dict:
         """
         Build a card payload. Behavior by card_type:
@@ -425,6 +427,14 @@ class PostingFormatter:
                 card["daily_recap"] = {
                     "data": dict(daily_recap) if daily_recap else {},
                     "text": daily_recap_text or "",
+                }
+            # Grade Track Record: per-(sport, grade) historical hit
+            # rate receipts. Premium-only section -- free content
+            # never carries raw win/loss counts by sport.
+            if grade_track_record or grade_track_record_text:
+                card["grade_track_record"] = {
+                    "data": list(grade_track_record) if grade_track_record else [],
+                    "text": grade_track_record_text or "",
                 }
 
         # The 9am Ledger card carries yesterday's cross-slot recap. The

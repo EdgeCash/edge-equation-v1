@@ -100,6 +100,15 @@ class BettingEngine:
             metadata={
                 "raw_universal_sum": str(fv.get("raw_universal_sum"))
                     if fv.get("raw_universal_sum") is not None else None,
+                # Premium "why this pick" audit trail: the exact numeric
+                # feature inputs the engine consumed to produce this
+                # projection. Stashed verbatim (as stringified Decimals)
+                # so the posting renderer can surface them. Free content
+                # strips this via PublicModeSanitizer; premium keeps it.
+                "feature_inputs": {
+                    **{k: str(v) for k, v in (bundle.inputs or {}).items()},
+                    **{k: str(v) for k, v in (bundle.universal_features or {}).items()},
+                },
                 **dict(bundle.metadata),
             },
         )
