@@ -280,12 +280,19 @@ class PremiumFormatter:
         picks = card.get("picks") or []
         tagline = card.get("tagline") or ""
         prop_section = (card.get("player_prop_projections") or {}).get("text") or ""
+        # Ledger card: yesterday's cross-slot recap renders above the
+        # (typically empty) picks block. The Season Ledger (all-time)
+        # footer stays where it is -- inside `tagline` at the very end.
+        recap_section = (card.get("daily_recap") or {}).get("text") or ""
 
         out: List[str] = []
         out.append(headline.upper())
         if subhead:
             out.append(subhead)
         out.append("")
+        if recap_section:
+            out.append(recap_section)
+            out.append("")
         for p in picks:
             out.extend(PremiumFormatter._public_pick_block(p))
             out.append("")

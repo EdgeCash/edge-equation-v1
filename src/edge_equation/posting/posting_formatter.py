@@ -83,7 +83,7 @@ CARD_TEMPLATES = {
     # --- Premium (subscriber email only; never posted to X)
     "premium_daily": {
         "headline": "Premium Daily Edge",
-        "subhead": "Full analytical read: every A+ / A / A- game, parlay of the day, top 6 DFS props, and yesterday's engine hit rate.",
+        "subhead": "Full analytical read: yesterday's Ledger recap, every A+ / A / A- projection, Spotlight deep dive, Player Prop Projections, parlay of the day, and engine hit rate.",
     },
 }
 
@@ -283,6 +283,8 @@ class PostingFormatter:
         prior_picks: Optional[Sequence[Pick]] = None,
         skip_filter: bool = False,
         engine_health: Optional[dict] = None,
+        daily_recap: Optional[dict] = None,
+        daily_recap_text: Optional[str] = None,
     ) -> dict:
         """
         Build a card payload. Behavior by card_type:
@@ -378,6 +380,49 @@ class PostingFormatter:
             card["top_props"] = [p.to_dict() for p in top_props]
             if engine_health is not None:
                 card["engine_health"] = dict(engine_health)
+            # Spotlight pick for the "deep dive" premium section. Reused
+            # from the free Spotlight selector so subscribers see the
+            # same game the 4pm X post highlights.
+            from edge_equation.posting.spotlight import select_spotlight_game
+            spot = select_spotlight_game(unfiltered_picks_for_props)
+            card["spotlight"] = {
+                "game_id": spot.game_id,
+                "sport": spot.sport,
+                "picks": [p.to_dict() for p in spot.picks],
+                "trend_score": str(spot.trend_score),
+            }
+            # Player Prop Projections: same brand-exact pipe format as
+            # the free card -- no DFS / app mentions -- but premium keeps
+            # it analytically rich via the adjacent edge/Kelly block on
+            # the full slate.
+            from edge_equation.posting.player_props import (
+                render_prop_section, select_prop_projections,
+            )
+            prop_picks = select_prop_projections(unfiltered_picks_for_props)
+            if prop_picks:
+                card["player_prop_projections"] = {
+                    "picks": [p.to_dict() for p in prop_picks],
+                    "text": render_prop_section(
+                        prop_picks, date_str=generated_at,
+                    ),
+                }
+            # Yesterday's cross-slot Ledger recap: premium gets the full
+            # recap even though this is a premium-mode card, because
+            # subscribers want everything in one email.
+            if daily_recap or daily_recap_text:
+                card["daily_recap"] = {
+                    "data": dict(daily_recap) if daily_recap else {},
+                    "text": daily_recap_text or "",
+                }
+
+        # The 9am Ledger card carries yesterday's cross-slot recap. The
+        # Season Ledger footer (all-time) is separately injected via
+        # ledger_stats when public_mode is on, below.
+        if card_type == "the_ledger" and (daily_recap or daily_recap_text):
+            card["daily_recap"] = {
+                "data": dict(daily_recap) if daily_recap else {},
+                "text": daily_recap_text or "",
+            }
 
         # Player Prop Projections section for the 4pm Spotlight and 11am
         # Daily Edge public cards. Falls out to an empty section (and

@@ -22,6 +22,7 @@ import pytest
 
 from edge_equation.engine.scheduled_runner import (
     CARD_TYPE_DAILY,
+    CARD_TYPE_OVERSEAS_EDGE,
     ScheduledRunner,
 )
 from edge_equation.persistence.db import Database
@@ -85,8 +86,11 @@ def test_csv_slate_with_results_history_produces_picks(conn, tmp_path):
     _seed_kbo_results(conn)
     _write_kbo_slate_csv(tmp_path)
 
+    # Phase 24 slate separation: KBO is overseas-only; run it through
+    # CARD_TYPE_OVERSEAS_EDGE so the runner's off-slate filter doesn't
+    # strip the whole league.
     summary = ScheduledRunner.run(
-        card_type=CARD_TYPE_DAILY,
+        card_type=CARD_TYPE_OVERSEAS_EDGE,
         conn=conn,
         run_datetime=RUN_DT,
         leagues=["KBO"],
@@ -110,7 +114,7 @@ def test_csv_slate_without_results_history_still_persists_slate(conn, tmp_path):
     _write_kbo_slate_csv(tmp_path)
 
     summary = ScheduledRunner.run(
-        card_type=CARD_TYPE_DAILY,
+        card_type=CARD_TYPE_OVERSEAS_EDGE,
         conn=conn,
         run_datetime=RUN_DT,
         leagues=["KBO"],
@@ -129,7 +133,7 @@ def test_stronger_home_team_gets_home_prob_above_half(conn, tmp_path):
     _write_kbo_slate_csv(tmp_path)
 
     summary = ScheduledRunner.run(
-        card_type=CARD_TYPE_DAILY, conn=conn, run_datetime=RUN_DT,
+        card_type=CARD_TYPE_OVERSEAS_EDGE, conn=conn, run_datetime=RUN_DT,
         leagues=["KBO"], csv_dir=str(tmp_path), prefer_mock=False,
     )
     picks = PickStore.list_by_slate(conn, summary.slate_id)
@@ -152,7 +156,7 @@ def test_shipped_kbo_results_csv_parses_and_is_usable(conn, tmp_path):
     # Feed the upcoming-games CSV too.
     _write_kbo_slate_csv(tmp_path)
     summary = ScheduledRunner.run(
-        card_type=CARD_TYPE_DAILY, conn=conn, run_datetime=RUN_DT,
+        card_type=CARD_TYPE_OVERSEAS_EDGE, conn=conn, run_datetime=RUN_DT,
         leagues=["KBO"], csv_dir=str(tmp_path), prefer_mock=False,
     )
     # With ~10 games of history per team, the composer produces features
@@ -222,8 +226,9 @@ def test_cli_load_results_and_run(tmp_path, monkeypatch, capsys):
 
     assert main(["load-results", str(results_csv), "--db", db_path]) == 0
     capsys.readouterr()
+    # Phase 24 slate separation: KBO ingestion runs through overseas.
     assert main([
-        "daily", "--db", db_path, "--leagues", "KBO",
+        "overseas", "--db", db_path, "--leagues", "KBO",
         "--csv-dir", str(tmp_path),
     ]) == 0
     out = capsys.readouterr().out

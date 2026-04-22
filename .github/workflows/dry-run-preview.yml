@@ -14,8 +14,8 @@ on:
   workflow_dispatch:
     inputs:
       leagues:
-        description: "Comma-separated league codes for Ledger/Daily/Spotlight/Evening"
-        default: "MLB,NFL,NHL,NBA,KBO,NPB"
+        description: "US-majors leagues for Ledger/Daily/Spotlight/Evening (overseas goes through its own slate)"
+        default: "MLB,NFL,NHL,NBA"
       overseas_leagues:
         description: "Overseas leagues (KBO/NPB/EPL/UCL)"
         default: "KBO,NPB"

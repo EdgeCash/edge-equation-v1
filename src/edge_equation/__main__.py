@@ -50,6 +50,8 @@ from edge_equation.engine.scheduled_runner import (
     CARD_TYPE_OVERSEAS_EDGE,
     CARD_TYPE_SPOTLIGHT,
     DEFAULT_LEAGUES,
+    DOMESTIC_LEAGUES,
+    LEAGUES_FOR_CARD_TYPE,
     OVERSEAS_LEAGUES,
     ScheduledRunner,
     load_prior_daily_edge_picks,
@@ -59,6 +61,11 @@ from edge_equation.persistence.pick_store import PickStore
 from edge_equation.persistence.realization_store import RealizationStore
 from edge_equation.posting.ai_graphic_prompt import build_ai_graphic_prompt
 from edge_equation.posting.ledger import LedgerStore
+from edge_equation.posting.ledger_recap import (
+    collect_yesterday_recap,
+    format_daily_recap,
+    recap_to_public_dict,
+)
 from edge_equation.posting.posting_formatter import PostingFormatter
 from edge_equation.posting.premium_daily_body import format_premium_daily
 from edge_equation.publishing.email_publisher import EmailPublisher
@@ -125,11 +132,18 @@ def _compliance_gate(card: dict, card_type: str) -> Optional[int]:
 
 
 def _default_leagues_for(card_type: str, explicit: Optional[str]) -> List[str]:
+    """Resolve the league list for a cadence card.
+
+    Slate separation is enforced here: every US-majors cadence card
+    (Ledger, Daily Edge, Spotlight, Evening Edge) defaults to
+    DOMESTIC_LEAGUES, while Overseas Edge defaults to OVERSEAS_LEAGUES.
+    An explicit --leagues flag always wins so a maintainer can still
+    run cross-slate diagnostics manually.
+    """
     if explicit:
         return _parse_leagues(explicit)
-    if card_type == CARD_TYPE_OVERSEAS_EDGE:
-        return list(OVERSEAS_LEAGUES)
-    return list(DEFAULT_LEAGUES)
+    default = LEAGUES_FOR_CARD_TYPE.get(card_type, DOMESTIC_LEAGUES)
+    return list(default)
 
 
 def _email_preview_publisher(card_type: str) -> EmailPublisher:
@@ -161,10 +175,19 @@ def _run_slate(args: argparse.Namespace, card_type: str) -> int:
         run_dt = datetime.utcnow()
         leagues = _default_leagues_for(card_type, args.leagues)
         ledger_stats = None
+        daily_recap_data: Optional[dict] = None
+        daily_recap_text: Optional[str] = None
         if card_type == CARD_TYPE_LEDGER:
-            # The Ledger post is purely season-record + model-health; it
-            # doesn't consult any slate. Compute from already-settled picks.
+            # The Ledger post has two independent pieces:
+            #   1. The card BODY = yesterday's cross-slot recap of every
+            #      public projection we actually posted (Daily / Spotlight
+            #      / Evening / Overseas).
+            #   2. The FOOTER (same as every free post) = the all-time
+            #      Season Ledger W-L-T + ROI line.
             ledger_stats = LedgerStore.compute(conn)
+            recap = collect_yesterday_recap(conn, run_dt)
+            daily_recap_data = recap_to_public_dict(recap)
+            daily_recap_text = format_daily_recap(recap, run_dt)
         elif public_mode:
             # Every free-content card must carry the Season Ledger footer,
             # so compute it up front and flow it into build_card.
@@ -213,6 +236,8 @@ def _run_slate(args: argparse.Namespace, card_type: str) -> int:
             publishers=runner_publishers,
             force=getattr(args, "force", False),
             cached_only=getattr(args, "cached_only", False),
+            daily_recap=daily_recap_data,
+            daily_recap_text=daily_recap_text,
         )
 
         preview_dir = getattr(args, "preview_dir", None)
@@ -230,6 +255,8 @@ def _run_slate(args: argparse.Namespace, card_type: str) -> int:
                 public_mode=public_mode,
                 ledger_stats=ledger_stats,
                 prior_picks=resolved_prior,
+                daily_recap=daily_recap_data,
+                daily_recap_text=daily_recap_text,
             )
             preview_text = format_x_text(preview_card)
             out_dir = Path(preview_dir)
@@ -345,12 +372,21 @@ def _cmd_premium_daily(args: argparse.Namespace) -> int:
         yesterday = (run_dt - timedelta(days=1)).date().isoformat()
         health = RealizationTracker.hit_rate_since(conn, since_iso=yesterday)
 
+        # Yesterday's cross-slot recap: pulled in for subscribers so
+        # they see the previous day's publicly-posted projections plus
+        # outcomes inside the same premium email.
+        recap = collect_yesterday_recap(conn, run_dt)
+        recap_data = recap_to_public_dict(recap)
+        recap_text = format_daily_recap(recap, run_dt)
+
         card = PostingFormatter.build_card(
             card_type="premium_daily",
             picks=all_picks,
             generated_at=run_dt.isoformat(),
             public_mode=False,
             engine_health=health,
+            daily_recap=recap_data,
+            daily_recap_text=recap_text,
         )
 
         # File-only failsafe: the primary leg here is SMTP, so routing

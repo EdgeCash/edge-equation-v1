@@ -15,8 +15,8 @@ on:
   workflow_dispatch:
     inputs:
       leagues:
-        description: "Comma-separated league codes"
-        default: "MLB,NFL,NHL,NBA,KBO,NPB"
+        description: "Comma-separated US-majors league codes (Evening Edge is domestic-only)"
+        default: "MLB,NFL,NHL,NBA"
       publish:
         description: "Invoke real publishers (X, Discord, Email)?"
         default: "true"

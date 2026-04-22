@@ -1,17 +1,31 @@
 """
 Premium Daily email body renderer.
 
-Plain-text, multi-section, no emoji/divider flash. Sections:
-  1. Header (date, tagline)
-  2. Major Variance Signal banner (only when at least one Grade-A+
-     pick cleared the strict MVS thresholds)
-  3. Full slate: every A+ / A / A- pick (edge + Kelly visible)
-  4. Parlay of the day (3 legs from distinct games; combined decimal odds)
-  5. Top 6 DFS props (highest edge across prop markets)
-  6. Engine health: yesterday's hit rate + win/loss/push count
+Plain-text, multi-section, no emoji/divider flash. Everything a
+subscriber wants for the day in one email -- brand stays "Facts Not
+Feelings" throughout; no tout language.
 
-This is a subscriber-only view. It is NEVER posted to X; the premium-
-daily CLI subcommand emails it via SMTP.
+Sections (in order):
+  1. Header (date, tagline)
+  2. Major Variance Signal banner (only when any Grade-A+ pick cleared
+     the strict MVS thresholds)
+  3. Yesterday's Ledger recap (cross-slot summary of what we posted
+     publicly yesterday)
+  4. Daily Edge full slate: every A+ / A / A- pick with edge + Kelly
+     visible (premium is not public_mode, so the numbers stay on)
+  5. Spotlight deep dive: the day's trending game picks
+  6. Player Prop Projections: brand-exact pipe table, same format as
+     the free card -- no "DFS" or app mentions
+  7. Parlay of the Day: 3 legs from distinct games + combined odds
+  8. Engine Health: yesterday's hit rate + win/loss/push count
+
+Beta test destination is controlled by the standard SMTP_* env vars;
+EMAIL_TO defaults to ProfessorEdgeCash@gmail.com at the workflow
+level. To broaden distribution later, point EMAIL_TO at a list
+relay / transactional sender -- no code change needed.
+
+This view is NEVER posted to X; the premium-daily CLI subcommand
+emails it via SMTP.
 """
 from decimal import Decimal
 from typing import Iterable, List, Optional
@@ -172,6 +186,21 @@ def _render_mvs_block(tagged: List[dict]) -> List[str]:
     return lines
 
 
+def _render_spotlight_block(spot: Optional[dict]) -> List[str]:
+    """Surface the trending game's picks. Factual tone, same `[grade]
+    sport · market ...` row format as the full-slate block so the
+    reader parses it without a mode switch."""
+    if not spot or not spot.get("picks"):
+        return ["  (no single game crossed the Spotlight bar today)"]
+    game_id = spot.get("game_id") or ""
+    sport = spot.get("sport") or ""
+    header = f"  {sport}  ·  {game_id}" if game_id else f"  {sport}"
+    lines = [header]
+    for p in spot["picks"]:
+        lines.append(f"  {_render_pick_line(p)}")
+    return lines
+
+
 def format_premium_daily(card: dict) -> str:
     """Render the premium_daily card as a plain-text email body."""
     headline = card.get("headline") or "Premium Daily Edge"
@@ -182,8 +211,10 @@ def format_premium_daily(card: dict) -> str:
 
     picks = card.get("picks") or []
     parlay = card.get("parlay") or []
-    top_props = card.get("top_props") or []
     health = card.get("engine_health")
+    spotlight = card.get("spotlight")
+    prop_section = (card.get("player_prop_projections") or {}).get("text") or ""
+    recap_section = (card.get("daily_recap") or {}).get("text") or ""
 
     out: List[str] = []
     out.append(headline.upper())
@@ -193,28 +224,47 @@ def format_premium_daily(card: dict) -> str:
         out.append(subhead)
     out.append("")
 
+    # 1. Major Variance Signal banner (when firing). First thing the
+    # subscriber sees if the rare signal fires.
     mvs_firing = _mvs_picks(picks)
     if mvs_firing:
         out.extend(_render_mvs_block(mvs_firing))
 
-    out.append(f"=== FULL SLATE · A+ / A / A- ({len(picks)}) ===")
+    # 2. Yesterday's Ledger recap -- what we posted publicly yesterday
+    # with outcomes attached.
+    if recap_section:
+        out.append("=== YESTERDAY'S LEDGER ===")
+        out.append(recap_section.rstrip())
+        out.append("")
+
+    # 3. Daily Edge: all A+ / A / A- picks with edge + Kelly.
+    out.append(f"=== DAILY EDGE · A+ / A / A- ({len(picks)}) ===")
     if not picks:
         out.append("  (no qualifying picks today)")
     for p in picks:
         out.append(f"  {_render_pick_line(p)}")
     out.append("")
 
+    # 4. Spotlight deep dive.
+    out.append("=== SPOTLIGHT ===")
+    out.extend(_render_spotlight_block(spotlight))
+    out.append("")
+
+    # 5. Player Prop Projections section. Brand-exact pipe format; same
+    # as the free Daily Edge prop block, no DFS mentions, no Top-N
+    # language. Edge + Kelly stay on adjacent sections (full slate +
+    # parlay) so premium remains richer without renaming the section.
+    if prop_section:
+        out.append("=== PLAYER PROP PROJECTIONS ===")
+        out.append(prop_section.rstrip())
+        out.append("")
+
+    # 6. Parlay of the Day.
     out.append("=== PARLAY OF THE DAY ===")
     out.extend(_render_parlay_block(parlay))
     out.append("")
 
-    out.append(f"=== TOP {len(top_props) or 6} PROPS · DFS ===")
-    if not top_props:
-        out.append("  (no prop picks available today)")
-    for p in top_props:
-        out.append(f"  {_render_pick_line(p)}")
-    out.append("")
-
+    # 7. Engine Health.
     out.append("=== ENGINE HEALTH · YESTERDAY ===")
     out.extend(_render_engine_health(health))
     out.append("")

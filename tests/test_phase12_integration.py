@@ -19,6 +19,7 @@ from edge_equation.engine.realization import SETTLED_LOSS, SETTLED_WIN
 from edge_equation.engine.scheduled_runner import (
     CARD_TYPE_DAILY,
     CARD_TYPE_EVENING,
+    CARD_TYPE_OVERSEAS_EDGE,
     ScheduledRunner,
 )
 from edge_equation.persistence.db import Database
@@ -98,13 +99,16 @@ def test_dated_csv_overrides_mock(conn, tmp_path):
     )
     (tmp_path / "kbo_2026-04-20.csv").write_text(csv_body, encoding="utf-8")
 
+    # Phase 24 slate separation: KBO is overseas-only; swap the card
+    # type accordingly so the runner's off-slate filter doesn't drop
+    # the whole league out.
     summary = ScheduledRunner.run(
-        card_type=CARD_TYPE_DAILY,
+        card_type=CARD_TYPE_OVERSEAS_EDGE,
         conn=conn,
         run_datetime=RUN_DT,
         leagues=["KBO"],
         csv_dir=str(tmp_path),
-        prefer_mock=False,  # make sure the CSV wins over the default mock
+        prefer_mock=False,
     )
     assert summary.new_slate is True
     assert summary.n_games == 1

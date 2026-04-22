@@ -242,10 +242,14 @@ def test_settle_empty_db_returns_zero(conn):
 # --------------------------------------------------------- defaults
 
 
-def test_default_leagues_constant_is_reasonable():
+def test_default_leagues_constant_is_domestic_only():
+    # Phase 24: DEFAULT_LEAGUES now aliases DOMESTIC_LEAGUES. Overseas
+    # content lives on its own slate so KBO/NPB never leak into the
+    # Daily Edge card.
     assert "MLB" in DEFAULT_LEAGUES
-    assert "KBO" in DEFAULT_LEAGUES
-    assert len(DEFAULT_LEAGUES) >= 5
+    assert "KBO" not in DEFAULT_LEAGUES
+    assert "NPB" not in DEFAULT_LEAGUES
+    assert len(DEFAULT_LEAGUES) == 4
 
 
 def test_valid_card_types_constant():
