@@ -100,7 +100,8 @@ jobs:
             LEAGUES="--leagues ${{ inputs.leagues }}"
             FORCE_FLAG="--force"
           fi
-          python -m edge_equation evening $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode $LEAGUES $FORCE_FLAG
+          # --cached-only: data-refresher is the sole live-API consumer.
+          python -m edge_equation evening $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode --cached-only $LEAGUES $FORCE_FLAG
 
       - name: Upload failsafe files
         if: always() && steps.guard.outputs.should_run == 'true'

@@ -96,7 +96,10 @@ jobs:
             LEAGUES="--leagues ${{ inputs.leagues }}"
             FORCE_FLAG="--force"
           fi
-          python -m edge_equation daily $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode $LEAGUES $FORCE_FLAG
+          # --cached-only: the data-refresher job is the sole live-API
+          # consumer. Cadence reads from the OddsCache so we stay inside
+          # the free-tier credit budget.
+          python -m edge_equation daily $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode --cached-only $LEAGUES $FORCE_FLAG
 
       - name: Upload failsafe files
         if: always() && steps.guard.outputs.should_run == 'true'

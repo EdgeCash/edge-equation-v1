@@ -64,8 +64,9 @@ class TheOddsApiSource:
         markets: Optional[List[str]] = None,
         regions: str = "us",
         preferred_bookmaker: Optional[str] = None,
-        ttl_seconds: int = 900,
+        ttl_seconds: int = 6 * 60 * 60,   # 6h: matches DataFetcher.CACHE_TTL_ODDS
         api_key: Optional[str] = None,
+        cached_only: bool = False,
     ):
         TheOddsApiSource.league_from_sport_key(sport_key)  # validates
         self.conn = conn
@@ -75,6 +76,11 @@ class TheOddsApiSource:
         self.preferred_bookmaker = preferred_bookmaker
         self.ttl_seconds = ttl_seconds
         self.api_key = api_key
+        # Credit guardrail: when True, a cache miss returns an empty
+        # slate instead of hitting the live Odds API. Used by the five
+        # cadence workflows so only the data-refresher ever burns a
+        # credit.
+        self.cached_only = cached_only
 
     @staticmethod
     def league_from_sport_key(sport_key: str) -> str:
@@ -152,6 +158,7 @@ class TheOddsApiSource:
             api_key=self.api_key,
             http_client=http_client,
             now=now,
+            cached_only=self.cached_only,
         )
 
     def get_raw_games(self, run_datetime: Optional[datetime] = None, http_client=None, now=None) -> list:

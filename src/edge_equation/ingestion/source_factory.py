@@ -84,6 +84,7 @@ class SourceFactory:
         csv_dir: Optional[str] = None,
         api_key: Optional[str] = None,
         prefer_mock: bool = False,
+        cached_only: bool = False,
     ):
         """
         Resolve an ingestion source:
@@ -92,6 +93,11 @@ class SourceFactory:
         - Fallback:         the mock source for the league.
         Raises ValueError if the league has no mock source and neither CSV nor
         API is available.
+
+        cached_only=True flips the Odds API source into cache-only mode:
+        a cache miss returns an empty slate rather than burning a free-
+        tier credit. Used by the five cadence workflows so the data-
+        refresher job is the only live-API consumer.
         """
         csv_path = SourceFactory.csv_path_for(league, run_date, csv_dir)
         if csv_path.exists():
@@ -108,6 +114,7 @@ class SourceFactory:
                 conn=conn,
                 sport_key=sport_key,
                 api_key=api_key,
+                cached_only=cached_only,
             )
 
         mock = _mock_source_for_league(league)

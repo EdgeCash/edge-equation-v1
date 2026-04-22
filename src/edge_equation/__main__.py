@@ -212,6 +212,7 @@ def _run_slate(args: argparse.Namespace, card_type: str) -> int:
             ledger_stats=ledger_stats,
             publishers=runner_publishers,
             force=getattr(args, "force", False),
+            cached_only=getattr(args, "cached_only", False),
         )
 
         preview_dir = getattr(args, "preview_dir", None)
@@ -331,6 +332,7 @@ def _cmd_premium_daily(args: argparse.Namespace) -> int:
                 prefer_mock=args.prefer_mock,
                 public_mode=False,
                 force=force,
+                cached_only=getattr(args, "cached_only", False),
             )
             picks_slate_id = summary.slate_id
         else:
@@ -478,6 +480,13 @@ def _add_slate_flags(p: argparse.ArgumentParser) -> None:
                         "so a cached DB doesn't block a second same-day run; "
                         "scheduled cron jobs leave it OFF so double-posts are "
                         "prevented.")
+    p.add_argument("--cached-only", dest="cached_only",
+                   action="store_true", default=False,
+                   help="Read odds / schedules / scrapers from local cache "
+                        "ONLY. On a cache miss, the slate is empty rather "
+                        "than hitting the live Odds API. Every cadence "
+                        "workflow passes this so the refresher is the sole "
+                        "live-API consumer and free-tier credits stay intact.")
     p.add_argument("--email-preview", dest="email_preview",
                    action="store_true", default=False,
                    help="Route every would-be publish to email instead of X/Discord. "
