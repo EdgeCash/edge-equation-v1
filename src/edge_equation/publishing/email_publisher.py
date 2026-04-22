@@ -55,6 +55,8 @@ class EmailPublisher:
         to_address: Optional[str] = None,
         smtp_factory=None,
         failsafe: Optional[object] = None,
+        body_formatter=None,
+        subject_prefix: Optional[str] = None,
     ):
         self.host = host if host is not None else os.environ.get(ENV_SMTP_HOST)
         port_raw = port if port is not None else os.environ.get(ENV_SMTP_PORT)
@@ -76,6 +78,11 @@ class EmailPublisher:
             self._failsafe = None
         else:
             self._failsafe = failsafe
+        # Injectable body formatter. Useful for email-preview mode where
+        # we want the email body to be byte-identical to what XPublisher
+        # would post. Default: the legacy structured email layout below.
+        self._body_formatter = body_formatter
+        self._subject_prefix = subject_prefix
 
     @staticmethod
     def build_subject(card: dict) -> str:
@@ -145,7 +152,12 @@ class EmailPublisher:
     def publish_card(self, card_payload: dict, dry_run: bool = False) -> PublishResult:
         try:
             subject = self.build_subject(card_payload)
-            body = self.build_body(card_payload)
+            if self._subject_prefix:
+                subject = f"{self._subject_prefix} {subject}"
+            if self._body_formatter is not None:
+                body = self._body_formatter(card_payload)
+            else:
+                body = self.build_body(card_payload)
         except Exception as e:
             return PublishResult(success=False, target="email", error=f"build error: {e}")
 

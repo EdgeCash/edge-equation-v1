@@ -31,6 +31,8 @@ Common flags:
   --csv-dir PATH   Directory containing manual-entry CSVs (default: data/)
   --prefer-mock    Skip the odds API and force the mock source (development)
   --public-mode    Strip edge/kelly and inject disclaimer + Ledger footer (default ON)
+  --email-preview  Route every would-be publish to email only (requires SMTP env).
+                   Body is byte-identical to what XPublisher would post.
 """
 import argparse
 import csv
@@ -57,6 +59,7 @@ from edge_equation.persistence.pick_store import PickStore
 from edge_equation.persistence.realization_store import RealizationStore
 from edge_equation.posting.ledger import LedgerStore
 from edge_equation.posting.posting_formatter import PostingFormatter
+from edge_equation.publishing.email_publisher import EmailPublisher
 from edge_equation.publishing.x_formatter import format_card as format_x_text
 from edge_equation.utils.logging import get_logger
 
@@ -101,9 +104,22 @@ def _default_leagues_for(card_type: str, explicit: Optional[str]) -> List[str]:
     return list(DEFAULT_LEAGUES)
 
 
+def _email_preview_publisher(card_type: str) -> EmailPublisher:
+    """Single-target publisher that emails the exact X post text. Used by
+    --email-preview so you can audit every cadence card in your inbox
+    before flipping X credentials on."""
+    return EmailPublisher(
+        body_formatter=format_x_text,
+        subject_prefix="[X-PREVIEW]",
+        # Intentionally leave failsafe=None -> default composite, so any
+        # SMTP blip still hits the local file failsafe.
+    )
+
+
 def _run_slate(args: argparse.Namespace, card_type: str) -> int:
     conn = _open_db(args.db)
     public_mode = getattr(args, "public_mode", True)
+    email_preview = getattr(args, "email_preview", False)
     try:
         run_dt = datetime.utcnow()
         leagues = _default_leagues_for(card_type, args.leagues)
@@ -116,6 +132,15 @@ def _run_slate(args: argparse.Namespace, card_type: str) -> int:
             # Every free-content card must carry the Season Ledger footer,
             # so compute it up front and flow it into build_card.
             ledger_stats = LedgerStore.compute(conn)
+
+        # --email-preview forces the publish path on with an email-only
+        # publisher, so the operator can audit every cadence card via SMTP
+        # before any X credential is provisioned. The CLI-level compliance
+        # gate is kept in play; the publisher-level gate is moot here
+        # (EmailPublisher doesn't run compliance_test).
+        if email_preview:
+            args.publish = True
+            args.dry_run = False
 
         # Compliance gate: build the card once in-process (independent of
         # any idempotency short-circuit inside ScheduledRunner) so we can
@@ -133,6 +158,10 @@ def _run_slate(args: argparse.Namespace, card_type: str) -> int:
             if blocked is not None:
                 return blocked
 
+        runner_publishers = None
+        if email_preview:
+            runner_publishers = [_email_preview_publisher(card_type)]
+
         summary = ScheduledRunner.run(
             card_type=card_type,
             conn=conn,
@@ -144,6 +173,7 @@ def _run_slate(args: argparse.Namespace, card_type: str) -> int:
             prefer_mock=args.prefer_mock,
             public_mode=public_mode,
             ledger_stats=ledger_stats,
+            publishers=runner_publishers,
         )
 
         preview_dir = getattr(args, "preview_dir", None)
@@ -288,6 +318,11 @@ def _add_slate_flags(p: argparse.ArgumentParser) -> None:
     p.add_argument("--preview-dir", type=str, default=None,
                    help="Directory to write the rendered X text for the built card. "
                         "Use with --no-publish for offline review of what would post.")
+    p.add_argument("--email-preview", dest="email_preview",
+                   action="store_true", default=False,
+                   help="Route every would-be publish to email instead of X/Discord. "
+                        "Body is the exact X post text. Forces --publish --no-dry-run "
+                        "and bypasses X credentials entirely. Requires SMTP env vars.")
 
 
 def build_parser() -> argparse.ArgumentParser:
