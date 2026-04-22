@@ -344,29 +344,41 @@ def _cmd_premium_daily(args: argparse.Namespace) -> int:
         # If today's premium slate already exists, re-use its picks so the
         # email is idempotent within the day -- unless --force was passed,
         # in which case we rebuild.
+        # Premium is cross-slate: subscribers see every A+ / A / A-
+        # projection across EVERY sport (domestic + overseas). We drive
+        # two separate runner passes and concatenate the picks so the
+        # per-card slate-separation guard stays intact for the public
+        # feed while premium gets the whole picture.
         from edge_equation.persistence.slate_store import SlateStore
         existing = SlateStore.get(conn, slate_id)
         force = getattr(args, "force", False)
-        if existing is None or force:
-            summary = ScheduledRunner.run(
-                card_type=CARD_TYPE_DAILY,    # reuse the daily engine path
-                conn=conn,
-                run_datetime=run_dt,
-                leagues=leagues,
-                publish=False,
-                dry_run=True,
-                csv_dir=args.csv_dir,
-                prefer_mock=args.prefer_mock,
-                public_mode=False,
-                force=force,
-                cached_only=getattr(args, "cached_only", False),
-            )
-            picks_slate_id = summary.slate_id
-        else:
-            picks_slate_id = existing.slate_id
-
-        pick_records = PickStore.list_by_slate(conn, picks_slate_id)
-        all_picks = [r.to_pick() for r in pick_records]
+        cached_only = getattr(args, "cached_only", False)
+        all_picks: list = []
+        for runner_card, runner_leagues in (
+            (CARD_TYPE_DAILY, list(DOMESTIC_LEAGUES)),
+            (CARD_TYPE_OVERSEAS_EDGE, list(OVERSEAS_LEAGUES)),
+        ):
+            try:
+                runner_summary = ScheduledRunner.run(
+                    card_type=runner_card,
+                    conn=conn,
+                    run_datetime=run_dt,
+                    leagues=runner_leagues,
+                    publish=False,
+                    dry_run=True,
+                    csv_dir=args.csv_dir,
+                    prefer_mock=args.prefer_mock,
+                    public_mode=False,
+                    force=force,
+                    cached_only=cached_only,
+                )
+            except ValueError:
+                # No sources for this slate (e.g., all leagues lack
+                # mock sources). Premium just skips that half -- better
+                # than a crash on a thin day.
+                continue
+            slate_picks = PickStore.list_by_slate(conn, runner_summary.slate_id)
+            all_picks.extend(r.to_pick() for r in slate_picks)
 
         # Yesterday's engine hit rate (UTC).
         yesterday = (run_dt - timedelta(days=1)).date().isoformat()

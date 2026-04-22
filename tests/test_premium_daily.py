@@ -76,9 +76,19 @@ def test_select_parlay_of_day_uses_distinct_games():
     assert len({l.game_id for l in legs}) == 3
 
 
-def test_select_parlay_returns_all_available_when_fewer_than_n():
+def test_select_parlay_returns_empty_below_min_legs():
+    # Phase 25: a parlay needs 3 legs minimum. One qualifying pick is
+    # not a parlay -- the premium email renders the empty-state line
+    # instead of shipping a nonsensical 1-leg "parlay".
     legs = PostingFormatter.select_parlay_of_day([_pick(game_id="ONLY-ONE")])
-    assert len(legs) == 1
+    assert legs == []
+
+
+def test_select_parlay_honors_max_legs_ceiling():
+    # Default max_legs=6 so a huge input still caps at 6 distinct games.
+    picks = [_pick(game_id=f"G{i}") for i in range(10)]
+    legs = PostingFormatter.select_parlay_of_day(picks)
+    assert 3 <= len(legs) <= 6
 
 
 def test_select_top_props_only_prop_markets():

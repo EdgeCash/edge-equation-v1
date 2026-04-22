@@ -192,12 +192,20 @@ class PostingFormatter:
     @staticmethod
     def select_parlay_of_day(
         picks: Sequence[Pick],
-        n: int = _PREMIUM_PARLAY_SIZE,
+        n: Optional[int] = None,
+        min_legs: int = 3,
+        max_legs: int = 6,
     ) -> List[Pick]:
-        """Pick N legs from distinct games, ranked by grade * edge. Does
-        NOT raise when fewer than N are available -- returns the best
-        feasible set so the premium email still renders a parlay block
-        on thin-slate days."""
+        """Pick 3 - 6 legs from distinct games, ranked by grade * edge
+        (via the Spotlight trend-score). Backwards-compat: when `n` is
+        passed it overrides both bounds to that single value.
+
+        Returns an empty list when fewer than min_legs distinct-game
+        picks qualify -- premium renders "no parlay legs qualified
+        today" in that case rather than shipping a 1-leg "parlay".
+        """
+        if n is not None:
+            min_legs = max_legs = n
         from edge_equation.posting.spotlight import _pick_contribution
         ranked = sorted(picks, key=_pick_contribution, reverse=True)
         legs: List[Pick] = []
@@ -208,8 +216,10 @@ class PostingFormatter:
                 continue
             seen_games.add(gid)
             legs.append(p)
-            if len(legs) >= n:
+            if len(legs) >= max_legs:
                 break
+        if len(legs) < min_legs:
+            return []
         return legs
 
     @staticmethod
@@ -391,14 +401,16 @@ class PostingFormatter:
                 "picks": [p.to_dict() for p in spot.picks],
                 "trend_score": str(spot.trend_score),
             }
-            # Player Prop Projections: same brand-exact pipe format as
-            # the free card -- no DFS / app mentions -- but premium keeps
-            # it analytically rich via the adjacent edge/Kelly block on
-            # the full slate.
+            # Player Prop Projections (premium): top-10 curated list
+            # ranked by grade then edge. Same brand-exact pipe format
+            # as the free card so a subscriber/non-subscriber reader
+            # sees the same shape; the premium differentiator is the
+            # adjacent deep pick block + edge/Kelly on the full slate,
+            # not a different format.
             from edge_equation.posting.player_props import (
-                render_prop_section, select_prop_projections,
+                render_prop_section, select_top_props_by_grade,
             )
-            prop_picks = select_prop_projections(unfiltered_picks_for_props)
+            prop_picks = select_top_props_by_grade(unfiltered_picks_for_props)
             if prop_picks:
                 card["player_prop_projections"] = {
                     "picks": [p.to_dict() for p in prop_picks],

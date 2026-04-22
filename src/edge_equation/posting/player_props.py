@@ -145,6 +145,39 @@ def _row_for(pick: Pick) -> PropProjectionRow:
     )
 
 
+# Premium Player Prop Projections table caps at 10 rows by design --
+# subscribers want a curated "best of" for the day, sorted by grade
+# then edge. Free content keeps the uncapped selector to match the
+# spec's "no top-N language" constraint for the public feed.
+PREMIUM_TOP_N_PROPS = 10
+# Premium admits A+/A/A- (engine grade B renders as the brand's "A-").
+_PREMIUM_PROP_GRADES = frozenset({"A+", "A", "B"})
+
+
+def select_top_props_by_grade(
+    picks: Sequence[Pick],
+    n: int = PREMIUM_TOP_N_PROPS,
+) -> List[Pick]:
+    """Premium prop-section selector: top N props ranked strictly by
+    grade (A+ > A > A-), then by edge descending. Includes A- where
+    the free selector does not, because premium subscribers see the
+    full analytical bar down to Grade B edge >= 3%."""
+    eligible = [
+        p for p in picks
+        if p.market_type in PROP_MARKETS
+        and (p.grade or "") in _PREMIUM_PROP_GRADES
+    ]
+    grade_rank = {"A+": 2, "A": 1, "B": 0}
+    eligible.sort(
+        key=lambda p: (
+            grade_rank.get(p.grade or "", -1),
+            Decimal(str(p.edge)) if p.edge is not None else Decimal("0"),
+        ),
+        reverse=True,
+    )
+    return eligible[:n]
+
+
 # ------------------------------------------------------- public API
 
 def select_prop_projections(picks: Sequence[Pick]) -> List[Pick]:
