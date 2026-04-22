@@ -208,13 +208,13 @@ def test_baseline_read_handles_missing_fields_gracefully():
 # ------------------------------------------------ tightened parlay
 
 
-def _parlay_pick(grade="A+", edge="0.10", game_id="G"):
+def _parlay_pick(grade="A+", edge="0.14", kelly="0.05", game_id="G"):
     return Pick(
         sport="MLB", market_type="ML", selection="X",
         line=Line(odds=-110),
         fair_prob=Decimal("0.55"),
         edge=Decimal(edge),
-        kelly=Decimal("0.03"),
+        kelly=Decimal(kelly),
         grade=grade,
         game_id=game_id,
     )
@@ -229,12 +229,13 @@ def test_parlay_rejects_below_aplus():
 def test_parlay_rejects_legs_above_max_leg_edge():
     """Phase 28 trust restoration: any leg with edge > 20% is dropped
     even if A+. Catches the residual "implausible edge" pattern in
-    case the upstream sanity guard ever misses one."""
+    case the upstream sanity guard ever misses one. Phase 30 also
+    requires edge >= 0.12."""
     picks = [
         _parlay_pick(grade="A+", edge="0.25", game_id="G1"),  # too hot
         _parlay_pick(grade="A+", edge="0.18", game_id="G2"),
         _parlay_pick(grade="A+", edge="0.15", game_id="G3"),
-        _parlay_pick(grade="A+", edge="0.10", game_id="G4"),
+        _parlay_pick(grade="A+", edge="0.13", game_id="G4"),
     ]
     legs = PostingFormatter.select_parlay_of_day(picks)
     # G1 dropped for excess edge; the remaining 3 form the parlay.
@@ -244,7 +245,7 @@ def test_parlay_rejects_legs_above_max_leg_edge():
 
 def test_parlay_admits_aplus_with_modest_edge():
     """Sanity check: well-behaved A+ legs do form a parlay."""
-    picks = [_parlay_pick(grade="A+", edge="0.12", game_id=f"G{i}")
+    picks = [_parlay_pick(grade="A+", edge="0.13", game_id=f"G{i}")
              for i in range(4)]
     legs = PostingFormatter.select_parlay_of_day(picks)
     assert 3 <= len(legs) <= 4

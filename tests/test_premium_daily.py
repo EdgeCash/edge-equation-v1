@@ -19,7 +19,7 @@ from edge_equation.posting.premium_daily_body import format_premium_daily
 
 
 def _pick(
-    *, grade="A+", edge="0.10", sport="MLB", market="ML",
+    *, grade="A+", edge="0.13", kelly="0.05", sport="MLB", market="ML",
     selection="Home", game_id="G1", odds=-110, number=None,
 ):
     return Pick(
@@ -29,7 +29,7 @@ def _pick(
         line=Line(odds=odds, number=Decimal(str(number)) if number is not None else None),
         fair_prob=Decimal("0.55"),
         edge=Decimal(str(edge)),
-        kelly=Decimal("0.02"),
+        kelly=Decimal(str(kelly)),
         grade=grade,
         game_id=game_id,
         metadata={"home_team": "NYY", "away_team": "BOS"},
@@ -67,12 +67,12 @@ def test_filter_premium_daily_sorts_grade_then_edge():
 
 
 def test_select_parlay_of_day_uses_distinct_games():
-    # Phase 28 trust restoration: parlays admit A+ only. Fixture
-    # picks default to A+ here so the grade gate passes.
+    # Phase 30 trust hardening: parlays admit A+ only with edge in
+    # [0.12, 0.20] and kelly >= 0.04. Fixture defaults satisfy those.
     g1a = _pick(game_id="G1", market="ML")
     g1b = _pick(game_id="G1", market="Total", selection="Over 9")
-    g2 = _pick(game_id="G2", edge="0.08")
-    g3 = _pick(game_id="G3", edge="0.07")
+    g2 = _pick(game_id="G2", edge="0.14")
+    g3 = _pick(game_id="G3", edge="0.13")
     legs = PostingFormatter.select_parlay_of_day([g1a, g1b, g2, g3])
     assert len(legs) == 3
     assert len({l.game_id for l in legs}) == 3
@@ -87,10 +87,11 @@ def test_select_parlay_returns_empty_below_min_legs():
 
 
 def test_select_parlay_honors_max_legs_ceiling():
-    # Default max_legs=6 so a huge input still caps at 6 distinct games.
+    # Phase 30: default max_legs tightened to 4 (was 6). A huge input
+    # still caps at 4 distinct games.
     picks = [_pick(game_id=f"G{i}") for i in range(10)]
     legs = PostingFormatter.select_parlay_of_day(picks)
-    assert 3 <= len(legs) <= 6
+    assert 3 <= len(legs) <= 4
 
 
 def test_select_top_props_only_prop_markets():
@@ -115,13 +116,12 @@ def test_select_top_props_caps_at_n():
 # ------------------------------------------- build_card integration
 
 def test_build_card_premium_daily_emits_parlay_and_top_props():
-    # Phase 28: parlay needs >=3 distinct A+ legs (each with edge in
-    # the trustworthy range). Bumping all three to A+ since the
-    # parlay-of-the-day rule no longer admits A or A-/B legs.
+    # Phase 30: parlay needs >=3 distinct A+ legs, each with edge in
+    # [0.12, 0.20] AND kelly >= 0.04. Top-props needs edge > 0.
     picks = [
-        _pick(grade="A+", market="ML", game_id="G1", edge="0.12"),
-        _pick(grade="A+", market="HR", game_id="G2", edge="0.09"),
-        _pick(grade="A+", market="K", game_id="G3", edge="0.05"),
+        _pick(grade="A+", market="ML", game_id="G1", edge="0.14", kelly="0.06"),
+        _pick(grade="A+", market="HR", game_id="G2", edge="0.13", kelly="0.05"),
+        _pick(grade="A+", market="K", game_id="G3", edge="0.12", kelly="0.04"),
     ]
     card = PostingFormatter.build_card(
         card_type="premium_daily",
