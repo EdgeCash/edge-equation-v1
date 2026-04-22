@@ -45,6 +45,9 @@ def test_picks_contains_known_det_at_bos_ml(client):
     pick = ml[0]
     assert pick["fair_prob"] == "0.618133"
     assert pick["edge"] == "0.049167"
-    assert pick["grade"] == "A"
+    # Phase 18 tightened grade thresholds: 0.049167 is in the B tier
+    # (>=0.03 but <0.05). Under the pre-Phase-18 ladder this was an "A".
+    assert pick["grade"] == "B"
     assert pick["kelly"] == "0.0324"
-    assert pick["realization"] == 59
+    # Realization bucket for B under Phase 18 is 52 (was A/59 pre-Phase-18).
+    assert pick["realization"] == 52

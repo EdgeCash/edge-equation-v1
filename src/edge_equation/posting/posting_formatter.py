@@ -2,10 +2,18 @@
 Posting formatter.
 
 Structured card payloads. No graphics, no network. Pure dict output.
+
+Phase 18 adds `public_mode` (default True). When public_mode=True, the
+returned card is run through PublicModeSanitizer + the mandatory
+disclaimer is appended to tagline. Callers that need the raw card (for
+premium email, internal admin views, tests asserting on edge/kelly)
+pass public_mode=False explicitly.
 """
 from decimal import Decimal
 from typing import Iterable, Optional
 
+from edge_equation.compliance.disclaimer import DISCLAIMER_TEXT, inject_into_card
+from edge_equation.compliance.sanitizer import PublicModeSanitizer
 from edge_equation.engine.pick_schema import Pick
 
 
@@ -29,7 +37,8 @@ class PostingFormatter:
     def _best_grade(picks: list) -> str:
         if not picks:
             return "C"
-        order = {"A+": 3, "A": 2, "B": 1, "C": 0}
+        # Higher-is-better ranking across the full Phase-18 grade ladder.
+        order = {"A+": 5, "A": 4, "B": 3, "C": 2, "D": 1, "F": 0}
         return max(picks, key=lambda p: order.get(p.grade, 0)).grade
 
     @staticmethod
@@ -49,6 +58,7 @@ class PostingFormatter:
         generated_at: Optional[str] = None,
         headline_override: Optional[str] = None,
         subhead_override: Optional[str] = None,
+        public_mode: bool = False,
     ) -> dict:
         if card_type not in CARD_TEMPLATES:
             raise ValueError(
@@ -66,7 +76,7 @@ class PostingFormatter:
         summary["edge"] = str(summary["edge"]) if summary["edge"] is not None else None
         summary["kelly"] = str(summary["kelly"]) if summary["kelly"] is not None else None
 
-        return {
+        card = {
             "card_type": card_type,
             "headline": headline_override or template["headline"],
             "subhead": subhead_override or template["subhead"],
@@ -75,3 +85,12 @@ class PostingFormatter:
             "tagline": TAGLINE,
             "generated_at": generated_at,
         }
+
+        if public_mode:
+            # 1. Strip edge / kelly / kelly_breakdown from every pick and the
+            #    summary block.
+            card = PublicModeSanitizer.sanitize_card(card)
+            # 2. Append the mandatory Phase-1 disclaimer to the tagline.
+            card = inject_into_card(card, disclaimer=DISCLAIMER_TEXT)
+
+        return card
