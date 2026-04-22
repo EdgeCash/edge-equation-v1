@@ -35,11 +35,13 @@ def test_run_slate_mlb_produces_picks():
 
 
 def test_run_slate_nba_produces_picks():
+    # Phase 29: NBA now maps to its own SPORT_CONFIG entry instead of
+    # falling through to NCAA_Basketball. Picks tagged with sport='NBA'.
     slate = _build_slate(NbaSource())
     picks = run_slate(slate, "NBA")
     assert picks
     for p in picks:
-        assert p.sport == "NCAA_Basketball"
+        assert p.sport == "NBA"
 
 
 def test_run_slate_nhl_produces_picks():
@@ -58,7 +60,8 @@ def test_run_slate_sport_filter_excludes_others():
     mlb_picks = run_slate(slate, "MLB")
     nba_picks = run_slate(slate, "NBA")
     assert all(p.sport == "MLB" for p in mlb_picks)
-    assert all(p.sport == "NCAA_Basketball" for p in nba_picks)
+    # Phase 29: NBA -> "NBA" sport (was "NCAA_Basketball" before).
+    assert all(p.sport == "NBA" for p in nba_picks)
     assert {p.game_id for p in mlb_picks} & {p.game_id for p in nba_picks} == set()
 
 

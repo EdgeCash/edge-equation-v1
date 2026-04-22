@@ -16,7 +16,14 @@ LEAGUE_TO_SPORT = {
     "MLB": "MLB",
     "KBO": "KBO",
     "NPB": "NPB",
-    "NBA": "NCAA_Basketball",
+    # Phase 29 fix: NBA used to be mapped to "NCAA_Basketball" because
+    # NBA wasn't in SPORT_CONFIG yet. That mapping caused NBA games to
+    # inherit NCAA's home_adv / Pythagorean exponent, AND -- worse --
+    # to compute strength ratings against college-basketball game
+    # results, producing wild ratios like 4.22 vs 0.24 on a Knicks /
+    # Hawks matchup. With NBA now configured (Phase 27b), point it at
+    # its own sport so the engine grades NBA on NBA history.
+    "NBA": "NBA",
     "NCAAB": "NCAA_Basketball",
     "NHL": "NHL",
     "NFL": "NFL",
