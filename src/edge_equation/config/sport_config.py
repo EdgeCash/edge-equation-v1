@@ -156,6 +156,27 @@ SPORT_CONFIG = {
             "pitching": Decimal('0.00'),
         },
     },
+    # NBA: 82-game regular season with heavy travel; Pythagorean
+    # exponent is high (~14) because NBA scoring is additive and
+    # runaway wins dominate the strength signal. Shorter decay window
+    # than NFL since pace / rotation changes move quickly. home_adv
+    # matches the long-run NBA home-court effect (~60% win rate).
+    "NBA": {
+        "markets": ["ML", "Spread", "Total", "Points", "Rebounds", "Assists"],
+        "league_baseline_total": Decimal('225.0'),
+        "ml_universal_weight": Decimal('0.65'),
+        "prop_universal_weight": Decimal('0.55'),
+        "pythagorean_exponent": Decimal('14.0'),
+        "decay_lambda": Decimal('0.93'),
+        "form_window_games": 10,
+        "home_adv": Decimal('0.150'),
+        "strength_blend": {
+            "pyth": Decimal('0.40'),
+            "form": Decimal('0.30'),
+            "elo": Decimal('0.30'),
+            "pitching": Decimal('0.00'),
+        },
+    },
 }
 
 
@@ -214,11 +235,22 @@ class SportConfig:
 
     @staticmethod
     def strength_blend(sport: str) -> dict:
+        """Return the per-sport pyth/form/elo/pitching blend weights.
+
+        Unknown sports get a neutral pyth/form/elo split instead of a
+        KeyError crash. The caller (TeamStrengthBuilder) then produces
+        a generic strength estimate; the engine still grades picks on
+        whatever markets arrive, just without a sport-specific tuning
+        advantage. This was the Phase 27b fix -- the backfill settler
+        now pulls game data for any league with a sport_key mapping,
+        so unmapped-to-config sports shouldn't crash the slate builder.
         """
-        Component-weight dict for TeamStrengthBuilder:
-            {"pyth": D, "form": D, "elo": D, "pitching": D}
-        All values Decimal; sum to 1.0 per sport. For non-baseball sports
-        pitching is 0 (we don't have a pitching stats source yet and the
-        concept is baseball-family-specific).
-        """
-        return dict(SportConfig.require(sport, "strength_blend"))
+        cfg = SPORT_CONFIG.get(sport)
+        if cfg is None or "strength_blend" not in cfg:
+            return {
+                "pyth": Decimal('0.40'),
+                "form": Decimal('0.30'),
+                "elo": Decimal('0.30'),
+                "pitching": Decimal('0.00'),
+            }
+        return dict(cfg["strength_blend"])
