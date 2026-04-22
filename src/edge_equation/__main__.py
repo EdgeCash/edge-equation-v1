@@ -57,12 +57,39 @@ from edge_equation.engine.scheduled_runner import (
 from edge_equation.persistence.db import Database
 from edge_equation.persistence.pick_store import PickStore
 from edge_equation.persistence.realization_store import RealizationStore
+from edge_equation.posting.ai_graphic_prompt import build_ai_graphic_prompt
 from edge_equation.posting.ledger import LedgerStore
 from edge_equation.posting.posting_formatter import PostingFormatter
 from edge_equation.posting.premium_daily_body import format_premium_daily
 from edge_equation.publishing.email_publisher import EmailPublisher
 from edge_equation.publishing.x_formatter import format_card as format_x_text
 from edge_equation.utils.logging import get_logger
+
+
+# Cards that, when previewed via email, should include the AI graphic
+# prompt in the body so the user can paste it straight into an image
+# generator. Matches the user-facing spec for daily / evening / overseas.
+_AI_PROMPT_CARD_TYPES = frozenset({
+    "daily_edge", "evening_edge", "overseas_edge",
+})
+
+
+def _email_preview_body(card: dict) -> str:
+    """Email body for --email-preview. Section 1 is always the exact
+    X post text. Section 2 -- only for the three slate cards -- is a
+    copy-paste AI image-generation prompt."""
+    x_text = format_x_text(card)
+    if card.get("card_type") not in _AI_PROMPT_CARD_TYPES:
+        return x_text
+    prompt = build_ai_graphic_prompt(card)
+    separator = "\n" + ("=" * 64) + "\n"
+    return (
+        "=== TEXT OF WHAT WOULD POST TO X ===\n\n"
+        + x_text
+        + separator
+        + "=== AI GRAPHIC PROMPT -- paste into DALL-E / Midjourney / etc. ===\n\n"
+        + prompt
+    )
 
 
 logger = get_logger("edge-equation")
@@ -108,9 +135,11 @@ def _default_leagues_for(card_type: str, explicit: Optional[str]) -> List[str]:
 def _email_preview_publisher(card_type: str) -> EmailPublisher:
     """Single-target publisher that emails the exact X post text. Used by
     --email-preview so you can audit every cadence card in your inbox
-    before flipping X credentials on."""
+    before flipping X credentials on. For daily / evening / overseas
+    cards the body also carries an AI-graphic prompt the operator can
+    paste into an image generator for manual posting."""
     return EmailPublisher(
-        body_formatter=format_x_text,
+        body_formatter=_email_preview_body,
         subject_prefix="[X-PREVIEW]",
         # Intentionally leave failsafe=None -> default composite, so any
         # SMTP blip still hits the local file failsafe.
