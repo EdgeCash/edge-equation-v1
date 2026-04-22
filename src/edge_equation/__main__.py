@@ -2,17 +2,25 @@
 CLI entry point.
 
 Subcommands:
-  daily      Run the daily-edge slate (ingest -> engine -> persist -> publish).
-  evening    Run the evening-edge slate.
+  ledger     Run The Ledger card (9am CT) -- season record + model health.
+  daily      Run the Daily Edge slate (11am CT).
+  spotlight  Run the Spotlight card (4pm CT) -- deep dive on trending game.
+  evening    Run the Evening Edge slate (6pm CT) -- posts only on material changes.
+  overseas   Run the Overseas Edge slate (11pm CT) -- KBO/NPB/Soccer, no props.
   settle     Record outcomes from a CSV and settle stored picks.
   pipeline   Legacy Phase-1 pipeline demo (kept for backwards compat).
 
+Every free-content publish step is gated by compliance_test(
+require_ledger_footer=True); any violation aborts the publish and exits
+non-zero -- no post goes out without the mandatory footer + disclaimer.
+
 Invocation (any scheduler that can call Python works here):
 
+  python -m edge_equation ledger --publish
   python -m edge_equation daily --publish
+  python -m edge_equation spotlight --publish
   python -m edge_equation evening --publish --leagues MLB,NHL
-  python -m edge_equation settle data/outcomes_2026-04-20.csv
-  python -m edge_equation pipeline --mode daily
+  python -m edge_equation overseas --publish
 
 Common flags:
   --db PATH        SQLite DB path (default: env EDGE_EQUATION_DB or ./edge_equation.db)
@@ -22,6 +30,7 @@ Common flags:
   --leagues LIST   Comma-separated league codes (MLB,NFL,NHL,NBA,KBO,NPB)
   --csv-dir PATH   Directory containing manual-entry CSVs (default: data/)
   --prefer-mock    Skip the odds API and force the mock source (development)
+  --public-mode    Strip edge/kelly and inject disclaimer + Ledger footer (default ON)
 """
 import argparse
 import csv
@@ -30,15 +39,22 @@ import sys
 from datetime import datetime
 from typing import List, Optional
 
+from edge_equation.compliance import compliance_test
 from edge_equation.engine.realization import RealizationTracker
 from edge_equation.engine.scheduled_runner import (
     CARD_TYPE_DAILY,
     CARD_TYPE_EVENING,
+    CARD_TYPE_LEDGER,
+    CARD_TYPE_OVERSEAS_EDGE,
+    CARD_TYPE_SPOTLIGHT,
     DEFAULT_LEAGUES,
+    OVERSEAS_LEAGUES,
     ScheduledRunner,
 )
 from edge_equation.persistence.db import Database
 from edge_equation.persistence.realization_store import RealizationStore
+from edge_equation.posting.ledger import LedgerStore
+from edge_equation.posting.posting_formatter import PostingFormatter
 from edge_equation.utils.logging import get_logger
 
 
@@ -57,18 +73,74 @@ def _open_db(path: Optional[str]):
     return conn
 
 
+def _compliance_gate(card: dict, card_type: str) -> Optional[int]:
+    """
+    Pre-publish compliance check. Returns None on pass, an exit code on
+    fail (and prints the violations). Free-content cards must carry the
+    Season Ledger footer + disclaimer per Phase 20.
+    """
+    report = compliance_test(card, require_ledger_footer=True)
+    if report.ok:
+        return None
+    print(json.dumps({
+        "compliance_gate": "blocked",
+        "card_type": card_type,
+        "violations": report.violations,
+    }, indent=2), file=sys.stderr)
+    return 3
+
+
+def _default_leagues_for(card_type: str, explicit: Optional[str]) -> List[str]:
+    if explicit:
+        return _parse_leagues(explicit)
+    if card_type == CARD_TYPE_OVERSEAS_EDGE:
+        return list(OVERSEAS_LEAGUES)
+    return list(DEFAULT_LEAGUES)
+
+
 def _run_slate(args: argparse.Namespace, card_type: str) -> int:
     conn = _open_db(args.db)
+    public_mode = getattr(args, "public_mode", True)
     try:
+        run_dt = datetime.utcnow()
+        leagues = _default_leagues_for(card_type, args.leagues)
+        ledger_stats = None
+        if card_type == CARD_TYPE_LEDGER:
+            # The Ledger post is purely season-record + model-health; it
+            # doesn't consult any slate. Compute from already-settled picks.
+            ledger_stats = LedgerStore.compute(conn)
+        elif public_mode:
+            # Every free-content card must carry the Season Ledger footer,
+            # so compute it up front and flow it into build_card.
+            ledger_stats = LedgerStore.compute(conn)
+
+        # Compliance gate: build the card once in-process (independent of
+        # any idempotency short-circuit inside ScheduledRunner) so we can
+        # block publishes that would fail the compliance rules.
+        if args.publish and public_mode:
+            preview_card = PostingFormatter.build_card(
+                card_type=card_type,
+                picks=[],
+                generated_at=run_dt.isoformat(),
+                public_mode=True,
+                ledger_stats=ledger_stats,
+                skip_filter=True,
+            )
+            blocked = _compliance_gate(preview_card, card_type)
+            if blocked is not None:
+                return blocked
+
         summary = ScheduledRunner.run(
             card_type=card_type,
             conn=conn,
-            run_datetime=datetime.utcnow(),
-            leagues=_parse_leagues(args.leagues),
+            run_datetime=run_dt,
+            leagues=leagues,
             publish=args.publish,
             dry_run=args.dry_run,
             csv_dir=args.csv_dir,
             prefer_mock=args.prefer_mock,
+            public_mode=public_mode,
+            ledger_stats=ledger_stats,
         )
     finally:
         conn.close()
@@ -86,6 +158,18 @@ def _cmd_daily(args: argparse.Namespace) -> int:
 
 def _cmd_evening(args: argparse.Namespace) -> int:
     return _run_slate(args, CARD_TYPE_EVENING)
+
+
+def _cmd_ledger(args: argparse.Namespace) -> int:
+    return _run_slate(args, CARD_TYPE_LEDGER)
+
+
+def _cmd_spotlight(args: argparse.Namespace) -> int:
+    return _run_slate(args, CARD_TYPE_SPOTLIGHT)
+
+
+def _cmd_overseas(args: argparse.Namespace) -> int:
+    return _run_slate(args, CARD_TYPE_OVERSEAS_EDGE)
 
 
 def _cmd_settle(args: argparse.Namespace) -> int:
@@ -172,19 +256,36 @@ def _add_slate_flags(p: argparse.ArgumentParser) -> None:
                      help="Actually post -- requires real credentials")
     p.add_argument("--prefer-mock", action="store_true", default=False,
                    help="Force the stubbed ingestion sources (dev/testing)")
+    public = p.add_mutually_exclusive_group()
+    public.add_argument("--public-mode", dest="public_mode", action="store_true", default=True,
+                        help="Strip edge/kelly and inject disclaimer + Ledger footer (default ON)")
+    public.add_argument("--no-public-mode", dest="public_mode", action="store_false",
+                        help="Disable public-mode sanitization (premium / internal use only)")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="edge-equation")
     sub = parser.add_subparsers(dest="subcommand", required=False)
 
-    p_daily = sub.add_parser("daily", help="Run the daily-edge slate")
+    p_ledger = sub.add_parser("ledger", help="Run The Ledger card (9am CT)")
+    _add_slate_flags(p_ledger)
+    p_ledger.set_defaults(func=_cmd_ledger)
+
+    p_daily = sub.add_parser("daily", help="Run the Daily Edge slate (11am CT)")
     _add_slate_flags(p_daily)
     p_daily.set_defaults(func=_cmd_daily)
 
-    p_even = sub.add_parser("evening", help="Run the evening-edge slate")
+    p_spot = sub.add_parser("spotlight", help="Run the Spotlight card (4pm CT)")
+    _add_slate_flags(p_spot)
+    p_spot.set_defaults(func=_cmd_spotlight)
+
+    p_even = sub.add_parser("evening", help="Run the Evening Edge slate (6pm CT)")
     _add_slate_flags(p_even)
     p_even.set_defaults(func=_cmd_evening)
+
+    p_over = sub.add_parser("overseas", help="Run the Overseas Edge slate (11pm CT)")
+    _add_slate_flags(p_over)
+    p_over.set_defaults(func=_cmd_overseas)
 
     p_settle = sub.add_parser("settle", help="Record outcomes and settle picks")
     p_settle.add_argument("outcomes_csv")

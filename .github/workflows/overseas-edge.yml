@@ -1,17 +1,22 @@
-name: Daily Edge (11am CT)
+name: Overseas Edge (11pm CT)
 
-# Phase 20 cadence slot 2 of 5: 11:00 US/Central.
-# Dual cron to cover CST (UTC-6 -> 17:00 UTC) and CDT (UTC-5 -> 16:00 UTC).
-# CT-hour guard below enforces exactly one run per day via stdlib zoneinfo.
+# Phase 20 cadence slot 5 of 5: 23:00 US/Central.
+# Dual cron to cover CST (UTC-6 -> 05:00 UTC next day) and CDT (UTC-5 -> 04:00 UTC next day).
+# CT-hour guard enforces exactly one run per day.
+#
+# Overseas Edge scopes to KBO / NPB / Soccer and excludes every prop
+# market (the PostingFormatter.filter_overseas pipeline enforces this at
+# card-build time; the CLI's OVERSEAS_LEAGUES default keeps ingestion in
+# sync with the filter).
 on:
   schedule:
-    - cron: "0 16 * * *"   # 11:00 CT during CDT (Mar-Nov)
-    - cron: "0 17 * * *"   # 11:00 CT during CST (Nov-Mar)
+    - cron: "0 4 * * *"   # 23:00 CT during CDT (Mar-Nov) -> 04:00 UTC next day
+    - cron: "0 5 * * *"   # 23:00 CT during CST (Nov-Mar) -> 05:00 UTC next day
   workflow_dispatch:
     inputs:
       leagues:
-        description: "Comma-separated league codes"
-        default: "MLB,NFL,NHL,NBA,KBO,NPB"
+        description: "Comma-separated league codes (overseas default)"
+        default: "KBO,NPB,EPL,UCL"
       publish:
         description: "Invoke real publishers (X, Discord, Email)?"
         default: "true"
@@ -57,7 +62,7 @@ jobs:
           python - <<'PY' >> "$GITHUB_OUTPUT"
           from datetime import datetime
           from zoneinfo import ZoneInfo
-          expected = 11
+          expected = 23
           now = datetime.now(ZoneInfo("America/Chicago"))
           print(f"should_run={'true' if now.hour == expected else 'false'}")
           print(f"ct_hour={now.hour}")
@@ -78,7 +83,7 @@ jobs:
           restore-keys: |
             edge-equation-db-
 
-      - name: Run daily edge
+      - name: Run overseas edge
         if: steps.guard.outputs.should_run == 'true'
         run: |
           mkdir -p data/failsafes
@@ -90,13 +95,13 @@ jobs:
             [ "${{ inputs.dry_run }}" = "false" ] || DRY_RUN_FLAG="--dry-run"
             LEAGUES="--leagues ${{ inputs.leagues }}"
           fi
-          python -m edge_equation daily $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode $LEAGUES
+          python -m edge_equation overseas $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode $LEAGUES
 
       - name: Upload failsafe files
         if: always() && steps.guard.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: failsafes-daily-${{ github.run_id }}
+          name: failsafes-overseas-${{ github.run_id }}
           path: data/failsafes/
           if-no-files-found: ignore
           retention-days: 14

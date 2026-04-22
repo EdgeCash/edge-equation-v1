@@ -1,17 +1,16 @@
-name: Daily Edge (11am CT)
+name: The Ledger (9am CT)
 
-# Phase 20 cadence slot 2 of 5: 11:00 US/Central.
-# Dual cron to cover CST (UTC-6 -> 17:00 UTC) and CDT (UTC-5 -> 16:00 UTC).
-# CT-hour guard below enforces exactly one run per day via stdlib zoneinfo.
+# Phase 20 cadence slot 1 of 5: 09:00 US/Central.
+# Dual cron to cover CST (UTC-6 -> 15:00 UTC) and CDT (UTC-5 -> 14:00 UTC).
+# The CT-hour guard below is the source of truth: it reads America/Chicago
+# via stdlib zoneinfo and sets should_run=true only on the cron line that
+# matches the current DST state, so exactly one run per day fires.
 on:
   schedule:
-    - cron: "0 16 * * *"   # 11:00 CT during CDT (Mar-Nov)
-    - cron: "0 17 * * *"   # 11:00 CT during CST (Nov-Mar)
+    - cron: "0 14 * * *"   # 09:00 CT during CDT (Mar-Nov)
+    - cron: "0 15 * * *"   # 09:00 CT during CST (Nov-Mar)
   workflow_dispatch:
     inputs:
-      leagues:
-        description: "Comma-separated league codes"
-        default: "MLB,NFL,NHL,NBA,KBO,NPB"
       publish:
         description: "Invoke real publishers (X, Discord, Email)?"
         default: "true"
@@ -57,7 +56,7 @@ jobs:
           python - <<'PY' >> "$GITHUB_OUTPUT"
           from datetime import datetime
           from zoneinfo import ZoneInfo
-          expected = 11
+          expected = 9
           now = datetime.now(ZoneInfo("America/Chicago"))
           print(f"should_run={'true' if now.hour == expected else 'false'}")
           print(f"ct_hour={now.hour}")
@@ -78,25 +77,23 @@ jobs:
           restore-keys: |
             edge-equation-db-
 
-      - name: Run daily edge
+      - name: Run the ledger
         if: steps.guard.outputs.should_run == 'true'
         run: |
           mkdir -p data/failsafes
           PUBLISH_FLAG="--publish"
           DRY_RUN_FLAG="--no-dry-run"
-          LEAGUES=""
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             [ "${{ inputs.publish }}" = "true" ] || PUBLISH_FLAG="--no-publish"
             [ "${{ inputs.dry_run }}" = "false" ] || DRY_RUN_FLAG="--dry-run"
-            LEAGUES="--leagues ${{ inputs.leagues }}"
           fi
-          python -m edge_equation daily $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode $LEAGUES
+          python -m edge_equation ledger $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode
 
       - name: Upload failsafe files
         if: always() && steps.guard.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: failsafes-daily-${{ github.run_id }}
+          name: failsafes-ledger-${{ github.run_id }}
           path: data/failsafes/
           if-no-files-found: ignore
           retention-days: 14

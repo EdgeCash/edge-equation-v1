@@ -33,6 +33,7 @@ from edge_equation.ingestion.schema import LEAGUE_TO_SPORT, Slate
 from edge_equation.ingestion.source_factory import SourceFactory
 from edge_equation.persistence.pick_store import PickStore
 from edge_equation.persistence.slate_store import SlateRecord, SlateStore
+from edge_equation.posting.ledger import LedgerStats
 from edge_equation.posting.posting_formatter import PostingFormatter
 from edge_equation.publishing.discord_publisher import DiscordPublisher
 from edge_equation.publishing.email_publisher import EmailPublisher
@@ -43,9 +44,19 @@ from edge_equation.stats.results import GameResultsStore
 
 CARD_TYPE_DAILY = "daily_edge"
 CARD_TYPE_EVENING = "evening_edge"
-VALID_CARD_TYPES = (CARD_TYPE_DAILY, CARD_TYPE_EVENING)
+CARD_TYPE_LEDGER = "the_ledger"
+CARD_TYPE_SPOTLIGHT = "spotlight"
+CARD_TYPE_OVERSEAS_EDGE = "overseas_edge"
+VALID_CARD_TYPES = (
+    CARD_TYPE_DAILY,
+    CARD_TYPE_EVENING,
+    CARD_TYPE_LEDGER,
+    CARD_TYPE_SPOTLIGHT,
+    CARD_TYPE_OVERSEAS_EDGE,
+)
 
 DEFAULT_LEAGUES = ("MLB", "NFL", "NHL", "NBA", "KBO", "NPB")
+OVERSEAS_LEAGUES = ("KBO", "NPB", "EPL", "UCL")
 
 
 @dataclass(frozen=True)
@@ -140,11 +151,17 @@ def _build_card(
     card_type: str,
     picks: List[Pick],
     run_datetime: datetime,
+    public_mode: bool = False,
+    ledger_stats: Optional[LedgerStats] = None,
+    prior_picks: Optional[List[Pick]] = None,
 ) -> dict:
     return PostingFormatter.build_card(
         card_type=card_type,
         picks=picks,
         generated_at=run_datetime.isoformat(),
+        public_mode=public_mode,
+        ledger_stats=ledger_stats,
+        prior_picks=prior_picks,
     )
 
 
@@ -184,6 +201,9 @@ class ScheduledRunner:
         api_key: Optional[str] = None,
         publishers: Optional[List[object]] = None,
         prefer_mock: bool = False,
+        public_mode: bool = False,
+        ledger_stats: Optional[LedgerStats] = None,
+        prior_picks: Optional[List[Pick]] = None,
     ) -> RunSummary:
         if card_type not in VALID_CARD_TYPES:
             raise ValueError(
@@ -235,7 +255,12 @@ class ScheduledRunner:
 
         publish_results: tuple = ()
         if publish:
-            card = _build_card(card_type, picks, run_dt)
+            card = _build_card(
+                card_type, picks, run_dt,
+                public_mode=public_mode,
+                ledger_stats=ledger_stats,
+                prior_picks=prior_picks,
+            )
             publish_results = tuple(_publish_card(card, dry_run=dry_run, publishers=publishers))
 
         return RunSummary(

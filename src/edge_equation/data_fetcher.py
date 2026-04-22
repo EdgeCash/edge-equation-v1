@@ -44,7 +44,9 @@ the build green. Wire real scraping endpoints in a follow-up.
 """
 from dataclasses import dataclass, field
 from datetime import date as _date, datetime
+from html.parser import HTMLParser
 import os
+import re
 import sqlite3
 import time
 from typing import Any, Dict, List, Optional
@@ -257,15 +259,174 @@ class TheSportsDBClient:
         return teams[0] if teams else None
 
 
-# ---------------------------------------------- scrapers (skeleton)
+# ---------------------------------------------- scrapers
+
+
+class _TableRowParser(HTMLParser):
+    """
+    Lightweight stdlib HTML scraper: collect one row of text cells per
+    `<tr>` inside the matching `<table>`. Tolerates malformed markup --
+    anything that doesn't fit the table shape is silently skipped, and
+    we never raise out of the parser. Callers are expected to map the
+    resulting rows to domain dicts.
+    """
+
+    def __init__(
+        self,
+        table_class: Optional[str] = None,
+        row_class: Optional[str] = None,
+    ):
+        super().__init__(convert_charrefs=True)
+        self._want_table_cls = table_class
+        self._want_row_cls = row_class
+        self._in_table = False
+        self._in_row = False
+        self._in_cell = False
+        self._current_row: List[str] = []
+        self._cell_buf: List[str] = []
+        self.rows: List[List[str]] = []
+
+    @staticmethod
+    def _has_class(attrs: List, name: Optional[str]) -> bool:
+        if name is None:
+            return True
+        for k, v in attrs:
+            if k == "class" and v and name in v.split():
+                return True
+        return False
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "table" and self._has_class(attrs, self._want_table_cls):
+            self._in_table = True
+            return
+        if not self._in_table:
+            return
+        if tag == "tr" and self._has_class(attrs, self._want_row_cls):
+            self._in_row = True
+            self._current_row = []
+            return
+        if self._in_row and tag in ("td", "th"):
+            self._in_cell = True
+            self._cell_buf = []
+
+    def handle_endtag(self, tag):
+        if tag == "table" and self._in_table:
+            self._in_table = False
+            self._in_row = False
+            return
+        if tag == "tr" and self._in_row:
+            if self._current_row:
+                self.rows.append(self._current_row)
+            self._in_row = False
+            return
+        if tag in ("td", "th") and self._in_cell:
+            self._in_cell = False
+            cell_text = " ".join("".join(self._cell_buf).split())
+            self._current_row.append(cell_text)
+
+    def handle_data(self, data):
+        if self._in_cell:
+            self._cell_buf.append(data)
+
+
+def _parse_table_rows(
+    html: str,
+    table_class: Optional[str] = None,
+    row_class: Optional[str] = None,
+) -> List[List[str]]:
+    """Parse rows from the first matching table; returns [] on any error."""
+    try:
+        p = _TableRowParser(table_class=table_class, row_class=row_class)
+        p.feed(html)
+        p.close()
+        return p.rows
+    except Exception:
+        return []
+
+
+# mykbostats.com schedule rows look like:
+#   <tr class="game"> <td class="time">18:30</td>
+#     <td class="away">LG @ Doosan</td>
+#     <td class="starters">Kelly / Raley</td> ... </tr>
+# The row order is stable enough that we key on position with defensive
+# index-out-of-range guards.
+_KBO_MATCHUP_SPLIT_RE = re.compile(r"\s+(?:@|vs\.?)\s+", re.IGNORECASE)
+_KBO_STARTERS_SPLIT_RE = re.compile(r"\s*(?:/|vs\.?)\s*", re.IGNORECASE)
+
+
+def _parse_kbo_rows(rows: List[List[str]], day_iso: str) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        if len(row) < 2:
+            continue
+        start_time = row[0].strip()
+        matchup = row[1].strip()
+        teams = _KBO_MATCHUP_SPLIT_RE.split(matchup, maxsplit=1)
+        if len(teams) != 2:
+            continue
+        away_team, home_team = teams[0].strip(), teams[1].strip()
+        starters_raw = row[2].strip() if len(row) >= 3 else ""
+        away_starter, home_starter = "", ""
+        if starters_raw:
+            parts = _KBO_STARTERS_SPLIT_RE.split(starters_raw, maxsplit=1)
+            if len(parts) == 2:
+                away_starter, home_starter = parts[0].strip(), parts[1].strip()
+        out.append({
+            "league": "KBO",
+            "game_id": f"KBO-{day_iso}-{away_team}-{home_team}",
+            "start_time_local": start_time,
+            "home_team": home_team,
+            "away_team": away_team,
+            "home_starter": home_starter,
+            "away_starter": away_starter,
+        })
+    return out
+
+
+# npb.jp schedule rows (bis/eng): single <table class="schedule_table"> with
+# one row per game. The English table order is [time, away team, score (if
+# completed), home team, starters] with starters blank for future games.
+_NPB_STARTERS_SPLIT_RE = re.compile(r"\s*(?:vs\.?|/|-)\s*", re.IGNORECASE)
+
+
+def _parse_npb_rows(rows: List[List[str]], day_iso: str) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    for row in rows:
+        if len(row) < 4:
+            continue
+        start_time = row[0].strip()
+        away_team = row[1].strip()
+        home_team = row[3].strip() if len(row) > 3 else ""
+        if not home_team or not away_team:
+            continue
+        starters_raw = row[4].strip() if len(row) >= 5 else ""
+        away_starter, home_starter = "", ""
+        if starters_raw:
+            parts = _NPB_STARTERS_SPLIT_RE.split(starters_raw, maxsplit=1)
+            if len(parts) == 2:
+                away_starter, home_starter = parts[0].strip(), parts[1].strip()
+        out.append({
+            "league": "NPB",
+            "game_id": f"NPB-{day_iso}-{away_team}-{home_team}",
+            "start_time_local": start_time,
+            "home_team": home_team,
+            "away_team": away_team,
+            "home_starter": home_starter,
+            "away_starter": away_starter,
+        })
+    return out
 
 
 class KboStatsScraper:
     """
-    Scraper wrapper for mykbostats.com (KBO). Phase 20 ships the cached
-    interface; the HTML parsing itself is intentionally stubbed so the
-    build stays green without a live target page. When you wire a real
-    parser, do so inside _parse() and keep the cache/retry envelope.
+    Scraper wrapper for mykbostats.com. Targets the daily schedule page
+    (.../schedule/YYYY-MM-DD) and returns a list of per-game dicts with
+    teams, start time, and probable starters. Lightweight stdlib HTML
+    parsing only -- no bs4, no external deps.
+
+    On any parse failure the scraper returns an empty list so the rest
+    of the fetcher degrades gracefully. See _parse_kbo_rows for the
+    output shape.
     """
 
     BASE = "https://www.mykbostats.com"
@@ -311,11 +472,15 @@ class KboStatsScraper:
         return html
 
     @staticmethod
-    def _parse(html: Optional[str]) -> List[Dict[str, Any]]:
-        # Intentional stub: parsing logic lives outside this commit until
-        # we have a real target page to validate against. Returns an
-        # empty list so callers degrade gracefully.
-        return []
+    def _parse(html: Optional[str], day_iso: str = "") -> List[Dict[str, Any]]:
+        """Parse mykbostats daily schedule HTML -> list of game dicts."""
+        if not html:
+            return []
+        rows = _parse_table_rows(html, table_class="schedule", row_class="game")
+        if not rows:
+            # Fallback: some layouts render without the .schedule class.
+            rows = _parse_table_rows(html, row_class="game")
+        return _parse_kbo_rows(rows, day_iso=day_iso)
 
     def starters_for_day(
         self,
@@ -323,18 +488,22 @@ class KboStatsScraper:
         day: _date,
         now: Optional[datetime] = None,
     ) -> List[Dict[str, Any]]:
-        """Returns a list of starter records for the day (empty in the
-        stub)."""
+        """Return a list of starter records for the day (empty on any
+        network or parse failure)."""
         path = f"/schedule/{day.isoformat()}"
         html = self._fetch(conn, path, now=now)
-        return KboStatsScraper._parse(html)
+        return KboStatsScraper._parse(html, day_iso=day.isoformat())
 
 
 class NpbStatsScraper:
     """
-    NPB stats/starters scraper wrapper. Same shape as KboStatsScraper --
-    cached + retried + rate-limited envelope; parsing is a stub until we
-    point it at a specific source.
+    NPB stats/starters scraper wrapper targeting npb.jp's English BIS
+    pages (.../bis/eng/YYYY/games/sMMDD.html). Returns a list of per-game
+    dicts identical in shape to KboStatsScraper output (game_id, teams,
+    starters, start_time). Lightweight stdlib HTML parsing only.
+
+    On any parse failure the scraper returns an empty list so the rest
+    of the fetcher degrades gracefully.
     """
 
     BASE = "https://npb.jp"
@@ -380,8 +549,14 @@ class NpbStatsScraper:
         return html
 
     @staticmethod
-    def _parse(html: Optional[str]) -> List[Dict[str, Any]]:
-        return []
+    def _parse(html: Optional[str], day_iso: str = "") -> List[Dict[str, Any]]:
+        """Parse the NPB English BIS daily schedule -> list of game dicts."""
+        if not html:
+            return []
+        rows = _parse_table_rows(html, table_class="schedule_table")
+        if not rows:
+            rows = _parse_table_rows(html, table_class="teble")  # alt layout
+        return _parse_npb_rows(rows, day_iso=day_iso)
 
     def starters_for_day(
         self,
@@ -391,7 +566,7 @@ class NpbStatsScraper:
     ) -> List[Dict[str, Any]]:
         path = f"/bis/eng/{day.year}/games/s{day.strftime('%m%d')}.html"
         html = self._fetch(conn, path, now=now)
-        return NpbStatsScraper._parse(html)
+        return NpbStatsScraper._parse(html, day_iso=day.isoformat())
 
 
 # ---------------------------------------------- DataBundle + fetch_daily_data

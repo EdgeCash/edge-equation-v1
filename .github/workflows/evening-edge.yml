@@ -1,9 +1,17 @@
-name: Evening Edge
+name: Evening Edge (6pm CT)
 
-# Runs the evening slate. Default 22:00 UTC = 6pm ET / 5pm CT.
+# Phase 20 cadence slot 4 of 5: 18:00 US/Central.
+# Dual cron to cover CST (UTC-6 -> 00:00 UTC next day) and CDT (UTC-5 -> 23:00 UTC same day).
+# CT-hour guard enforces exactly one run per day.
+#
+# Evening Edge is post-only-if-material: the card_type logic in
+# PostingFormatter.build_card emits an "engine stable" short card when
+# the slate hasn't moved since the Daily Edge, so this workflow always
+# runs and lets the engine decide whether to post or stay quiet.
 on:
   schedule:
-    - cron: "0 22 * * *"
+    - cron: "0 23 * * *"   # 18:00 CT during CDT (Mar-Nov)
+    - cron: "0 0 * * *"    # 18:00 CT during CST (Nov-Mar) -> 00:00 UTC next day
   workflow_dispatch:
     inputs:
       leagues:
@@ -44,12 +52,30 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: CT-hour guard
+        id: guard
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          expected = 18
+          now = datetime.now(ZoneInfo("America/Chicago"))
+          print(f"should_run={'true' if now.hour == expected else 'false'}")
+          print(f"ct_hour={now.hour}")
+          PY
+
       - name: Install package
+        if: steps.guard.outputs.should_run == 'true'
         run: |
           python -m pip install --upgrade pip
           pip install -e .
 
       - name: Restore SQLite from cache
+        if: steps.guard.outputs.should_run == 'true'
         uses: actions/cache@v4
         with:
           path: edge_equation.db
@@ -58,21 +84,21 @@ jobs:
             edge-equation-db-
 
       - name: Run evening edge
+        if: steps.guard.outputs.should_run == 'true'
         run: |
           mkdir -p data/failsafes
           PUBLISH_FLAG="--publish"
           DRY_RUN_FLAG="--no-dry-run"
+          LEAGUES=""
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             [ "${{ inputs.publish }}" = "true" ] || PUBLISH_FLAG="--no-publish"
             [ "${{ inputs.dry_run }}" = "false" ] || DRY_RUN_FLAG="--dry-run"
             LEAGUES="--leagues ${{ inputs.leagues }}"
-          else
-            LEAGUES=""
           fi
-          python -m edge_equation evening $PUBLISH_FLAG $DRY_RUN_FLAG $LEAGUES
+          python -m edge_equation evening $PUBLISH_FLAG $DRY_RUN_FLAG --public-mode $LEAGUES
 
       - name: Upload failsafe files
-        if: always()
+        if: always() && steps.guard.outputs.should_run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: failsafes-evening-${{ github.run_id }}
