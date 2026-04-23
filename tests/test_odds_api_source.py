@@ -167,7 +167,12 @@ def test_ml_markets_have_no_line(conn):
     assert all(m["line"] is None for m in ml)
 
 
-def test_spreads_selection_includes_signed_point(conn):
+def test_spreads_selection_is_team_name_only(conn):
+    """Post-fix: spreads selections carry just the team name so
+    BettingEngine._resolve_selection_side can exact-match home/away.
+    The point lives on MarketInfo.line. Embedding the point in the
+    selection string (old behavior) silently made every spread pick
+    ungradeable because "PIT -1.5" never equals "PIT"."""
     nhl_payload = {
         "games": [
             {
@@ -198,8 +203,12 @@ def test_spreads_selection_includes_signed_point(conn):
     assert len(markets) == 2
     assert all(m["market_type"] == "Puck_Line" for m in markets)
     selections = {m["selection"] for m in markets}
-    assert "Pittsburgh Penguins -1.5" in selections
-    assert "Philadelphia Flyers +1.5" in selections
+    # Team names only -- no embedded point.
+    assert selections == {"Pittsburgh Penguins", "Philadelphia Flyers"}
+    # Line is preserved per-outcome so downstream math still sees -1.5 / +1.5.
+    lines_by_sel = {m["selection"]: m["line"] for m in markets}
+    assert lines_by_sel["Pittsburgh Penguins"] == Decimal("-1.5")
+    assert lines_by_sel["Philadelphia Flyers"] == Decimal("1.5")
 
 
 def test_empty_bookmakers_yields_no_markets(conn):
