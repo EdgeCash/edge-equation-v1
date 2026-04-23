@@ -253,12 +253,22 @@ def test_pitching_zero_league_fip_raises():
 # -------------------------------------------------- build() end-to-end
 
 
-def test_build_no_data_returns_neutral():
-    ts = TeamStrengthBuilder.build(
-        team="A", league="MLB", results=[],
-    )
-    assert ts.strength == NEUTRAL_STRENGTH
+def test_build_no_data_returns_seed_near_neutral():
+    """Phase 31: cold start no longer returns the literal NEUTRAL_STRENGTH
+    1.0. A flat 1.0 on both sides collapses BT to 50/50, which trips the
+    sanity guard for the away pick post-side-flip and zeros the slate.
+    The seed perturbation is small (~3%) but non-zero so each team gets
+    a deterministic, distinct cold-start strength."""
+    ts = TeamStrengthBuilder.build(team="A", league="MLB", results=[])
     assert ts.games_used == 0
+    # Strength is within +/- 3% of neutral (the seed perturbation cap).
+    assert abs(ts.strength - NEUTRAL_STRENGTH) <= Decimal("0.030001")
+    # Two different teams get DIFFERENT seeds (the whole point).
+    ts_b = TeamStrengthBuilder.build(team="B", league="MLB", results=[])
+    assert ts.strength != ts_b.strength
+    # Same team in same league reproduces (deterministic from sha256).
+    ts_a2 = TeamStrengthBuilder.build(team="A", league="MLB", results=[])
+    assert ts.strength == ts_a2.strength
 
 
 def test_build_strong_team_returns_strength_above_one():

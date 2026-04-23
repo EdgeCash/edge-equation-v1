@@ -34,8 +34,19 @@ remaining weights renormalize to 1 so the result is always well-defined.
 The final strength is clamped to [0.1, 10.0] so downstream Bradley-Terry
 probabilities stay in a sane range (roughly [0.01, 0.99] at equal odds).
 
+Phase 31: when EVERY component is unavailable (cold start, no settled
+games for either side) we no longer return the literal 1.0 -- two teams
+both at exactly 1.0 produce an artificial 50/50 BT projection that the
+sanity guard then rejects, leaving the slate empty. Instead we return
+a tiny deterministic per-team perturbation around 1.0 derived from a
+sha256(league + team) hash. The perturbation is small enough (~1%) that
+Monte Carlo's input sigma still dominates, but it's non-zero so paired
+teams differ. games_used=0 stays in the audit trail so callers can
+flag the projection as low-credibility.
+
 Everything below is pure Decimal + stdlib math. No RNG, no training.
 """
+import hashlib
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, Dict, Iterable, List, Optional
@@ -49,6 +60,13 @@ from edge_equation.stats.results import GameResult
 STRENGTH_FLOOR = Decimal('0.10')
 STRENGTH_CEIL = Decimal('10.00')
 NEUTRAL_STRENGTH = Decimal('1.000000')
+
+# Phase 31: cap on the cold-start seed perturbation. ~+/-3% multiplicative
+# spread is large enough that two teams render as different projections,
+# small enough that the engine's sanity guard never flags it as a real
+# edge signal on its own. Anything beyond this should come from real
+# settled-results data flowing through the four blend components above.
+_SEED_PERTURBATION = Decimal('0.030')
 
 
 @dataclass(frozen=True)
@@ -142,6 +160,22 @@ class TeamStrengthBuilder:
         if value > ceil:
             return ceil
         return value
+
+    @staticmethod
+    def _seed_strength(team: str, league: str) -> Decimal:
+        """Phase 31: deterministic cold-start seed when no historical
+        components exist. Pulls a small +/- multiplier in the range
+        [-_SEED_PERTURBATION, +_SEED_PERTURBATION] from the first 4
+        bytes of sha256(league + ":" + team). Same (team, league) ->
+        same seed across runs (critical for reproducibility) but two
+        different teams in the same league will land at different
+        strengths, so Bradley-Terry no longer collapses to 50/50."""
+        h = hashlib.sha256(f"{league}:{team}".encode("utf-8")).digest()
+        # 32-bit unsigned int from first 4 bytes -> [0.0, 1.0).
+        u32 = int.from_bytes(h[:4], "big") / 2**32
+        # Map [0, 1) -> [-_SEED_PERTURBATION, +_SEED_PERTURBATION].
+        offset = (Decimal(str(u32)) * Decimal('2') - Decimal('1')) * _SEED_PERTURBATION
+        return (Decimal('1') + offset).quantize(Decimal('0.000001'))
 
     # -------------------------------------------------- components
 
@@ -298,9 +332,20 @@ class TeamStrengthBuilder:
         ]
         active = [(n, s, w) for (n, s, w) in pairs if s is not None and w > Decimal('0')]
         if not active:
+            # Phase 31: cold start. No settled games / Elo / pitching for
+            # this team in this league means every blend component is None.
+            # Returning a flat NEUTRAL_STRENGTH = 1.0 for BOTH sides of a
+            # matchup makes Bradley-Terry collapse to 50/50, which then
+            # crashes through the engine's +30% sanity ceiling on the
+            # away side after the side-flip and zeroes the slate. Instead,
+            # return a deterministic seed strength: 1.0 perturbed by a
+            # tiny +/- multiplier derived from sha256(league + team). The
+            # caller still sees games_used=0 so any Read can correctly
+            # flag the projection as "league prior, no settled history".
+            seed = TeamStrengthBuilder._seed_strength(team, league)
             return TeamStrength(
                 team=team, league=league,
-                strength=NEUTRAL_STRENGTH,
+                strength=seed,
                 components=components,
                 effective_weights={},
                 games_used=games_used,

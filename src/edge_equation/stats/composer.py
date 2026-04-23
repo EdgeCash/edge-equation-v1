@@ -124,10 +124,25 @@ class FeatureComposer:
         market whose game appears in raw_games. Existing meta['inputs'] values
         are preserved -- this fills gaps without overwriting.
 
+        Phase 31 changes:
+          - The composer runs even when `results` is empty. Previously the
+            scheduled runner skipped enrich_markets entirely when no
+            historical results were stored, leaving every ML market with
+            no inputs and BettingEngine falling back to strength=1.0/1.0.
+            With Team_StrengthBuilder's cold-start seed, strengths are
+            now per-team-deterministic even on day zero of a league.
+          - Each enriched market also gets a meta['read_context'] dict
+            stashed alongside meta['inputs']. This is the structured
+            evidence the betting_engine's _baseline_read consumes to
+            produce a substantive "Read:" line: games-used, recent form
+            string, run differential, Elo edge, etc. NEVER includes tout
+            language -- it's facts the renderer can quote verbatim.
+
         Returns a new list (inputs list is not mutated).
         """
         games_by_id = {g["game_id"]: g for g in raw_games if g.get("league") == league}
-        elo = EloCalculator.replay(league, [r for r in results if r.league == league])
+        scoped_results = [r for r in results if r.league == league]
+        elo = EloCalculator.replay(league, scoped_results)
         enriched: List[dict] = []
         for market in raw_markets:
             gid = market.get("game_id")
@@ -139,12 +154,11 @@ class FeatureComposer:
             if meta.get("inputs") is not None:
                 enriched.append(market)
                 continue
+            home = game["home_team"]
+            away = game["away_team"]
             composed = FeatureComposer.compose(
-                home=game["home_team"],
-                away=game["away_team"],
-                league=league,
-                results=results,
-                elo=elo,
+                home=home, away=away, league=league,
+                results=results, elo=elo,
             )
             market_type = market.get("market_type")
             if market_type in ("ML", "Run_Line", "Puck_Line", "Spread"):
@@ -154,8 +168,103 @@ class FeatureComposer:
             else:
                 enriched.append(market)
                 continue
+            # Phase 31: stash structured evidence the engine can quote
+            # in its Read line. Every key here is FACTUAL data pulled
+            # from game results / Elo replay -- the renderer never
+            # invents narrative on top.
+            meta["read_context"] = FeatureComposer._read_context(
+                home=home, away=away, league=league,
+                scoped_results=scoped_results, elo=elo,
+            )
             meta.setdefault("universal_features", {})
             new_market = dict(market)
             new_market["meta"] = meta
             enriched.append(new_market)
         return enriched
+
+    # --------------------------------------------------- read context
+
+    @staticmethod
+    def _read_context(
+        home: str,
+        away: str,
+        league: str,
+        scoped_results: List[GameResult],
+        elo: EloRatings,
+    ) -> Dict[str, object]:
+        """Phase 31: produce the FACTUAL evidence block that powers the
+        engine's Read line. No tout language, no narrative -- just numbers
+        and short strings the renderer composes into prose downstream.
+
+        Keys (all optional; renderer skips missing ones):
+          - games_used_home, games_used_away: settled-game counts
+          - recent_form_home, recent_form_away: e.g. "8-3 L11"
+          - run_diff_home, run_diff_away: total runs scored - allowed in window
+          - elo_home, elo_away: Elo ratings (ints)
+          - elo_diff: home - away Elo delta (int)
+          - sample_warning: True iff either side has < 8 settled games
+            (drives the "limited history -- league prior dominates" caveat)
+        """
+        from edge_equation.config.sport_config import SportConfig
+        window = int(SportConfig.form_window_games(league))
+
+        def _team_window(team: str) -> List[GameResult]:
+            tg = [g for g in scoped_results if team in (g.home_team, g.away_team)]
+            return sorted(tg, key=lambda g: g.start_time, reverse=True)[:window]
+
+        def _wl_string(team: str, games: List[GameResult]) -> Optional[str]:
+            if not games:
+                return None
+            wins = losses = 0
+            for g in games:
+                if g.is_draw():
+                    continue
+                team_won = (
+                    (g.home_team == team and g.home_won())
+                    or (g.away_team == team and not g.home_won())
+                )
+                if team_won:
+                    wins += 1
+                else:
+                    losses += 1
+            return f"{wins}-{losses} L{len(games)}"
+
+        def _run_diff(team: str, games: List[GameResult]) -> Optional[int]:
+            if not games:
+                return None
+            rs = sum(g.home_score if g.home_team == team else g.away_score for g in games)
+            ra = sum(g.away_score if g.home_team == team else g.home_score for g in games)
+            return int(rs - ra)
+
+        home_games = _team_window(home)
+        away_games = _team_window(away)
+        ctx: Dict[str, object] = {
+            "games_used_home": len(home_games),
+            "games_used_away": len(away_games),
+        }
+        wf_h = _wl_string(home, home_games)
+        wf_a = _wl_string(away, away_games)
+        if wf_h:
+            ctx["recent_form_home"] = wf_h
+        if wf_a:
+            ctx["recent_form_away"] = wf_a
+        rd_h = _run_diff(home, home_games)
+        rd_a = _run_diff(away, away_games)
+        if rd_h is not None:
+            ctx["run_diff_home"] = rd_h
+        if rd_a is not None:
+            ctx["run_diff_away"] = rd_a
+        if elo is not None:
+            r_h = elo.ratings.get(home)
+            r_a = elo.ratings.get(away)
+            if r_h is not None:
+                ctx["elo_home"] = int(r_h)
+            if r_a is not None:
+                ctx["elo_away"] = int(r_a)
+            if r_h is not None and r_a is not None:
+                ctx["elo_diff"] = int(r_h) - int(r_a)
+        # Sample warning -- the engine quotes this so subscribers know
+        # when a projection is leaning on the league prior.
+        if len(home_games) < 8 or len(away_games) < 8:
+            ctx["sample_warning"] = True
+        return ctx

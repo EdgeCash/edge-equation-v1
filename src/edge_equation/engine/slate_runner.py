@@ -23,6 +23,28 @@ def _evaluate_market(game: GameInfo, market: MarketInfo, public_mode: bool) -> O
         return None
     universal = meta.get("universal_features", {})
 
+    # Phase 31: forward read_context (and any pitcher / weather / umpire
+    # metadata the source attached) into bundle.metadata so the betting
+    # engine's _baseline_read can pull real signals instead of the old
+    # generic placeholder text.
+    bundle_meta: dict = {
+        "league": game.league,
+        "home_team": game.home_team,
+        "away_team": game.away_team,
+    }
+    if "read_context" in meta:
+        bundle_meta["read_context"] = meta["read_context"]
+    for k in (
+        "pitching_home", "pitching_away",
+        "starter_home", "starter_away",
+        "weather", "umpire",
+        "rest_days_home", "rest_days_away",
+        "travel_miles_away", "elo_diff",
+        "barrel_rate", "wOBA_delta",
+    ):
+        if k in meta:
+            bundle_meta[k] = meta[k]
+
     try:
         bundle = FeatureBuilder.build(
             sport=game.sport,
@@ -32,7 +54,7 @@ def _evaluate_market(game: GameInfo, market: MarketInfo, public_mode: bool) -> O
             game_id=game.game_id,
             event_time=game.start_time.isoformat(),
             selection=market.selection,
-            metadata={"league": game.league, "home_team": game.home_team, "away_team": game.away_team},
+            metadata=bundle_meta,
         )
     except ValueError:
         return None

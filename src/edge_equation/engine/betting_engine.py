@@ -4,7 +4,7 @@ Betting engine.
 Glue layer that takes a FeatureBundle + market Line and produces a Pick.
 """
 from decimal import Decimal
-from typing import Optional
+from typing import List, Optional
 
 from edge_equation.math.probability import ProbabilityCalculator
 from edge_equation.math.ev import EVCalculator
@@ -87,64 +87,158 @@ def _baseline_read(
     decay_halflife_days: Optional[Decimal],
     mc_stability: Optional[dict] = None,
 ) -> str:
-    """Compose a factual multi-sentence read from whatever feature
-    inputs are on hand. Premium subscribers see this verbatim under
-    "Read:" -- Facts Not Feelings, no hype, no tout language. Returns
-    "" when we can't say anything honest."""
-    bits = []
+    """Phase 31: substantive Read built from FACTUAL evidence stashed by
+    the composer. Premium subscribers see this verbatim under "Read:".
+
+    Brand rules:
+      * Facts Not Feelings -- every sentence quotes a number or a
+        verifiable string (W/L record, Elo rating, weather mph).
+      * No tout language. No "lock", no "value play", no "edge of the
+        day" filler.
+      * No generic fallback prose. If the only thing we know is that
+        the engine produced an edge, we say nothing -- the math line
+        in the rendered card already carries that signal. Empty Read
+        beats hype Read.
+
+    The function consumes (in order of preference, every key optional):
+      bundle.metadata['read_context']  -- composer's structured evidence
+      bundle.metadata['pitching_*']    -- starter/bullpen FIP if present
+      bundle.metadata['weather']       -- {wind_mph, temp_f, dome}
+      bundle.metadata['umpire']        -- {name, k_factor}
+      bundle.metadata['rest_days_*']   -- ints
+      bundle.metadata['travel_miles_*']-- ints
+      bundle.inputs['pace'/'off_env'/'def_env']  -- totals env factors
+      mc_stability                     -- engine's 10k MC band
+    """
+    bits: List[str] = []
     inputs = bundle.inputs or {}
     meta = bundle.metadata or {}
+    rc: dict = meta.get("read_context") or {}
+
+    # ---------------------------------------------------------------
+    # ML markets: lead with team form / Elo. The composer stash gives
+    # the reader an immediate "what's behind this projection" anchor.
+    # ---------------------------------------------------------------
     if market_type == "ML":
-        sh = inputs.get("strength_home")
-        sa = inputs.get("strength_away")
-        if sh is not None and sa is not None:
-            try:
-                diff = float(sh) - float(sa)
-                if abs(diff) > 0.10:
-                    side = "home" if diff > 0 else "away"
-                    bits.append(
-                        f"Composer strength differential favors {side} "
-                        f"({float(sh):.2f} vs {float(sa):.2f})."
-                    )
-                else:
-                    bits.append(
-                        f"Strengths within noise ({float(sh):.2f} vs "
-                        f"{float(sa):.2f}); edge lives in the price."
-                    )
-            except (TypeError, ValueError):
-                pass
-        elo_diff = meta.get("elo_diff")
+        rfh = rc.get("recent_form_home")
+        rfa = rc.get("recent_form_away")
+        rd_h = rc.get("run_diff_home")
+        rd_a = rc.get("run_diff_away")
+        if rfh and rfa:
+            sign_h = "+" if (rd_h or 0) >= 0 else ""
+            sign_a = "+" if (rd_a or 0) >= 0 else ""
+            rd_part = ""
+            if rd_h is not None and rd_a is not None:
+                rd_part = f" (run diff {sign_h}{rd_h} vs {sign_a}{rd_a})"
+            bits.append(f"Recent form home {rfh}, away {rfa}{rd_part}.")
+        elo_diff = rc.get("elo_diff")
+        if elo_diff is None:
+            elo_diff = meta.get("elo_diff")
         if elo_diff is not None:
             try:
-                ed = float(elo_diff)
+                ed = int(elo_diff)
                 if abs(ed) >= 25:
                     side = "home" if ed > 0 else "away"
-                    bits.append(f"Elo gap {ed:+.0f} to {side}.")
+                    bits.append(f"Elo gap {ed:+d} to {side}.")
             except (TypeError, ValueError):
                 pass
+        # Strength differential ONLY when it's meaningful AND we're not
+        # just echoing a cold-start seed. games_used > 0 means real data
+        # backed the BT input. Below that we say nothing -- the seed is
+        # not informative enough to justify a sentence about it.
+        sh = inputs.get("strength_home")
+        sa = inputs.get("strength_away")
+        gh = rc.get("games_used_home", 0)
+        ga = rc.get("games_used_away", 0)
+        if sh is not None and sa is not None and (gh or 0) >= 5 and (ga or 0) >= 5:
+            try:
+                diff = float(sh) - float(sa)
+                if abs(diff) > 0.08:
+                    side = "home" if diff > 0 else "away"
+                    bits.append(
+                        f"Composer strength favors {side} "
+                        f"({float(sh):.2f} vs {float(sa):.2f})."
+                    )
+            except (TypeError, ValueError):
+                pass
+        # Pitching matchup -- if upstream attached starter FIPs we can
+        # contrast them. Better (lower) FIP gets the nod.
+        ph = meta.get("pitching_home") or meta.get("starter_home")
+        pa = meta.get("pitching_away") or meta.get("starter_away")
+        if isinstance(ph, dict) and isinstance(pa, dict):
+            fh = ph.get("fip") or ph.get("era")
+            fa = pa.get("fip") or pa.get("era")
+            nh = ph.get("name") or "home starter"
+            na = pa.get("name") or "away starter"
+            if fh is not None and fa is not None:
+                try:
+                    bits.append(
+                        f"Starters: {nh} {float(fh):.2f} vs "
+                        f"{na} {float(fa):.2f}."
+                    )
+                except (TypeError, ValueError):
+                    pass
+
+    # ---------------------------------------------------------------
+    # Totals: lead with pace + offensive / defensive environment.
+    # ---------------------------------------------------------------
     if market_type in ("Total", "Game_Total"):
         pace = inputs.get("pace")
         off = inputs.get("off_env")
         dfn = inputs.get("def_env")
         env_bits = []
-        if pace is not None:
+        for label, val in (("pace", pace), ("off", off), ("def", dfn)):
+            if val is None:
+                continue
             try:
-                env_bits.append(f"pace={float(pace):.2f}")
-            except (TypeError, ValueError):
-                pass
-        if off is not None:
-            try:
-                env_bits.append(f"off={float(off):.2f}")
-            except (TypeError, ValueError):
-                pass
-        if dfn is not None:
-            try:
-                env_bits.append(f"def={float(dfn):.2f}")
+                env_bits.append(f"{label}={float(val):.2f}")
             except (TypeError, ValueError):
                 pass
         if env_bits:
             bits.append("Run environment " + " ".join(env_bits) + ".")
-    # Rest / travel context if the composer surfaced it.
+
+    # ---------------------------------------------------------------
+    # Cross-market context blocks.
+    # ---------------------------------------------------------------
+    weather = meta.get("weather")
+    if isinstance(weather, dict):
+        wbits = []
+        if weather.get("dome"):
+            wbits.append("dome (no weather impact)")
+        else:
+            wind = weather.get("wind_mph")
+            temp = weather.get("temp_f")
+            if wind is not None:
+                try:
+                    direction = weather.get("wind_dir") or ""
+                    if direction:
+                        wbits.append(f"wind {float(wind):.0f} mph {direction}")
+                    else:
+                        wbits.append(f"wind {float(wind):.0f} mph")
+                except (TypeError, ValueError):
+                    pass
+            if temp is not None:
+                try:
+                    wbits.append(f"{float(temp):.0f}°F")
+                except (TypeError, ValueError):
+                    pass
+        if wbits:
+            bits.append("Weather: " + ", ".join(wbits) + ".")
+
+    umpire = meta.get("umpire")
+    if isinstance(umpire, dict):
+        name = umpire.get("name") or "HP umpire"
+        kf = umpire.get("k_factor")
+        if kf is not None:
+            try:
+                kf_f = float(kf)
+                tilt = "+K" if kf_f > Decimal("1.0") or kf_f > 1.0 else "-K"
+                bits.append(f"HP umpire {name} ({tilt} {kf_f:.2f}x).")
+            except (TypeError, ValueError):
+                bits.append(f"HP umpire {name}.")
+        elif name:
+            bits.append(f"HP umpire {name}.")
+
     rest_home = meta.get("rest_days_home")
     rest_away = meta.get("rest_days_away")
     if rest_home is not None and rest_away is not None:
@@ -152,9 +246,7 @@ def _baseline_read(
             rh, ra = float(rest_home), float(rest_away)
             if abs(rh - ra) >= 1.0:
                 side = "home" if rh > ra else "away"
-                bits.append(
-                    f"Rest edge to {side} ({rh:.0f}d vs {ra:.0f}d)."
-                )
+                bits.append(f"Rest edge to {side} ({rh:.0f}d vs {ra:.0f}d).")
         except (TypeError, ValueError):
             pass
     travel_miles = meta.get("travel_miles_away")
@@ -165,6 +257,27 @@ def _baseline_read(
                 bits.append(f"Away side traveling {tm:.0f} mi.")
         except (TypeError, ValueError):
             pass
+
+    # Barrel-rate / wOBA delta surfacing for HR-style props. Engine
+    # consumers can stash these on the market meta and they'll appear
+    # verbatim here. No-op when absent.
+    barrel = meta.get("barrel_rate")
+    if isinstance(barrel, dict):
+        delta = barrel.get("delta_pp")
+        window = barrel.get("window_days")
+        if delta is not None:
+            try:
+                d_f = float(delta)
+                sign = "+" if d_f >= 0 else ""
+                w_part = f" ({int(window)}d)" if window is not None else ""
+                bits.append(f"Barrel rate {sign}{d_f:.1f}pp{w_part}.")
+            except (TypeError, ValueError):
+                pass
+
+    # ---------------------------------------------------------------
+    # Engine-side audit: HFA, decay, MC band. These are factual and
+    # always safe to surface.
+    # ---------------------------------------------------------------
     if hfa_value is not None:
         try:
             sign = "+" if float(hfa_value) >= 0 else ""
@@ -176,8 +289,6 @@ def _baseline_read(
             bits.append(f"Form decay tau/2 {float(decay_halflife_days):.0f}d.")
         except (TypeError, ValueError):
             pass
-    # MC stability line -- gives the reader the uncertainty band on
-    # fair_prob directly. Only added when stdev is trustworthy.
     if mc_stability:
         try:
             stdev = float(mc_stability.get("stdev", 0))
@@ -189,10 +300,21 @@ def _baseline_read(
                 )
         except (TypeError, ValueError):
             pass
-    if not bits and fair_prob is not None and edge is not None:
+
+    # Sample-size caveat -- dropped at the end so subscribers know when
+    # the projection is leaning on the league prior. Never apologetic;
+    # it's a credibility statement.
+    if rc.get("sample_warning"):
         bits.append(
-            "Edge derived from price/probability delta vs market consensus."
+            "Limited settled-game history; projection blended toward "
+            "the league prior."
         )
+
+    # NO generic price/probability fallback. If we can't say anything
+    # specific, the Read field stays empty and the renderer falls back
+    # to its own "engine flagged on price/probability delta" line --
+    # we no longer pre-fill that here so the absence is visible to
+    # the auditor instead of looking like a real analytical read.
     return " ".join(bits)
 
 
