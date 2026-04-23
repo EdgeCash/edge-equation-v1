@@ -1,4 +1,5 @@
 """Slate runner: glue between ingestion and the Phase-3 engine."""
+import os
 from decimal import Decimal
 from typing import Optional
 
@@ -10,6 +11,34 @@ from edge_equation.utils.logging import get_logger
 
 
 _logger = get_logger("edge-equation.slate_runner")
+
+
+# Process-wide debug counters populated when DEBUG=1. Cheap, additive,
+# and safe to ignore in normal runs -- consumers (e.g. the --debug CLI
+# summary) read via get_debug_stats() and can reset via reset_debug_stats().
+_DEBUG_STATS: dict = {
+    "markets_processed": 0,
+    "markets_with_picks": 0,
+    "supported_markets_seen": set(),
+}
+
+
+def _debug_enabled() -> bool:
+    return os.getenv("DEBUG") == "1"
+
+
+def get_debug_stats() -> dict:
+    return {
+        "markets_processed": _DEBUG_STATS["markets_processed"],
+        "markets_with_picks": _DEBUG_STATS["markets_with_picks"],
+        "supported_markets_seen": sorted(_DEBUG_STATS["supported_markets_seen"]),
+    }
+
+
+def reset_debug_stats() -> None:
+    _DEBUG_STATS["markets_processed"] = 0
+    _DEBUG_STATS["markets_with_picks"] = 0
+    _DEBUG_STATS["supported_markets_seen"] = set()
 
 
 def _league_filter_matches(league: str, filter_value: str) -> bool:
@@ -82,6 +111,17 @@ def run_slate(slate: Slate, sport: str, public_mode: bool = False) -> list:
         if not _league_filter_matches(game.league, sport):
             continue
         pick = _evaluate_market(game, market, public_mode=public_mode)
+        if _debug_enabled():
+            _DEBUG_STATS["markets_processed"] += 1
+            if pick is not None:
+                _DEBUG_STATS["markets_with_picks"] += 1
+                _DEBUG_STATS["supported_markets_seen"].add(pick.market_type)
+                print(
+                    f"[OUTPUT] Produced pick: {pick.market_type} | "
+                    f"{pick.game_id} | Edge: {getattr(pick, 'edge', 'N/A')}"
+                )
+            else:
+                print(f"[SKIPPED] Market: {market.market_type}")
         if pick is not None:
             picks.append(pick)
     return picks

@@ -1,6 +1,11 @@
+import os
 from decimal import Decimal
 from .stats import DeterministicStats
 from edge_equation.config.sport_config import SPORT_CONFIG
+
+
+def _debug_enabled() -> bool:
+    return os.getenv("DEBUG") == "1"
 
 
 class ProbabilityCalculator:
@@ -61,11 +66,17 @@ class ProbabilityCalculator:
             if fair_prob > Decimal('0.99'):
                 fair_prob = Decimal('0.99')
             fair_prob = fair_prob.quantize(Decimal('0.000001'))
-            return {
+            result = {
                 "fair_prob": fair_prob,
                 "raw_universal_sum": raw_univ,
                 "clamped_universal_sum": clamped_univ,
             }
+            if _debug_enabled():
+                game_id = inputs.get("game_id", "?")
+                print(f"[DEBUG] Market {market_type} for {game_id}: "
+                      f"fair_prob={result.get('fair_prob')}, "
+                      f"edge={result.get('edge')}")
+            return result
 
         # Spread / Run_Line / Puck_Line: BT home-centric prob adjusted by the
         # line, where the line is normalized against half the league baseline
@@ -89,11 +100,17 @@ class ProbabilityCalculator:
             if fair_prob > Decimal('0.99'):
                 fair_prob = Decimal('0.99')
             fair_prob = fair_prob.quantize(Decimal('0.000001'))
-            return {
+            result = {
                 "fair_prob": fair_prob,
                 "raw_universal_sum": raw_univ,
                 "clamped_universal_sum": clamped_univ,
             }
+            if _debug_enabled():
+                game_id = inputs.get("game_id", "?")
+                print(f"[DEBUG] Market {market_type} for {game_id}: "
+                      f"fair_prob={result.get('fair_prob')}, "
+                      f"edge={result.get('edge')}")
+            return result
 
         # Totals: league_baseline_total * env_factor + DC adj, then 2-decimal rounding
         if market_type in ["Total", "Game_Total"]:
@@ -164,10 +181,16 @@ class ProbabilityCalculator:
             if fair_prob > Decimal('0.99'):
                 fair_prob = Decimal('0.99')
             fair_prob = fair_prob.quantize(Decimal('0.000001'))
-            return {
+            result = {
                 "fair_prob": fair_prob,
                 "raw_universal_sum": raw_univ,
                 "clamped_universal_sum": clamped_univ,
             }
+            if _debug_enabled():
+                game_id = inputs.get("game_id", "?")
+                print(f"[DEBUG] Market {market_type} for {game_id}: "
+                      f"fair_prob={result.get('fair_prob')}, "
+                      f"edge={result.get('edge')}")
+            return result
 
         raise ValueError(f"Unsupported market_type: {market_type} for sport {sport}")
