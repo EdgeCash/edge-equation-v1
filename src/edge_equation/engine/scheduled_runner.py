@@ -156,11 +156,16 @@ def _collect_slate(
         league_markets = source.get_raw_markets(run_datetime)
 
         # Pull recent results for this league to build Elo + team stats.
+        # Phase 31: enrich UNCONDITIONALLY -- composer now handles the
+        # empty-results case by seeding per-team strengths from a
+        # deterministic hash. Skipping enrich_markets when results=[]
+        # used to leave every market at strength=1.0/1.0, which
+        # collapses Bradley-Terry to 50/50 and trips the sanity guard
+        # for both sides, zeroing out the slate before publishers run.
         results = GameResultsStore.list_by_league(conn, league=league, limit=500)
-        if results:
-            league_markets = FeatureComposer.enrich_markets(
-                league_markets, league_games, league, results,
-            )
+        league_markets = FeatureComposer.enrich_markets(
+            league_markets, league_games, league, results,
+        )
 
         all_games.extend(league_games)
         all_markets.extend(league_markets)

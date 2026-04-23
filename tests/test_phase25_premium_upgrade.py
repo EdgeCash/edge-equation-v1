@@ -169,6 +169,10 @@ def test_pick_block_shows_read_notes_verbatim():
 
 
 def test_pick_block_falls_back_to_factual_line_when_no_read():
+    """Phase 31: the empty-read fallback no longer apologizes ("no
+    narrative delta recorded") -- it cites the engine's own math
+    (fair vs implied, edge) so the row is still substantive. No
+    generic tout prose, no apology."""
     p = _team()
     meta = dict(p.metadata)
     meta.pop("read_notes", None)
@@ -179,7 +183,10 @@ def test_pick_block_falls_back_to_factual_line_when_no_read():
         hfa_value=p.hfa_value, decay_halflife_days=p.decay_halflife_days,
     )
     block = "\n".join(_render_pick_block(no_read.to_dict()))
-    assert "no narrative delta recorded" in block.lower()
+    assert "Read:" in block
+    # Substantive fallback quotes the math instead of apologizing.
+    assert "no narrative delta" not in block.lower()
+    assert ("Engine projects" in block) or ("Grade" in block)
 
 
 # ------------------------------------------------ format_premium_daily

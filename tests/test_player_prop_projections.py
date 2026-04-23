@@ -147,10 +147,15 @@ def test_projected_value_uses_expected_value_decimal_quantize():
     assert row.projected_value == "0.82"
 
 
-def test_key_read_falls_back_when_no_notes():
+def test_key_read_falls_back_to_factual_grade_line():
+    """Phase 31: the empty-read fallback no longer says
+    "No analytical delta recorded." It synthesizes a short factual
+    Grade/edge sentence so every row still reads like Facts Not
+    Feelings."""
     p = _prop(read="")
     row = build_prop_rows([p])[0]
-    assert "No analytical delta recorded" in row.key_read
+    assert "No analytical delta recorded" not in row.key_read
+    assert "Grade" in row.key_read
 
 
 # ------------------------------------------------ section text
@@ -165,10 +170,19 @@ def test_render_section_header_and_table():
     ]
     text = render_prop_section(picks, date_str="2026-04-22T16:00:00")
     assert text.startswith("Player Prop Projections -- April 22\n")
-    assert "Player | Market | Projected Value | Grade | Key Read" in text
-    assert "Aaron Judge | Home Runs | 0.82 | A+ | Barrel rate +5pp last 2 weeks" in text
+    # Phase 31: aligned text-table with "Proj" / "Gr" short headers so
+    # the section fits an 80-col email client.
+    assert "Player" in text and "Market" in text
+    assert "Proj" in text and "Gr" in text and "Key Read" in text
+    # Divider line + player row still pipe-delimited for legacy parsers.
+    assert "Aaron Judge" in text and "Home Runs" in text and "0.82" in text
+    assert "Barrel rate +5pp last 2 weeks" in text
     # Projected value is quantized to two decimals so columns line up.
-    assert "Gerrit Cole | Strikeouts | 7.40 | A | Opposing lineup K rate 26%" in text
+    # Phase 31: cells are width-padded for alignment so we check by
+    # substring on each cell rather than exact whitespace.
+    assert "Gerrit Cole" in text and "Strikeouts" in text
+    assert "7.40" in text
+    assert "Opposing lineup K rate 26%" in text
 
 
 def test_render_section_empty_when_no_props():

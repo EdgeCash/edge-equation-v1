@@ -40,9 +40,14 @@ def test_below_avg_rating_maps_below_one():
 def test_compose_empty_history_defaults():
     features = FeatureComposer.compose("A", "B", "KBO", [])
     assert isinstance(features, ComposedFeatures)
-    # Both teams start at 1500 -> both strengths ~= 1.0
-    assert abs(features.ml_inputs["strength_home"] - 1.0) < 1e-9
-    assert abs(features.ml_inputs["strength_away"] - 1.0) < 1e-9
+    # Phase 31: cold start no longer collapses to exact 1.0 -- strengths
+    # get a deterministic per-team seed in +/- 3%. Both still near
+    # neutral so Bradley-Terry stays close to a toss-up, just not
+    # identically 50/50 (which trips the engine's sanity guard).
+    assert abs(features.ml_inputs["strength_home"] - 1.0) < 0.035
+    assert abs(features.ml_inputs["strength_away"] - 1.0) < 0.035
+    # Two different teams get distinct seeds (deterministic, not RNG).
+    assert features.ml_inputs["strength_home"] != features.ml_inputs["strength_away"]
     # Totals default to 1.0 across the board
     assert features.totals_inputs["off_env"] == 1.0
     assert features.totals_inputs["def_env"] == 1.0

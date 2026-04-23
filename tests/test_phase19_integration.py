@@ -72,19 +72,22 @@ def test_compose_uses_sport_home_adv():
     assert abs(features.ml_inputs["home_adv"] - 0.150) < 1e-6
 
 
-def test_compose_empty_history_yields_neutral_strengths_and_toss_up():
+def test_compose_empty_history_yields_near_neutral_strengths_and_toss_up():
+    """Phase 31: cold start seeds strengths with a small deterministic
+    perturbation (sha256-derived) instead of a flat 1.0. The BT
+    projection stays close to the home-adv-only toss-up, just nudged
+    by the seed so two teams never collapse to identical inputs."""
     features = FeatureComposer.compose("A", "B", "MLB", [])
-    # Both strengths neutral (1.0) -> BT returns home_adv-only edge.
-    assert abs(features.ml_inputs["strength_home"] - 1.0) < 1e-6
-    assert abs(features.ml_inputs["strength_away"] - 1.0) < 1e-6
+    assert abs(features.ml_inputs["strength_home"] - 1.0) < 0.035
+    assert abs(features.ml_inputs["strength_away"] - 1.0) < 0.035
     prob = ProbabilityCalculator.bradley_terry(
         features.ml_inputs["strength_home"],
         features.ml_inputs["strength_away"],
         features.ml_inputs["home_adv"],
     )
-    # With home_adv=0.115 and equal strengths, home win prob is e^0.115 /
-    # (e^0.115 + 1) ~= 0.529. Assert in a reasonable band.
-    assert Decimal('0.51') < prob < Decimal('0.55')
+    # With home_adv=0.115 and near-equal strengths the projection stays
+    # inside the home-toss-up band; the seed never pushes it out.
+    assert Decimal('0.47') < prob < Decimal('0.58')
 
 
 def test_full_slate_runner_flow_end_to_end():

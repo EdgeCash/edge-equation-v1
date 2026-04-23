@@ -97,6 +97,12 @@ _OVERSEAS_EXCLUDED_MARKETS = frozenset({
 
 _OVERSEAS_ALLOWED_SPORTS = frozenset({"KBO", "NPB", "Soccer"})
 
+# Phase 31: explicit domestic whitelist so any caller that builds a
+# Daily Edge / Spotlight / Evening Edge card with a mixed picks list
+# can't accidentally surface KBO / NPB / Soccer rows. Mirror image of
+# _OVERSEAS_ALLOWED_SPORTS. Update both lists in lockstep.
+_DOMESTIC_ALLOWED_SPORTS = frozenset({"MLB", "NFL", "NHL", "NBA", "NCAA_Football", "NCAA_Basketball"})
+
 # Premium Daily grade admission. Brand-intent "A-" maps to the engine's
 # Grade B tier (edge 0.03-0.05); the premium email surfaces it while
 # the free Daily Edge stays A+/A only.
@@ -152,8 +158,20 @@ class PostingFormatter:
         """
         Top-5 Grade A / A+ filter. Sort by grade (A+ first) then by edge
         descending to break ties. Never more than DAILY_EDGE_TOP_N.
+
+        Phase 31: also enforces sport-level slate separation. KBO / NPB /
+        Soccer picks are dropped here even if they slip into the input
+        list. The domestic feed (Daily Edge / Spotlight / Evening Edge)
+        must NEVER surface overseas content -- that's the brand rule that
+        ScheduledRunner already enforces at league-resolution time, but
+        we mirror it at the formatter so any caller composing a card by
+        hand inherits the same guarantee.
         """
-        qualifying = [p for p in picks if p.grade in _DAILY_EDGE_ALLOWED_GRADES]
+        qualifying = [
+            p for p in picks
+            if p.grade in _DAILY_EDGE_ALLOWED_GRADES
+            and p.sport in _DOMESTIC_ALLOWED_SPORTS
+        ]
         order = {"A+": 1, "A": 0}
         qualifying.sort(
             key=lambda p: (
@@ -163,6 +181,13 @@ class PostingFormatter:
             reverse=True,
         )
         return qualifying[:DAILY_EDGE_TOP_N]
+
+    @staticmethod
+    def filter_domestic(picks: Sequence[Pick]) -> List[Pick]:
+        """Phase 31: shared domestic-only guard for Spotlight / Evening
+        cards that don't otherwise grade-filter. Inverse of
+        filter_overseas. KBO / NPB / Soccer picks are dropped."""
+        return [p for p in picks if p.sport in _DOMESTIC_ALLOWED_SPORTS]
 
     @staticmethod
     def filter_overseas(picks: Sequence[Pick]) -> List[Pick]:

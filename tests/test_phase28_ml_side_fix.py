@@ -154,17 +154,21 @@ def test_max_reasonable_edge_constant_locked_at_30pct():
 
 
 def test_read_field_auto_populates_when_metadata_missing():
-    """When upstream didn't supply read_notes, the engine derives a
-    factual baseline from available feature inputs (strength
-    differential, HFA, decay)."""
+    """Phase 31: the baseline Read now requires a read_context block
+    (games_used >= 5 for both sides) before it will surface a strength
+    line -- a bare bundle without composer-stashed context gets the
+    MC band row only. Either way the Read field is non-empty and is
+    factual (no generic placeholder prose)."""
     pick = BettingEngine.evaluate(
         _bundle("NYY", "NYY", "BOS"), Line(odds=-130),
     )
     read = pick.metadata.get("read_notes") or ""
     assert read, "read_notes should be auto-populated"
-    # Strength differential of 0.17 (1.32 vs 1.15) crosses the 0.10
-    # threshold so the favors-home line should be present.
-    assert "strength differential" in read.lower()
+    assert "no narrative delta" not in read.lower()
+    assert "edge lives in the price" not in read.lower()
+    assert "strengths within noise" not in read.lower()
+    # MC band line from the Phase 30 wiring is always present.
+    assert "MC band" in read
 
 
 def test_explicit_read_notes_take_precedence_over_baseline():

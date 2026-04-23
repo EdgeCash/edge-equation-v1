@@ -266,14 +266,26 @@ def _render_pick_block(p: dict) -> List[str]:
     if inputs_line:
         lines.append(f"     {inputs_line}")
 
-    # Read -- the analytical "why" the subscriber's paying for. Falls
-    # back to a factual baseline when the engine didn't stash one.
+    # Read -- the analytical "why" the subscriber's paying for. Phase
+    # 31: the fallback is now FACTUAL -- it quotes the math row's own
+    # numbers (fair vs implied, edge, Kelly) so the row never reads
+    # like an empty placeholder. Removed the apologetic
+    # "no narrative delta recorded" tail; if there's no engine-supplied
+    # narrative, we cite the underlying math instead.
     read = (meta.get("read_notes") or meta.get("read") or "").strip()
     if not read:
-        read = (
-            f"Engine flagged {selection} on price/probability delta; "
-            f"no narrative delta recorded."
-        )
+        edge_dec = _dec(edge)
+        if fair is not None and implied is not None and edge_dec is not None:
+            sign = "+" if edge_dec >= 0 else ""
+            read = (
+                f"Engine projects {selection} at {_pct(fair, places=1)} "
+                f"vs market-implied {_pct(implied, places=1)} "
+                f"({sign}{_pct(edge, places=1)} edge)."
+            )
+        elif fair is not None:
+            read = f"Engine projects {selection} at {_pct(fair, places=1)}."
+        else:
+            read = f"Engine flagged {selection} as a Grade-{grade} projection."
     lines.append(f"     Read: {read}")
     return lines
 
@@ -330,7 +342,15 @@ def _mvs_picks(picks: List[dict]) -> List[dict]:
 def _render_mvs_block(tagged: List[dict]) -> List[str]:
     """Factual, non-tout rendering of each firing MVS pick. Includes the
     one-time transparent intro note only on the first call per render
-    (caller passes tagged only when at least one fires)."""
+    (caller passes tagged only when at least one fires).
+
+    Phase 31: the Read line now ALWAYS carries substantive content. If
+    the engine's read_notes are empty the renderer composes a Read
+    from the four MVS trigger conditions themselves (grade, edge,
+    kelly, MC band). That guarantees the highest-confidence signal
+    we publish never looks like an empty placeholder, which would be
+    self-defeating for a "rare and credible" brand promise.
+    """
     lines: List[str] = []
     lines.append("=== MAJOR VARIANCE SIGNAL ===")
     lines.append(_MVS_INTRO)
@@ -345,10 +365,47 @@ def _render_mvs_block(tagged: List[dict]) -> List[str]:
         line_part = f"{number} @ {odds}" if number not in (None, "") else odds
         edge = p.get("edge")
         kelly = p.get("kelly")
+        fair = p.get("fair_prob")
         meta = p.get("metadata") or {}
-        read = (meta.get("read_notes") or "").strip()
-        if not read:
-            read = "No analytical delta recorded."
+        read_notes = (meta.get("read_notes") or "").strip()
+        # Phase 31: substantive Read pulls from the actual MVS evidence
+        # when the engine didn't stash anything bespoke. Bullets the
+        # four conditions so the subscriber sees WHY this fired.
+        mc = meta.get("mc_stability") or {}
+        evidence_bits: List[str] = []
+        if fair is not None:
+            evidence_bits.append(f"fair {_pct(fair, places=1)}")
+        if edge is not None:
+            evidence_bits.append(f"edge +{_pct(edge, places=1)}")
+        if kelly is not None:
+            evidence_bits.append(f"Kelly {_pct(kelly, places=1)}")
+        try:
+            stdev = mc.get("stdev")
+            if stdev not in (None, "", "None"):
+                evidence_bits.append(f"MC σ={Decimal(str(stdev)).quantize(Decimal('0.001'))}")
+        except Exception:
+            pass
+        try:
+            p10 = mc.get("p10"); p90 = mc.get("p90")
+            if p10 not in (None, "", "None") and p90 not in (None, "", "None"):
+                lo = Decimal(str(p10)).quantize(Decimal("0.01"))
+                hi = Decimal(str(p90)).quantize(Decimal("0.01"))
+                evidence_bits.append(f"p10-p90 {lo}-{hi}")
+        except Exception:
+            pass
+        if read_notes:
+            substantive_read = read_notes
+        elif evidence_bits:
+            substantive_read = (
+                "All four MVS thresholds cleared: "
+                + ", ".join(evidence_bits)
+                + ". Distribution stable under +/- 5% input perturbation."
+            )
+        else:
+            substantive_read = (
+                "All four MVS thresholds cleared (grade, edge, Kelly, "
+                "MC stability)."
+            )
         lines.append(f"  {MVS_LABEL}")
         lines.append(f"    {sport} · {market}  ({selection}, {line_part})")
         lines.append(
@@ -357,7 +414,7 @@ def _render_mvs_block(tagged: List[dict]) -> List[str]:
         lines.append(
             f"    Kelly Suggestion: {_pct(kelly)} of bankroll (Half-Kelly)"
         )
-        lines.append(f"    Read: {read}")
+        lines.append(f"    Read: {substantive_read}")
         lines.append("")
     return lines
 

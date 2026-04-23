@@ -32,10 +32,16 @@ from edge_equation.engine.pick_schema import Pick
 # Every prop market the engine knows about. Synced with EXPECTATION_MARKETS
 # and the overseas-exclude list in posting_formatter -- if you add a new
 # prop market type, update all three sites.
+#
+# Phase 31: NRFI / YRFI / First_Inning_Run added so the first-inning
+# markets actually qualify for the section. They render as game-level
+# props (player_name resolves to "First Inning") rather than a player
+# row -- the renderer handles that downstream by inspecting selection.
 PROP_MARKETS = frozenset({
     "HR", "K",
     "Passing_Yards", "Rushing_Yards", "Receiving_Yards",
     "Points", "Rebounds", "Assists", "SOG",
+    "NRFI", "YRFI", "First_Inning_Run",
 })
 
 # Plural, reader-facing labels for the prop section. Intentionally
@@ -52,7 +58,17 @@ PROP_MARKET_LABEL = {
     "Rebounds": "Rebounds",
     "Assists": "Assists",
     "SOG": "Shots on Goal",
+    # Phase 31: first-inning markets get plain-language labels; the
+    # selection itself (Yes / No / Over 0.5) carries the side.
+    "NRFI": "No Runs 1st Inning",
+    "YRFI": "Yes Run 1st Inning",
+    "First_Inning_Run": "1st Inning Run",
 }
+
+# Phase 31: markets where the "player" column is really a game-level
+# label, not a person. Renderer pulls a friendlier matchup string
+# instead of trying to parse a player name out of the selection.
+_GAME_LEVEL_PROPS = frozenset({"NRFI", "YRFI", "First_Inning_Run"})
 
 # Free-content grade floor. Same bar as Daily Edge so the feed has a
 # consistent curation standard -- users never see a B-grade prop even
@@ -95,8 +111,20 @@ class PropProjectionRow:
 def _player_name(pick: Pick) -> str:
     """Extract the player name from a pick. Prefers a metadata key if
     the engine set one; otherwise strips the common "over/under/yes/no"
-    suffix from the selection string."""
+    suffix from the selection string.
+
+    Phase 31: for game-level prop markets (NRFI / YRFI / First_Inning_Run)
+    the column shows "<away> @ <home>" instead of trying to parse a
+    person out of the selection -- there is no player on those markets.
+    """
+    market = (pick.market_type or "")
     meta = pick.metadata or {}
+    if market in _GAME_LEVEL_PROPS:
+        away = meta.get("away_team") or ""
+        home = meta.get("home_team") or ""
+        if away and home:
+            return f"{away} @ {home}"
+        return pick.game_id or "Game"
     explicit = meta.get("player_name") or meta.get("player")
     if explicit:
         return str(explicit).strip()
@@ -129,9 +157,26 @@ def _projected_value(pick: Pick) -> str:
 
 
 def _key_read(pick: Pick) -> str:
+    """Phase 31: prefer the engine's substantive read_notes; otherwise
+    synthesize a one-line factual summary from the data we DO have
+    (grade, edge, market label) instead of an apologetic placeholder."""
     meta = pick.metadata or {}
     read = (meta.get("read_notes") or meta.get("read") or "").strip()
-    return read or _DEFAULT_READ
+    if read:
+        return read
+    # Fallback synthesizes a short factual sentence so the row never
+    # ships with literal "No analytical delta recorded." Brand wants
+    # every row to read like Facts Not Feelings even when sparse.
+    grade = pick.grade or "?"
+    edge = pick.edge
+    if edge is not None:
+        try:
+            ev_pct = float(edge) * 100.0
+            sign = "+" if ev_pct >= 0 else ""
+            return f"Grade {grade} on {sign}{ev_pct:.1f}% edge vs market."
+        except (TypeError, ValueError):
+            pass
+    return f"Grade {grade} projection."
 
 
 def _row_for(pick: Pick) -> PropProjectionRow:
@@ -211,10 +256,14 @@ def render_prop_section(
     date_str: Optional[str] = None,
 ) -> str:
     """
-    Render the full pipe-separated prop section text. Returns an
-    empty string if no picks qualify -- the caller SHOULD skip
-    emitting the section entirely in that case rather than showing
-    a header with no rows.
+    Render the full prop section text. Returns an empty string if no
+    picks qualify -- the caller SHOULD skip emitting the section
+    entirely in that case rather than showing a header with no rows.
+
+    Phase 31: the row layout is now an aligned plain-text table (still
+    pipe-delimited so legacy parsers work) with column widths sized
+    to the widest cell. Reads truncate to a per-row max so a long Read
+    can't push the columns out of alignment in a 80-col email client.
 
     date_str is the human-readable date for the section header.
     Callers typically pass the card's generated_at.date() isoformat.
@@ -223,11 +272,43 @@ def render_prop_section(
     if not rows:
         return ""
     date_label = _date_header(date_str)
+
+    # Column widths sized to the widest cell with a sensible cap so
+    # one long player name (or one verbose Read) doesn't blow up the
+    # whole table layout.
+    max_player = min(28, max(len(r.player) for r in rows))
+    max_market = min(20, max(len(r.market_label) for r in rows))
+    max_value = min(8, max(len(r.projected_value) for r in rows))
+    max_grade = 3
+    max_read = 60  # cap to keep the section readable at 80 cols
+
+    headers = ("Player", "Market", "Proj", "Gr", "Key Read")
+    widths = (
+        max(max_player, len(headers[0])),
+        max(max_market, len(headers[1])),
+        max(max_value, len(headers[2])),
+        max(max_grade, len(headers[3])),
+        max_read,
+    )
+
+    def _fmt_row(cells):
+        # Left-aligned, single-space pad on each side of the pipe.
+        parts = []
+        for cell, w in zip(cells, widths):
+            text = str(cell)
+            if len(text) > w:
+                text = text[: w - 1] + "…"
+            parts.append(text.ljust(w))
+        return " | ".join(parts).rstrip()
+
     lines: List[str] = []
     lines.append(f"Player Prop Projections -- {date_label}")
-    lines.append("Player | Market | Projected Value | Grade | Key Read")
-    for row in rows:
-        lines.append(row.to_text())
+    lines.append(_fmt_row(headers))
+    lines.append("-+-".join("-" * w for w in widths))
+    for r in rows:
+        lines.append(_fmt_row(
+            (r.player, r.market_label, r.projected_value, r.grade, r.key_read)
+        ))
     return "\n".join(lines)
 
 
