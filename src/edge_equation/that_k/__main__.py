@@ -52,6 +52,12 @@ from edge_equation.that_k.runner import (
 )
 from edge_equation.that_k.sample_slate import sample_slate
 from edge_equation.that_k.simulator import DEFAULT_N_SIMS
+from edge_equation.that_k.poster import (
+    MAX_TWEET_LENGTH,
+    PostError,
+    canned_test_text,
+    post_tweet,
+)
 from edge_equation.that_k.spotlight import (
     SpotlightSubject,
     render_spotlight,
@@ -196,6 +202,80 @@ def _cmd_results(args) -> int:
         target_account=account,
     )
     _emit(text, args.out)
+    return 0
+
+
+def _cmd_post(args) -> int:
+    """Send a single tweet to @ThatK_Guy.  Hard-gated to k_guy --
+    the K-Report module never posts to the main @EdgeEquation
+    account.  Default behavior is DRY-RUN: nothing leaves the
+    process unless --live is explicitly passed.
+    """
+    account = _resolve_target(args.target_account)
+    if account != TargetAccount.KGUY:
+        raise SystemExit(
+            "post: K-Report posting path is K-Guy only. "
+            "Use --target-account k_guy."
+        )
+    _preflight_account(account)
+
+    # Resolve the text payload from exactly one of three sources.
+    sources = [bool(args.text), bool(args.from_file), bool(args.test)]
+    if sum(sources) != 1:
+        raise SystemExit(
+            "post: pass exactly one of --text, --from, or --test."
+        )
+    if args.test:
+        text = canned_test_text()
+    elif args.text:
+        text = args.text
+    else:
+        text = args.from_file.read_text(encoding="utf-8")
+
+    text = text.rstrip("\n")
+    if not text:
+        raise SystemExit("post: text payload is empty.")
+    if len(text) > MAX_TWEET_LENGTH:
+        sys.stderr.write(
+            f"[that_k] warn: text length {len(text)} chars exceeds X "
+            f"default cap of {MAX_TWEET_LENGTH}; X may reject the post.\n"
+        )
+
+    creds = resolve_x_credentials(account)
+    if not args.live:
+        sys.stdout.write(
+            "DRY-RUN -- would POST to X as @ThatK_Guy.\n"
+            "  endpoint: https://api.x.com/2/tweets\n"
+            f"  credentials: {'OK' if creds.is_complete() else 'MISSING ' + str(list(creds.missing))}\n"
+            "  body:\n"
+            "  ---\n"
+            f"{text}\n"
+            "  ---\n"
+            "Pass --live to actually fire the request.\n"
+        )
+        return 0
+
+    if not creds.is_complete():
+        raise SystemExit(
+            "post: --live requires complete X credentials. "
+            f"Missing: {list(creds.missing)}"
+        )
+
+    sys.stderr.write(
+        "[that_k] LIVE post starting -- target=@ThatK_Guy "
+        f"({len(text)} chars).\n"
+    )
+    try:
+        result = post_tweet(text, creds)
+    except PostError as e:
+        sys.stderr.write(f"[that_k] post FAILED: {e}\n")
+        return 1
+    sys.stdout.write(
+        "Posted.\n"
+        f"  status:    {result.status}\n"
+        f"  tweet_id:  {result.tweet_id}\n"
+        f"  url:       https://x.com/ThatK_Guy/status/{result.tweet_id}\n"
+    )
     return 0
 
 
@@ -387,6 +467,41 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=[a.value for a in TargetAccount], help=TARGET_HELP,
     )
 
+    # --- post ------------------------------------------------------
+    # Hard-gated to k_guy only -- the K-Report module never ships a
+    # path that can post to the main @EdgeEquation account.  Default
+    # is DRY-RUN; --live must be explicit.
+    pop = sub.add_parser(
+        "post",
+        help="POST a single tweet to @ThatK_Guy (default DRY-RUN).",
+    )
+    pop_src = pop.add_mutually_exclusive_group(required=False)
+    pop_src.add_argument(
+        "--text",
+        help="Tweet body text (single string).",
+    )
+    pop_src.add_argument(
+        "--from", dest="from_file", type=Path,
+        help="Read tweet body from a file path.",
+    )
+    pop_src.add_argument(
+        "--test", action="store_true",
+        help="Use the canned 'Test from That K Report pipeline -- "
+             "<UTC timestamp>' message.  Safe to delete from X "
+             "immediately after the API call returns success.",
+    )
+    pop.add_argument(
+        "--live", action="store_true",
+        help="Actually fire the POST.  Default is DRY-RUN -- the "
+             "command prints what WOULD be posted and exits 0 "
+             "without contacting X.",
+    )
+    pop.add_argument(
+        "--target-account", default=TargetAccount.KGUY.value,
+        choices=[TargetAccount.KGUY.value],
+        help="Locked to k_guy for the K-Report module by design.",
+    )
+
     return root
 
 
@@ -407,6 +522,8 @@ def main(argv=None) -> int:
         return _cmd_supporting(args)
     if args.cmd == "spotlight":
         return _cmd_spotlight(args)
+    if args.cmd == "post":
+        return _cmd_post(args)
     parser.print_help()
     return 2
 
