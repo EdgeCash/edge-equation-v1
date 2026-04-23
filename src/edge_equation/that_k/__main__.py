@@ -52,6 +52,11 @@ from edge_equation.that_k.runner import (
 )
 from edge_equation.that_k.sample_slate import sample_slate
 from edge_equation.that_k.simulator import DEFAULT_N_SIMS
+from edge_equation.that_k.mailer import (
+    DEFAULT_RECIPIENT,
+    MailError,
+    send_email,
+)
 from edge_equation.that_k.poster import (
     MAX_TWEET_LENGTH,
     PostError,
@@ -107,6 +112,32 @@ def _load_json(path: Path):
         return json.load(fh)
 
 
+def _maybe_email(args, *, subject: str, body: str) -> None:
+    """Send the rendered card by SMTP when --email was passed.  All
+    SMTP config comes from env (same vars the main engine's
+    EmailPublisher already uses, no new secrets).  --email-to
+    overrides EMAIL_TO for this single send only.
+
+    Mail failures are logged to stderr and re-raised as SystemExit
+    so a CI workflow's exit code reflects the failure -- silent
+    drop would give a false-OK.
+    """
+    if not getattr(args, "email", False):
+        return
+    try:
+        config = send_email(
+            subject=subject, body=body,
+            recipient_override=getattr(args, "email_to", None) or None,
+        )
+    except MailError as e:
+        sys.stderr.write(f"[that_k] email FAILED: {e}\n")
+        raise SystemExit(1) from e
+    sys.stderr.write(
+        f"[that_k] emailed to {config.recipient} "
+        f"via {config.host}:{config.port}\n"
+    )
+
+
 def _emit(text: str, out_path: Optional[Path]) -> None:
     """Write to file if `out_path` is set; otherwise stdout."""
     if out_path is not None:
@@ -145,6 +176,14 @@ def _cmd_projections(args) -> int:
             date_str=args.date, target_account=account,
         )
         write_metrics(Path(metrics_out), payload)
+    # Optional email delivery.  Subject mirrors the in-card header
+    # so the inbox reads "That K Report -- 2026-04-23 (Top Plays)"
+    # without needing to open the body.
+    _maybe_email(
+        args,
+        subject=f"That K Report — {args.date} (Top Plays)",
+        body=text,
+    )
     return 0
 
 
@@ -202,6 +241,11 @@ def _cmd_results(args) -> int:
         target_account=account,
     )
     _emit(text, args.out)
+    _maybe_email(
+        args,
+        subject=f"That K Report — Results · {args.date}",
+        body=text,
+    )
     return 0
 
 
@@ -343,7 +387,10 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     # Back-compat defaults so a top-level `--sample` invocation (no
     # subcommand) doesn't AttributeError on subcommand-only flags.
-    root.set_defaults(no_commentary=False, metrics_out=None)
+    root.set_defaults(
+        no_commentary=False, metrics_out=None,
+        email=False, email_to=None,
+    )
 
     sub = root.add_subparsers(dest="cmd")
 
@@ -380,6 +427,18 @@ def _build_parser() -> argparse.ArgumentParser:
         "--metrics-out", type=Path, default=None,
         help="Optional path to write a debug metrics JSON "
              "(calibration + feature importance + A/B variants).",
+    )
+    pp.add_argument(
+        "--email", action="store_true",
+        help="Email the rendered card via SMTP after writing.  "
+             "Reuses SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / "
+             "SMTP_FROM env vars (same as the main engine's Email "
+             "Publisher) -- no new secrets needed.",
+    )
+    pp.add_argument(
+        "--email-to", default=None,
+        help="Override recipient (default: EMAIL_TO env, then "
+             f"{DEFAULT_RECIPIENT!r}).",
     )
 
     # --- spotlight -------------------------------------------------
@@ -432,6 +491,15 @@ def _build_parser() -> argparse.ArgumentParser:
     rp.add_argument(
         "--target-account", default=TargetAccount.KGUY.value,
         choices=[a.value for a in TargetAccount], help=TARGET_HELP,
+    )
+    rp.add_argument(
+        "--email", action="store_true",
+        help="Email the rendered Results card via SMTP after writing.",
+    )
+    rp.add_argument(
+        "--email-to", default=None,
+        help="Override recipient (default: EMAIL_TO env, then "
+             f"{DEFAULT_RECIPIENT!r}).",
     )
 
     # --- supporting ------------------------------------------------
