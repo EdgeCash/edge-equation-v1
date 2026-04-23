@@ -560,6 +560,119 @@ def _cmd_load_results(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_diag(args: argparse.Namespace) -> int:
+    """Engine diagnostic snapshot -- read-only DB inventory.
+
+    Answers the "is the engine actually live and saving picks?"
+    question without requiring the operator to sign into GitHub and
+    scrape workflow logs. Prints a single JSON document covering:
+
+      * Total slates and slates grouped by card_type.
+      * Total picks and picks grouped by sport / market_type / grade.
+      * Date range (earliest and latest slate generated_at, earliest
+        and latest pick recorded_at).
+      * Realization counters: how many picks have a realization set
+        vs still pending.
+      * A small "recent activity" window: the last 5 slates and how
+        many picks each produced.
+
+    The workflow counterpart (diag.yml) is manual-only -- never
+    scheduled, never publishes. Safe to run anytime.
+    """
+    conn = _open_db(args.db)
+    try:
+        cur = conn.cursor()
+
+        def scalar(sql: str, *params):
+            row = cur.execute(sql, params).fetchone()
+            return row[0] if row else None
+
+        def rows(sql: str, *params):
+            return [dict(r) for r in cur.execute(sql, params).fetchall()]
+
+        slates_total = scalar("SELECT COUNT(*) FROM slates")
+        slates_by_card_type = rows(
+            "SELECT card_type, COUNT(*) AS n "
+            "FROM slates GROUP BY card_type ORDER BY n DESC"
+        )
+        slate_date_range = cur.execute(
+            "SELECT MIN(generated_at) AS earliest, "
+            "MAX(generated_at) AS latest FROM slates"
+        ).fetchone()
+
+        picks_total = scalar("SELECT COUNT(*) FROM picks")
+        picks_by_sport = rows(
+            "SELECT sport, COUNT(*) AS n "
+            "FROM picks GROUP BY sport ORDER BY n DESC"
+        )
+        picks_by_market = rows(
+            "SELECT market_type, COUNT(*) AS n "
+            "FROM picks GROUP BY market_type ORDER BY n DESC"
+        )
+        picks_by_grade = rows(
+            "SELECT grade, COUNT(*) AS n "
+            "FROM picks GROUP BY grade ORDER BY n DESC"
+        )
+        pick_date_range = cur.execute(
+            "SELECT MIN(recorded_at) AS earliest, "
+            "MAX(recorded_at) AS latest FROM picks"
+        ).fetchone()
+
+        realizations_total = scalar("SELECT COUNT(*) FROM realizations")
+        # A pick is "settled" iff a matching row exists in the
+        # realizations table (CSV / manual outcome recording) OR the
+        # game is marked final in game_results (auto-settle path).
+        # We don't infer settlement from the picks.realization column
+        # because that field is initialized to a grade-based forecast
+        # at pick creation (B=52, A=56 etc.) and only C-grade picks
+        # start at the PENDING_DEFAULT value of 47.
+        picks_with_csv_realization = scalar(
+            "SELECT COUNT(*) FROM picks p WHERE EXISTS ("
+            "  SELECT 1 FROM realizations r "
+            "  WHERE r.game_id = p.game_id "
+            "    AND r.market_type = p.market_type "
+            "    AND r.selection = p.selection)"
+        )
+        picks_with_final_game = scalar(
+            "SELECT COUNT(DISTINCT p.id) FROM picks p "
+            "JOIN game_results g ON g.game_id = p.game_id "
+            "WHERE g.status = 'final'"
+        )
+
+        recent_slates = rows(
+            "SELECT s.slate_id, s.card_type, s.generated_at, "
+            "  (SELECT COUNT(*) FROM picks p WHERE p.slate_id = s.slate_id) AS n_picks "
+            "FROM slates s ORDER BY s.generated_at DESC LIMIT 5"
+        )
+
+        summary = {
+            "slates": {
+                "total": slates_total,
+                "by_card_type": slates_by_card_type,
+                "earliest": slate_date_range["earliest"] if slate_date_range else None,
+                "latest": slate_date_range["latest"] if slate_date_range else None,
+            },
+            "picks": {
+                "total": picks_total,
+                "by_sport": picks_by_sport,
+                "by_market_type": picks_by_market,
+                "by_grade": picks_by_grade,
+                "earliest": pick_date_range["earliest"] if pick_date_range else None,
+                "latest": pick_date_range["latest"] if pick_date_range else None,
+            },
+            "realizations": {
+                "rows_in_realizations_table": realizations_total,
+                "picks_with_csv_realization": picks_with_csv_realization,
+                "picks_with_final_game_result": picks_with_final_game,
+            },
+            "recent_slates": recent_slates,
+        }
+    finally:
+        conn.close()
+    print(json.dumps(summary, indent=2, default=str))
+    return 0
+
+
 def _cmd_pipeline(args: argparse.Namespace) -> int:
     # Phase-1 demo pipeline retained for backwards compatibility.
     from edge_equation.engine.modes import PipelineMode
@@ -701,6 +814,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_load.add_argument("results_csv")
     p_load.add_argument("--db", type=str, default=None)
     p_load.set_defaults(func=_cmd_load_results)
+
+    p_diag = sub.add_parser(
+        "diag",
+        help="Print a JSON snapshot of slates / picks / realizations "
+             "already persisted in the DB (read-only).",
+    )
+    p_diag.add_argument("--db", type=str, default=None)
+    p_diag.set_defaults(func=_cmd_diag)
 
     p_pipe = sub.add_parser("pipeline", help="Legacy Phase-1 pipeline demo")
     p_pipe.add_argument("--mode", type=str, default="daily")
