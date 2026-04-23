@@ -78,25 +78,36 @@ class ProbabilityCalculator:
                       f"edge={result.get('edge')}")
             return result
 
-        # Spread / Run_Line / Puck_Line: BT home-centric prob adjusted by the
-        # line, where the line is normalized against half the league baseline
-        # total as a conservative points-to-probability shift.
+        # Spread / Run_Line / Puck_Line: BT home-centric prob plus a
+        # per-sport line-to-probability conversion. The old shared
+        # denominator (baseline * 0.5) over-corrected low-scoring sports
+        # (NHL/MLB) and under-corrected nothing in particular; see the
+        # spread_line_weight key in SPORT_CONFIG for tuning rationale.
         if market_type in ("Spread", "Run_Line", "Puck_Line"):
             base_prob = ProbabilityCalculator.bradley_terry(
                 inputs["strength_home"],
                 inputs["strength_away"],
                 inputs.get("home_adv", 0.115),
             )
-            _, _, baseline = ProbabilityCalculator._get_weights_and_baseline(sport)
+            cfg = SPORT_CONFIG.get(sport, {})
+            # Fall back to the pre-calibration denominator shape when the
+            # sport config predates this key, so adding a new sport later
+            # doesn't crash the engine -- it just grades poorly until tuned.
+            spread_weight = cfg.get("spread_line_weight")
             raw_line = inputs.get("line")
             if _debug_enabled():
-                print(f"[DEBUG] {market_type} received line={raw_line} (baseline={baseline})")
+                print(f"[DEBUG] {market_type} received line={raw_line} "
+                      f"(spread_line_weight={spread_weight})")
             line_val = Decimal(str(raw_line)) if raw_line is not None else Decimal('0')
             # Line is expressed from the home side (negative = home favored).
             # Covering a negative line is HARDER than winning outright, so a
             # negative line must REDUCE home_prob: adjustment carries the
             # same sign as the line itself.
-            line_adj = line_val / (baseline * Decimal('0.5'))
+            if spread_weight is not None:
+                line_adj = line_val * spread_weight
+            else:
+                _, _, baseline = ProbabilityCalculator._get_weights_and_baseline(sport)
+                line_adj = line_val / (baseline * Decimal('0.5'))
             clamped_univ = DeterministicStats.clamp_universal_prob(raw_univ)
             fair_prob = base_prob + line_adj + clamped_univ * ml_weight
             if fair_prob < Decimal('0.01'):

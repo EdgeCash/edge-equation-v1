@@ -187,3 +187,63 @@ def test_unknown_selection_on_spread_is_ungradeable():
     pick = BettingEngine.evaluate(bundle, ln, public_mode=False)
     assert pick.fair_prob is None
     assert pick.edge is None
+
+
+# ---------------------------------------------------------------------------
+# Magnitude sanity checks for the per-sport calibration constants. These
+# are intentionally WIDE ranges -- they verify the formula isn't wildly
+# mis-calibrated (e.g. pegged at the 0.01/0.99 clamps) without pinning
+# exact values that shadow-phase data should be allowed to retune.
+# ---------------------------------------------------------------------------
+
+def test_nhl_puck_line_home_favorite_magnitude_is_plausible():
+    """NHL home -1.5 covers real-world ~35-40%. Allow a generous 0.25-0.50
+    band: narrower than that would pin calibration we're not yet ready to
+    pin, wider than that means the formula is badly off."""
+    out = ProbabilityCalculator.calculate_fair_value(
+        "Puck_Line", "NHL", _bt_inputs(line=-1.5), {},
+    )
+    assert Decimal("0.25") <= out["fair_prob"] <= Decimal("0.50")
+
+
+def test_mlb_run_line_home_favorite_magnitude_is_plausible():
+    """MLB home -1.5 covers real-world ~35-40%. Same generous band as NHL."""
+    out = ProbabilityCalculator.calculate_fair_value(
+        "Run_Line", "MLB", _bt_inputs(line=-1.5), {},
+    )
+    assert Decimal("0.25") <= out["fair_prob"] <= Decimal("0.50")
+
+
+def test_nfl_spread_standard_line_is_near_coinflip():
+    """NFL home -3.5 at a standard line should sit near coinflip. 0.35-0.60
+    is a deliberately wide band that excludes the pre-calibration bug (which
+    produced ~0.07 on the analogous NHL line) and the opposite over-correction."""
+    out = ProbabilityCalculator.calculate_fair_value(
+        "Spread", "NFL", _bt_inputs(line=-3.5), {},
+    )
+    assert Decimal("0.35") <= out["fair_prob"] <= Decimal("0.60")
+
+
+def test_nba_spread_standard_line_is_near_coinflip():
+    """NBA home -5.5 -- same sanity range as NFL."""
+    out = ProbabilityCalculator.calculate_fair_value(
+        "Spread", "NBA", _bt_inputs(line=-5.5), {},
+    )
+    assert Decimal("0.35") <= out["fair_prob"] <= Decimal("0.60")
+
+
+def test_spread_weight_missing_falls_back_without_crashing():
+    """If a sport is added later without spread_line_weight, the math must
+    not crash -- it should fall back to the legacy formula (which grades
+    poorly but is safe). Simulated here by temporarily removing the key."""
+    from edge_equation.config.sport_config import SPORT_CONFIG
+    saved = SPORT_CONFIG["NHL"].pop("spread_line_weight")
+    try:
+        out = ProbabilityCalculator.calculate_fair_value(
+            "Puck_Line", "NHL", _bt_inputs(line=-1.5), {},
+        )
+        # Clamped to [0.01, 0.99]; main thing is it returns a Decimal
+        # without crashing.
+        assert Decimal("0.01") <= out["fair_prob"] <= Decimal("0.99")
+    finally:
+        SPORT_CONFIG["NHL"]["spread_line_weight"] = saved
