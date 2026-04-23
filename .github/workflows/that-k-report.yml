@@ -46,6 +46,12 @@ on:
       live:
         description: "mode=post only: 'true' actually fires the X API call. Default DRY-RUN."
         default: "false"
+      email:
+        description: "mode=projections | results: 'true' emails the rendered card via SMTP after the artifact is written. Default false."
+        default: "false"
+      email_to:
+        description: "Override recipient (default: EMAIL_TO secret, then ProfessorEdgeCash@gmail.com)."
+        default: ""
 
 jobs:
   projections:
@@ -62,6 +68,14 @@ jobs:
       X_API_SECRET_KGUY:           ${{ secrets.X_API_SECRET_KGUY }}
       X_ACCESS_TOKEN_KGUY:         ${{ secrets.X_ACCESS_TOKEN_KGUY }}
       X_ACCESS_TOKEN_SECRET_KGUY:  ${{ secrets.X_ACCESS_TOKEN_SECRET_KGUY }}
+      # SMTP env reused from the main engine -- no new secrets needed
+      # to email the rendered card to ProfessorEdgeCash@gmail.com.
+      SMTP_HOST:      ${{ secrets.SMTP_HOST }}
+      SMTP_PORT:      ${{ secrets.SMTP_PORT }}
+      SMTP_USER:      ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD:  ${{ secrets.SMTP_PASSWORD }}
+      SMTP_FROM:      ${{ secrets.SMTP_FROM }}
+      EMAIL_TO:       ${{ secrets.EMAIL_TO || 'ProfessorEdgeCash@gmail.com' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -93,8 +107,16 @@ jobs:
           # debug metrics JSON (calibration baseline + feature
           # importance + A/B variant comparison).  The file feeds the
           # main Edge Equation engine's future weight-tuning pass.
+          EMAIL_FLAG=""
+          if [ "${{ github.event.inputs.email }}" = "true" ]; then
+            EMAIL_FLAG="--email"
+            EMAIL_TO_INPUT="${{ github.event.inputs.email_to }}"
+            if [ -n "$EMAIL_TO_INPUT" ]; then
+              EMAIL_FLAG="$EMAIL_FLAG --email-to $EMAIL_TO_INPUT"
+            fi
+          fi
           python -m edge_equation.that_k projections \
-            $SOURCE_FLAG $INTRO_FLAG \
+            $SOURCE_FLAG $INTRO_FLAG $EMAIL_FLAG \
             --target-account "$TARGET" \
             --date "${{ steps.date.outputs.run_date }}" \
             --top-n "$TOP_N" \
@@ -240,6 +262,14 @@ jobs:
       X_API_SECRET_KGUY:           ${{ secrets.X_API_SECRET_KGUY }}
       X_ACCESS_TOKEN_KGUY:         ${{ secrets.X_ACCESS_TOKEN_KGUY }}
       X_ACCESS_TOKEN_SECRET_KGUY:  ${{ secrets.X_ACCESS_TOKEN_SECRET_KGUY }}
+      # SMTP env reused from the main engine -- enables --email
+      # delivery of the rendered Results card.
+      SMTP_HOST:      ${{ secrets.SMTP_HOST }}
+      SMTP_PORT:      ${{ secrets.SMTP_PORT }}
+      SMTP_USER:      ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD:  ${{ secrets.SMTP_PASSWORD }}
+      SMTP_FROM:      ${{ secrets.SMTP_FROM }}
+      EMAIL_TO:       ${{ secrets.EMAIL_TO || 'ProfessorEdgeCash@gmail.com' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -275,8 +305,16 @@ jobs:
             INTRO_FLAG="--intro-70s"
           fi
           TARGET="${{ github.event.inputs.target_account }}"; TARGET="${TARGET:-k_guy}"
+          EMAIL_FLAG=""
+          if [ "${{ github.event.inputs.email }}" = "true" ]; then
+            EMAIL_FLAG="--email"
+            EMAIL_TO_INPUT="${{ github.event.inputs.email_to }}"
+            if [ -n "$EMAIL_TO_INPUT" ]; then
+              EMAIL_FLAG="$EMAIL_FLAG --email-to $EMAIL_TO_INPUT"
+            fi
+          fi
           python -m edge_equation.that_k results \
-            $SOURCE_FLAG $INTRO_FLAG \
+            $SOURCE_FLAG $INTRO_FLAG $EMAIL_FLAG \
             --target-account "$TARGET" \
             --date "${{ steps.date.outputs.run_date }}" \
             --ledger data/thatk_ledger.json \
