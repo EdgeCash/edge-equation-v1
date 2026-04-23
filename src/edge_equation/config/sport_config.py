@@ -16,6 +16,18 @@ from decimal import Decimal
 #                           attributable to relief pitching.
 #   home_adv                default Bradley-Terry home exponent (same units
 #                           as the existing `home_adv` input in probability.py).
+#   spread_line_weight      per-sport point-to-probability conversion factor
+#                           used by the Spread / Run_Line / Puck_Line branch
+#                           in ProbabilityCalculator. line_adj = line *
+#                           spread_line_weight, so a higher weight means a
+#                           larger probability shift per unit of line.
+#                           Calibrated conservatively per sport -- low-scoring
+#                           sports (NHL, MLB) need a higher weight because a
+#                           1.5-unit line is a large fraction of typical
+#                           score variance; high-scoring sports (NFL, NBA)
+#                           need a lower weight. These seed values are
+#                           expected to be re-tuned against shadow-phase
+#                           realization data before any public posting.
 #
 # The Bradley-Terry team_strength builder is NOT implemented in this phase --
 # these are knobs staged for the next review-gated change per the user's
@@ -25,6 +37,7 @@ SPORT_CONFIG = {
     "MLB": {
         "markets": ["ML", "Run_Line", "Total", "HR", "K", "NRFI", "YRFI"],
         "league_baseline_total": Decimal('8.86'),
+        "spread_line_weight": Decimal('0.113'),
         "ml_universal_weight": Decimal('0.65'),
         "prop_universal_weight": Decimal('0.55'),
         "pythagorean_exponent": Decimal('1.83'),
@@ -43,6 +56,7 @@ SPORT_CONFIG = {
     "KBO": {
         "markets": ["ML", "Run_Line", "Total", "HR", "K", "NRFI", "YRFI"],
         "league_baseline_total": Decimal('8.65'),
+        "spread_line_weight": Decimal('0.113'),
         "ml_universal_weight": Decimal('0.65'),
         "prop_universal_weight": Decimal('0.55'),
         "pythagorean_exponent": Decimal('1.83'),
@@ -61,6 +75,7 @@ SPORT_CONFIG = {
     "NPB": {
         "markets": ["ML", "Run_Line", "Total", "HR", "K", "NRFI", "YRFI"],
         "league_baseline_total": Decimal('8.65'),
+        "spread_line_weight": Decimal('0.113'),
         "ml_universal_weight": Decimal('0.65'),
         "prop_universal_weight": Decimal('0.55'),
         "pythagorean_exponent": Decimal('1.83'),
@@ -79,6 +94,7 @@ SPORT_CONFIG = {
     "NFL": {
         "markets": ["ML", "Spread", "Total", "Passing_Yards", "Rushing_Yards", "Receiving_Yards"],
         "league_baseline_total": Decimal('47.5'),
+        "spread_line_weight": Decimal('0.023'),
         "ml_universal_weight": Decimal('0.65'),
         "prop_universal_weight": Decimal('0.55'),
         "pythagorean_exponent": Decimal('2.37'),
@@ -95,6 +111,7 @@ SPORT_CONFIG = {
     "NCAA_Football": {
         "markets": ["ML", "Spread", "Total", "Passing_Yards", "Rushing_Yards"],
         "league_baseline_total": Decimal('48.5'),
+        "spread_line_weight": Decimal('0.023'),
         "ml_universal_weight": Decimal('0.65'),
         "prop_universal_weight": Decimal('0.55'),
         "pythagorean_exponent": Decimal('2.37'),
@@ -111,6 +128,7 @@ SPORT_CONFIG = {
     "NCAA_Basketball": {
         "markets": ["ML", "Spread", "Total", "Points", "Rebounds", "Assists"],
         "league_baseline_total": Decimal('155.0'),
+        "spread_line_weight": Decimal('0.015'),
         "ml_universal_weight": Decimal('0.65'),
         "prop_universal_weight": Decimal('0.55'),
         "pythagorean_exponent": Decimal('11.5'),
@@ -143,6 +161,7 @@ SPORT_CONFIG = {
     "NHL": {
         "markets": ["ML", "Puck_Line", "Total", "SOG"],
         "league_baseline_total": Decimal('5.85'),
+        "spread_line_weight": Decimal('0.133'),
         "ml_universal_weight": Decimal('0.65'),
         "prop_universal_weight": Decimal('0.55'),
         "pythagorean_exponent": Decimal('2.15'),
@@ -164,6 +183,7 @@ SPORT_CONFIG = {
     "NBA": {
         "markets": ["ML", "Spread", "Total", "Points", "Rebounds", "Assists"],
         "league_baseline_total": Decimal('225.0'),
+        "spread_line_weight": Decimal('0.015'),
         "ml_universal_weight": Decimal('0.65'),
         "prop_universal_weight": Decimal('0.55'),
         "pythagorean_exponent": Decimal('14.0'),
