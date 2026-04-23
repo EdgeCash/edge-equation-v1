@@ -59,7 +59,22 @@ def _evaluate_market(game: GameInfo, market: MarketInfo, public_mode: bool) -> O
     # composer needing to duplicate them into inputs itself.
     inputs = dict(inputs)
     if market.line is not None and "line" not in inputs:
-        inputs["line"] = market.line
+        # Normalize to a HOME-CENTRIC line before handing to the math
+        # layer. MarketInfo.line is outcome-centric (for display): a
+        # spread with home -3.5 produces one outcome with line=-3.5 and
+        # another with line=+3.5. ProbabilityCalculator's Spread branch,
+        # however, assumes the line is from the home team's perspective.
+        # If we pass the away-outcome's +3.5 as-is, the calculator
+        # produces a home-side fair_prob keyed to the wrong line and
+        # home/away picks no longer sum to 1 after mirroring. Flipping
+        # sign when the selection is the away team restores symmetry
+        # without disturbing display (which still uses market.line).
+        is_away_spread = (
+            market.market_type in ("Spread", "Run_Line", "Puck_Line")
+            and market.selection
+            and market.selection.strip() == game.away_team
+        )
+        inputs["line"] = -market.line if is_away_spread else market.line
     if game.game_id and "game_id" not in inputs:
         inputs["game_id"] = game.game_id
     universal = meta.get("universal_features", {})

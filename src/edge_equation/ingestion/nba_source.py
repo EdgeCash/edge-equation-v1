@@ -60,4 +60,19 @@ class NbaSource:
                     "universal_features": {"form_off": 0.02},
                 },
             })
+            # Spread emitted as two outcomes: home -5.5 and away +5.5.
+            # Selections are bare team names; the line lives on
+            # MarketInfo.line so _resolve_selection_side can exact-match.
+            sp_inputs = {"strength_home": 1.30, "strength_away": 1.12, "home_adv": 0.115}
+            sp_univ = {"home_edge": 0.060, "form_off": 0.02}
+            markets.append({
+                "game_id": gid, "market_type": "Spread", "selection": home,
+                "line": Decimal("-5.5"), "odds": -110,
+                "meta": {"inputs": sp_inputs, "universal_features": sp_univ},
+            })
+            markets.append({
+                "game_id": gid, "market_type": "Spread", "selection": away,
+                "line": Decimal("5.5"), "odds": -110,
+                "meta": {"inputs": sp_inputs, "universal_features": sp_univ},
+            })
         return markets
