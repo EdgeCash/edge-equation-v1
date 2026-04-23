@@ -1,0 +1,145 @@
+name: That K Report (3pm CT)
+
+# Side project: daily pitcher strikeout projection report for the
+# @ThatK_Guy account ("Powered by Edge Equation").  Kept separate from
+# the main cadence (Ledger / Daily Edge / Spotlight / Evening / Overseas)
+# so iterations here never risk the free-feed / premium-email pipelines.
+#
+# Schedule: 3:00 PM US/Central so the report lands well before the
+# first pitch of a typical evening MLB slate.  DST-aware via the same
+# dual-cron + zoneinfo guard pattern the rest of the cadence uses.
+
+on:
+  schedule:
+    - cron: "0 20 * * *"   # 3:00 CT during CDT (Mar-Nov)
+    - cron: "0 21 * * *"   # 3:00 CT during CST (Nov-Mar)
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Slate source: 'sample' (dry-run) or 'json' (data/thatk_slate.json)"
+        default: "sample"
+      top_n:
+        description: "Max pitchers to render"
+        default: "8"
+      email:
+        description: "Send the report by SMTP to EMAIL_TO?"
+        default: "false"
+
+jobs:
+  that_k:
+    runs-on: ubuntu-latest
+    env:
+      EMAIL_TO:       ${{ secrets.EMAIL_TO || 'ProfessorEdgeCash@gmail.com' }}
+      SMTP_HOST:      ${{ secrets.SMTP_HOST }}
+      SMTP_PORT:      ${{ secrets.SMTP_PORT }}
+      SMTP_USER:      ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD:  ${{ secrets.SMTP_PASSWORD }}
+      SMTP_FROM:      ${{ secrets.SMTP_FROM }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: CT-hour guard
+        id: guard
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          expected = 15
+          now = datetime.now(ZoneInfo("America/Chicago"))
+          print(f"should_run={'true' if now.hour == expected else 'false'}")
+          print(f"ct_hour={now.hour}")
+          PY
+
+      - name: Install package
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Resolve date
+        if: steps.guard.outputs.should_run == 'true'
+        id: date
+        shell: bash
+        run: |
+          RUN_DATE="$(TZ='America/Chicago' date +%F)"
+          echo "run_date=${RUN_DATE}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate That K Report
+        if: steps.guard.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          mkdir -p data
+          SOURCE_FLAG="--sample"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
+             [ "${{ inputs.source }}" = "json" ]; then
+            SOURCE_FLAG="--slate data/thatk_slate.json"
+          fi
+          TOP_N="${{ inputs.top_n }}"
+          TOP_N="${TOP_N:-8}"
+          python -m edge_equation.that_k \
+            $SOURCE_FLAG \
+            --date "${{ steps.date.outputs.run_date }}" \
+            --top-n "$TOP_N" \
+            --out "data/thatk_report.txt"
+          echo "===== That K Report ====="
+          cat data/thatk_report.txt
+
+      - name: Upload rendered report as artifact
+        if: steps.guard.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: thatk-report-${{ steps.date.outputs.run_date }}
+          path: data/thatk_report.txt
+
+      - name: Email the report (optional)
+        if: >-
+          steps.guard.outputs.should_run == 'true' &&
+          (github.event_name == 'schedule' ||
+           (github.event_name == 'workflow_dispatch' && inputs.email == 'true'))
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os, smtplib, ssl
+          from email.message import EmailMessage
+          from pathlib import Path
+
+          host = os.environ.get("SMTP_HOST")
+          if not host:
+              print("SMTP_HOST missing -- skipping email step.")
+              raise SystemExit(0)
+          port = int(os.environ.get("SMTP_PORT") or 587)
+          user = os.environ.get("SMTP_USER") or ""
+          pw   = os.environ.get("SMTP_PASSWORD") or ""
+          sender = os.environ.get("SMTP_FROM") or user
+          to = os.environ.get("EMAIL_TO") or ""
+          body = Path("data/thatk_report.txt").read_text(encoding="utf-8")
+
+          msg = EmailMessage()
+          msg["Subject"] = "That K Report"
+          msg["From"] = sender
+          msg["To"] = to
+          msg.set_content(body)
+
+          ctx = ssl.create_default_context()
+          if port == 465:
+              s = smtplib.SMTP_SSL(host, port, context=ctx)
+          else:
+              s = smtplib.SMTP(host, port)
+              s.starttls(context=ctx)
+          try:
+              if user:
+                  s.login(user, pw)
+              s.send_message(msg)
+          finally:
+              s.quit()
+          print("Sent That K Report to", to)
+          PY
