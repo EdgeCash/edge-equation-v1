@@ -51,18 +51,17 @@ def _resolve_selection_side(
     """Identify which side of the market this pick is on so the engine
     can flip ProbabilityCalculator's home-centric fair_prob when needed.
 
-    ML: returns 'home' iff selection matches home_team, 'away' iff it
-    matches away_team, else None (refuse to grade).
+    ML / Spread / Run_Line / Puck_Line: returns 'home' iff selection
+    matches home_team, 'away' iff it matches away_team, else None
+    (refuse to grade). The math layer returns a home-centric fair_prob
+    for all four market types, so an away-side pick must be mirrored.
     BTTS: 'home' for Yes (matches the "fair_prob" computed by the
     Poisson math), 'away' for No.
-    Other PROB_MARKETS (Run_Line / Puck_Line / Spread): not yet
-    supported by ProbabilityCalculator -- those raise upstream and
-    never reach this function.
     """
     if not selection:
         return None
     sel = selection.strip()
-    if market_type == "ML":
+    if market_type in ("ML", "Spread", "Run_Line", "Puck_Line"):
         if home_team and sel == home_team:
             return "home"
         if away_team and sel == away_team:
@@ -75,7 +74,7 @@ def _resolve_selection_side(
         if s in ("no",):
             return "away"
         return None
-    return "home"
+    return None
 
 
 def _baseline_read(
