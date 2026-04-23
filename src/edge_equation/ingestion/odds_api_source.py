@@ -123,9 +123,16 @@ class TheOddsApiSource:
         name = outcome.get("name", "")
         point = outcome.get("point")
         if api_market_key == "totals":
+            # Totals selection carries the point inline ("Over 6.5")
+            # because "Over" / "Under" alone isn't meaningful; the
+            # posting formatter de-dupes if the line would append again.
             return f"{name} {point}" if point is not None else name
-        if api_market_key == "spreads":
-            return f"{name} {point:+g}" if point is not None else name
+        # Spreads (Run_Line / Puck_Line / Spread) return just the team
+        # name. The point lives on MarketInfo.line, and
+        # BettingEngine._resolve_selection_side requires a strict team
+        # match to decide whether to mirror the home-centric fair_prob.
+        # Embedding the point here ("PIT -1.5") breaks that match and
+        # silently drops the pick to fair_prob=None.
         return name
 
     @staticmethod

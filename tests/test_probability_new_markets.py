@@ -179,6 +179,37 @@ def test_away_puck_line_fair_prob_is_complement_of_home():
     assert abs(total - Decimal("1")) < Decimal("0.00001")
 
 
+def test_mock_nhl_puck_line_selection_grades_correctly():
+    """Regression test for the selection-format bug.
+
+    The NHL mock previously emitted selection='PIT -1.5' (team + line).
+    After the PR #40 _resolve_selection_side tightening, that format no
+    longer matched home_team='PIT' and every mock Puck_Line silently
+    came back fair_prob=None -- ungradeable. This test locks in the
+    post-fix contract: selection is the bare team name, line lives on
+    MarketInfo.line, and the engine grades the pick through.
+    """
+    bundle = FeatureBuilder.build(
+        sport="NHL",
+        market_type="Puck_Line",
+        inputs={
+            "strength_home": 1.22,
+            "strength_away": 1.10,
+            "home_adv": 0.095,
+            "line": Decimal("-1.5"),
+        },
+        universal_features={"home_edge": 0.05},
+        game_id="NHL-regression-PHI-PIT",
+        selection="PIT",  # bare team name, what the mock now emits
+        metadata={"home_team": "PIT", "away_team": "PHI"},
+    )
+    pick = BettingEngine.evaluate(
+        bundle, Line(odds=+180, number=Decimal("-1.5")), public_mode=False,
+    )
+    assert pick.fair_prob is not None
+    assert pick.edge is not None
+
+
 def test_unknown_selection_on_spread_is_ungradeable():
     """Selection that matches neither team leaves fair_prob=None and does
     not post -- same safety behavior as ML."""

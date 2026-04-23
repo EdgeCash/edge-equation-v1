@@ -27,8 +27,12 @@ class NhlSource:
                 "game_id": gid, "market_type": "ML", "selection": home, "odds": -125,
                 "meta": {"inputs": ml_inputs, "universal_features": ml_univ},
             })
+            # Puck_Line selection is just the team name -- the line lives
+            # on MarketInfo.line. The posting formatter appends "-1.5" for
+            # display, and BettingEngine._resolve_selection_side requires a
+            # strict team-name match to decide home/away mirroring.
             markets.append({
-                "game_id": gid, "market_type": "Puck_Line", "selection": f"{home} -1.5",
+                "game_id": gid, "market_type": "Puck_Line", "selection": home,
                 "line": Decimal("-1.5"), "odds": +180,
                 "meta": {"inputs": ml_inputs, "universal_features": ml_univ},
             })
