@@ -1,24 +1,26 @@
 name: That K Report
 
-# Side-project content pipeline for @ThatK_Guy. Three jobs:
+# Three jobs, strict account discipline per the brief:
 #
-#   1. projections  -- scheduled 3:00 PM CT, emits "Tonight's K
-#                      Projections" and uploads as an artifact.
-#   2. supporting   -- scheduled 9:00 AM CT, emits 1-2 light
-#                      supporting posts (K of the Night / Stat Drop
-#                      / Throwback), auto-rotated by date.
-#   3. results      -- workflow_dispatch ONLY (manual step per
-#                      brief -- results stay operator-gated).
+#   projections -- workflow_dispatch ONLY. Operator runs, reviews,
+#                  then manually posts to @ThatK_Guy. Zero scheduled
+#                  automation so a half-baked slate never tweets on
+#                  its own.
+#   supporting  -- scheduled daily 9:00 CT + dispatch. Generates
+#                  1-2 rotated posts (K of the Night / Stat Drop /
+#                  Throwback Classic K). Text artifact only; the
+#                  tweet step is still a separate manual queue.
+#   results     -- workflow_dispatch ONLY. Ledger updates persist
+#                  across runs via a cache pair.
 #
-# Keeping all three in the same workflow so secrets / artifact
-# naming / python setup stays DRY.  The job-level "if" filters by
-# the inbound schedule OR manual dispatch.  DST-aware dual cron +
-# zoneinfo CT guard matches the main cadence's pattern.
+# Credential discipline: every job exposes the *_KGUY X-secret set
+# and NEVER the main @EdgeEquation X secrets.  The config.py module
+# hard-isolates the two identities -- any future poster step that
+# reads creds picks exactly one bucket based on the --target-account
+# input below.
 
 on:
   schedule:
-    - cron: "0 20 * * *"   # 3:00 CT during CDT (projections)
-    - cron: "0 21 * * *"   # 3:00 CT during CST (projections)
     - cron: "0 14 * * *"   # 9:00 CT during CDT (supporting)
     - cron: "0 15 * * *"   # 9:00 CT during CST (supporting)
   workflow_dispatch:
@@ -32,60 +34,42 @@ on:
       top_n:
         description: "Max pitchers in the projections report"
         default: "8"
-      email:
-        description: "Send the output via SMTP to EMAIL_TO?"
-        default: "false"
       intro_70s:
         description: "Prepend a tasteful 70s intro line"
         default: "false"
+      target_account:
+        description: "k_guy (@ThatK_Guy) or main (@EdgeEquation)"
+        default: "k_guy"
 
 jobs:
   projections:
+    # Dispatch-only. Removed the prior 3pm CT cron so nothing auto-ships.
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.event.inputs.mode == 'projections'
-      || (github.event_name == 'schedule' &&
-          (github.event.schedule == '0 20 * * *' ||
-           github.event.schedule == '0 21 * * *'))
     runs-on: ubuntu-latest
     env:
-      EMAIL_TO:       ${{ secrets.EMAIL_TO || 'ProfessorEdgeCash@gmail.com' }}
-      SMTP_HOST:      ${{ secrets.SMTP_HOST }}
-      SMTP_PORT:      ${{ secrets.SMTP_PORT }}
-      SMTP_USER:      ${{ secrets.SMTP_USER }}
-      SMTP_PASSWORD:  ${{ secrets.SMTP_PASSWORD }}
-      SMTP_FROM:      ${{ secrets.SMTP_FROM }}
+      # K-Guy X credentials only. Main account secrets intentionally
+      # left unset in this job's env so a typo in a future poster
+      # script can't route to the wrong identity.
+      X_API_KEY_KGUY:              ${{ secrets.X_API_KEY_KGUY }}
+      X_API_SECRET_KGUY:           ${{ secrets.X_API_SECRET_KGUY }}
+      X_ACCESS_TOKEN_KGUY:         ${{ secrets.X_ACCESS_TOKEN_KGUY }}
+      X_ACCESS_TOKEN_SECRET_KGUY:  ${{ secrets.X_ACCESS_TOKEN_SECRET_KGUY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11", cache: pip }
 
-      - name: CT-hour guard (15 = 3pm)
-        id: guard
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          python - <<'PY' >> "$GITHUB_OUTPUT"
-          from datetime import datetime
-          from zoneinfo import ZoneInfo
-          now = datetime.now(ZoneInfo("America/Chicago"))
-          print(f"should_run={'true' if now.hour == 15 else 'false'}")
-          PY
-
       - name: Install
-        if: steps.guard.outputs.should_run == 'true'
         run: pip install -e .
 
       - name: Resolve date
-        if: steps.guard.outputs.should_run == 'true'
         id: date
         shell: bash
         run: echo "run_date=$(TZ='America/Chicago' date +%F)" >> "$GITHUB_OUTPUT"
 
       - name: Generate projections
-        if: steps.guard.outputs.should_run == 'true'
         shell: bash
         run: |
           mkdir -p data
@@ -98,8 +82,10 @@ jobs:
             INTRO_FLAG="--intro-70s"
           fi
           TOP_N="${{ github.event.inputs.top_n }}"; TOP_N="${TOP_N:-8}"
+          TARGET="${{ github.event.inputs.target_account }}"; TARGET="${TARGET:-k_guy}"
           python -m edge_equation.that_k projections \
             $SOURCE_FLAG $INTRO_FLAG \
+            --target-account "$TARGET" \
             --date "${{ steps.date.outputs.run_date }}" \
             --top-n "$TOP_N" \
             --out "data/thatk_projections.txt"
@@ -107,7 +93,6 @@ jobs:
           cat data/thatk_projections.txt
 
       - uses: actions/upload-artifact@v4
-        if: steps.guard.outputs.should_run == 'true'
         with:
           name: thatk-projections-${{ steps.date.outputs.run_date }}
           path: data/thatk_projections.txt
@@ -120,6 +105,11 @@ jobs:
           (github.event.schedule == '0 14 * * *' ||
            github.event.schedule == '0 15 * * *'))
     runs-on: ubuntu-latest
+    env:
+      X_API_KEY_KGUY:              ${{ secrets.X_API_KEY_KGUY }}
+      X_API_SECRET_KGUY:           ${{ secrets.X_API_SECRET_KGUY }}
+      X_ACCESS_TOKEN_KGUY:         ${{ secrets.X_ACCESS_TOKEN_KGUY }}
+      X_ACCESS_TOKEN_SECRET_KGUY:  ${{ secrets.X_ACCESS_TOKEN_SECRET_KGUY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -156,19 +146,16 @@ jobs:
           mkdir -p data
           SOURCE_FLAG="--sample"
           if [ "${{ github.event.inputs.source }}" = "json" ]; then
-            # The supporting generator reads two optional payload files
-            # when the operator wants hand-curated hooks; both default
-            # to the built-in deterministic sample.
             [ -f data/thatk_last_night.json ] && \
               SOURCE_FLAG="$SOURCE_FLAG --last-night data/thatk_last_night.json"
             [ -f data/thatk_slate_hooks.json ] && \
               SOURCE_FLAG="$SOURCE_FLAG --slate-hooks data/thatk_slate_hooks.json"
-            # If neither file was committed, fall back to sample so a
-            # freshly-dispatched manual run still produces content.
             [ "$SOURCE_FLAG" = "--sample" ] || SOURCE_FLAG="${SOURCE_FLAG#--sample }"
           fi
+          TARGET="${{ github.event.inputs.target_account }}"; TARGET="${TARGET:-k_guy}"
           python -m edge_equation.that_k supporting \
             $SOURCE_FLAG \
+            --target-account "$TARGET" \
             --date "${{ steps.date.outputs.run_date }}" \
             --n 2 \
             --out "data/thatk_supporting.txt"
@@ -182,12 +169,15 @@ jobs:
           path: data/thatk_supporting.txt
 
   results:
-    # Manual-only per the task spec -- operator reviews before posting
-    # the Results card.
     if: >-
       github.event_name == 'workflow_dispatch' &&
       github.event.inputs.mode == 'results'
     runs-on: ubuntu-latest
+    env:
+      X_API_KEY_KGUY:              ${{ secrets.X_API_KEY_KGUY }}
+      X_API_SECRET_KGUY:           ${{ secrets.X_API_SECRET_KGUY }}
+      X_ACCESS_TOKEN_KGUY:         ${{ secrets.X_ACCESS_TOKEN_KGUY }}
+      X_ACCESS_TOKEN_SECRET_KGUY:  ${{ secrets.X_ACCESS_TOKEN_SECRET_KGUY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -202,10 +192,6 @@ jobs:
         run: echo "run_date=$(TZ='America/Chicago' date +%F)" >> "$GITHUB_OUTPUT"
 
       - name: Restore ledger
-        # Season totals persist across runs via a read+save cache pair
-        # so each manual Results run increments yesterday's verdicts
-        # into the running W-L.  Dispatch-only, so there's no risk of
-        # a scheduled job racing with this writer.
         uses: actions/cache/restore@v4
         with:
           path: data/thatk_ledger.json
@@ -226,8 +212,10 @@ jobs:
           if [ "${{ github.event.inputs.intro_70s }}" = "true" ]; then
             INTRO_FLAG="--intro-70s"
           fi
+          TARGET="${{ github.event.inputs.target_account }}"; TARGET="${TARGET:-k_guy}"
           python -m edge_equation.that_k results \
             $SOURCE_FLAG $INTRO_FLAG \
+            --target-account "$TARGET" \
             --date "${{ steps.date.outputs.run_date }}" \
             --ledger data/thatk_ledger.json \
             --out data/thatk_results.txt

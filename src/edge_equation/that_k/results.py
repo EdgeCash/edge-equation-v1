@@ -32,6 +32,14 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Iterable, List, Optional, Sequence
 
+from edge_equation.that_k.commentary import (
+    render_day_commentary,
+    render_season_commentary,
+)
+from edge_equation.that_k.config import (
+    TargetAccount,
+    target_header_tag,
+)
 from edge_equation.that_k.ledger import (
     DEFAULT_LEDGER_PATH,
     Ledger,
@@ -102,10 +110,21 @@ def render_results_card(
     *,
     intro_70s: bool = False,
     update_ledger: bool = True,
+    commentary: bool = True,
+    target_account: TargetAccount = TargetAccount.KGUY,
 ) -> str:
     """Render the Results card.  When `ledger` is supplied AND
     `update_ledger=True` the snapshot is incremented (idempotently)
     by every verdict before the footer line is composed.
+
+    commentary=True appends a short hit-rate-bucketed 70s-flair line
+    below the Season Ledger block that ties the day's W-L to a bucket
+    phrase per the brand's tone rules.  The commentary sits in its
+    own section so downstream parsers can strip it without touching
+    the factual Hit/Miss rows above.
+
+    target_account stamps an audit-only header tag so artifacts
+    carry which identity they were built for (no secret material).
 
     The renderer never reaches for a default Ledger -- it stays a
     pure function when the caller doesn't pass one, so unit tests
@@ -113,6 +132,7 @@ def render_results_card(
     """
     out: List[str] = []
     out.append(f"That K Report — Results · {date_str}")
+    out.append(f"  ({target_header_tag(target_account)})")
     if intro_70s:
         out.append("Groovy K recap from last night—")
     out.append("Yesterday's K Projections")
@@ -162,6 +182,23 @@ def render_results_card(
         if ledger_pushes:
             ledger_line += f" · {ledger_pushes} push"
         out.append(ledger_line)
+
+    # Day-level commentary block. Ties the light 70s flair to TODAY's
+    # actual W-L (not season) so the tone always matches the slate
+    # the reader just saw. Falls back silently when the day had
+    # nothing settled.
+    if commentary and results:
+        day_wins = sum(1 for r in results if r.verdict == VERDICT_HIT)
+        day_losses = sum(1 for r in results if r.verdict == VERDICT_MISS)
+        day_pushes = sum(1 for r in results if r.verdict == VERDICT_PUSH)
+        day_comment = render_day_commentary(
+            wins=day_wins, losses=day_losses, pushes=day_pushes,
+            seed_key=date_str,
+        )
+        if day_comment is not None:
+            out.append("")
+            out.append(day_comment.text)
+
     out.append("")
     out.append(BRAND_FOOTER)
     return "\n".join(out).rstrip() + "\n"

@@ -31,6 +31,11 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
+from edge_equation.that_k.config import (
+    TargetAccount,
+    assert_account_separation,
+    resolve_x_credentials,
+)
 from edge_equation.that_k.ledger import DEFAULT_LEDGER_PATH, Ledger
 from edge_equation.that_k.report import DEFAULT_TOP_N, render_report
 from edge_equation.that_k.results import build_results, render_results_card
@@ -46,6 +51,35 @@ from edge_equation.that_k.supporting import (
     generate_supporting,
     render_supporting,
 )
+
+
+def _resolve_target(value: str) -> TargetAccount:
+    try:
+        return TargetAccount(value)
+    except ValueError as e:
+        raise SystemExit(
+            f"Invalid --target-account {value!r}. Expected 'k_guy' or 'main'."
+        ) from e
+
+
+def _preflight_account(account: TargetAccount) -> None:
+    """Log (stderr) any account-separation warnings + completeness
+    summary before the subcommand runs. Never prints secret values."""
+    warnings = assert_account_separation(account)
+    for w in warnings:
+        sys.stderr.write(f"[that_k] warn: {w}\n")
+    creds = resolve_x_credentials(account)
+    if not creds.is_complete():
+        # Informational only -- current workflow doesn't post to X
+        # from these subcommands (projections + results are manual,
+        # supporting is text-artifact only).  When a future poster
+        # step IS added it will hard-fail on incomplete creds; for
+        # now we just print the missing names so the operator can
+        # configure them ahead of time.
+        sys.stderr.write(
+            "[that_k] info: target_account="
+            f"{account.value} missing X secrets: {list(creds.missing)}\n"
+        )
 
 
 def _today() -> str:
@@ -69,6 +103,8 @@ def _emit(text: str, out_path: Optional[Path]) -> None:
 # ---------------------------------------------------------------- subcommands
 
 def _cmd_projections(args) -> int:
+    account = _resolve_target(args.target_account)
+    _preflight_account(account)
     if args.sample:
         slate = sample_slate()
     else:
@@ -78,12 +114,15 @@ def _cmd_projections(args) -> int:
     rows = build_projections(slate, n_sims=args.n_sims)
     text = render_report(
         rows, date_str=args.date, top_n=args.top_n, intro_70s=args.intro_70s,
+        target_account=account,
     )
     _emit(text, args.out)
     return 0
 
 
 def _cmd_results(args) -> int:
+    account = _resolve_target(args.target_account)
+    _preflight_account(account)
     if args.sample:
         rows = sample_results()
     else:
@@ -102,12 +141,16 @@ def _cmd_results(args) -> int:
         ledger=ledger,
         intro_70s=args.intro_70s,
         update_ledger=not args.no_ledger,
+        commentary=not args.no_commentary,
+        target_account=account,
     )
     _emit(text, args.out)
     return 0
 
 
 def _cmd_supporting(args) -> int:
+    account = _resolve_target(args.target_account)
+    _preflight_account(account)
     last_night = None
     slate_hooks = None
     if args.sample:
@@ -163,8 +206,25 @@ def _build_parser() -> argparse.ArgumentParser:
     root.add_argument(
         "--intro-70s", action="store_true", help=argparse.SUPPRESS,
     )
+    root.add_argument(
+        "--target-account", default=TargetAccount.KGUY.value,
+        help=argparse.SUPPRESS,
+    )
+    # Results-only back-compat: the top-level doesn't hit results but
+    # tests hit _cmd_results directly with the parsed namespace so the
+    # attribute needs to exist.
+    root.set_defaults(no_commentary=False)
 
     sub = root.add_subparsers(dest="cmd")
+
+    # Shared default for --target-account across subparsers. K Report
+    # module is @ThatK_Guy by default; operator can force the main
+    # account on the top-level --target-account flag.
+    TARGET_HELP = (
+        "Account identity for artifacts + credential resolution. "
+        "'k_guy' -> @ThatK_Guy (X_*_KGUY secrets). "
+        "'main'  -> @EdgeEquation (X_* secrets). Default k_guy."
+    )
 
     # --- projections -----------------------------------------------
     pp = sub.add_parser(
@@ -181,6 +241,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "--intro-70s", action="store_true",
         help="Prepend a light 70s personality line above the section "
              "header.",
+    )
+    pp.add_argument(
+        "--target-account", default=TargetAccount.KGUY.value,
+        choices=[a.value for a in TargetAccount], help=TARGET_HELP,
     )
 
     # --- results ---------------------------------------------------
@@ -205,6 +269,14 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Skip ledger persistence (dry-run mode).",
     )
     rp.add_argument("--intro-70s", action="store_true")
+    rp.add_argument(
+        "--no-commentary", action="store_true",
+        help="Skip the 70s-flair day commentary footer.",
+    )
+    rp.add_argument(
+        "--target-account", default=TargetAccount.KGUY.value,
+        choices=[a.value for a in TargetAccount], help=TARGET_HELP,
+    )
 
     # --- supporting ------------------------------------------------
     sp = sub.add_parser(
@@ -233,6 +305,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "--types", nargs="*",
         help="Explicit post types to generate (default: auto-rotate "
              "by date).",
+    )
+    sp.add_argument(
+        "--target-account", default=TargetAccount.KGUY.value,
+        choices=[a.value for a in TargetAccount], help=TARGET_HELP,
     )
 
     return root

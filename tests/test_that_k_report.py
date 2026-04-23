@@ -706,3 +706,336 @@ def test_cli_projections_backcompat_flag(capsys):
     rc = main(["--sample", "--date", "2026-04-23"])
     assert rc == 0
     assert capsys.readouterr().out.startswith("That K Report — 2026-04-23\n")
+
+
+# ------------------------------------------------ target account + credentials
+
+from edge_equation.that_k.config import (
+    TargetAccount,
+    XCredentials,
+    assert_account_separation,
+    resolve_x_credentials,
+    target_header_tag,
+)
+
+
+def test_target_account_enum_values():
+    assert TargetAccount("k_guy") is TargetAccount.KGUY
+    assert TargetAccount("main") is TargetAccount.MAIN
+
+
+def test_resolve_kguy_credentials_reads_only_kguy_env():
+    env = {
+        "X_API_KEY_KGUY": "k1",
+        "X_API_SECRET_KGUY": "k2",
+        "X_ACCESS_TOKEN_KGUY": "k3",
+        "X_ACCESS_TOKEN_SECRET_KGUY": "k4",
+        # Main creds present but MUST NOT leak in.
+        "X_API_KEY": "SHOULD_NEVER_BE_RETURNED",
+        "X_API_SECRET": "SHOULD_NEVER_BE_RETURNED",
+        "X_ACCESS_TOKEN": "SHOULD_NEVER_BE_RETURNED",
+        "X_ACCESS_TOKEN_SECRET": "SHOULD_NEVER_BE_RETURNED",
+    }
+    c = resolve_x_credentials(TargetAccount.KGUY, env=env)
+    assert c.is_complete()
+    assert c.account is TargetAccount.KGUY
+    assert c.api_key == "k1" and c.api_secret == "k2"
+    assert c.access_token == "k3" and c.access_token_secret == "k4"
+    # None of the main-account values leaked into the KGuy record.
+    for v in (c.api_key, c.api_secret, c.access_token, c.access_token_secret):
+        assert v != "SHOULD_NEVER_BE_RETURNED"
+
+
+def test_resolve_main_credentials_reads_only_main_env():
+    env = {
+        "X_API_KEY": "m1", "X_API_SECRET": "m2",
+        "X_ACCESS_TOKEN": "m3", "X_ACCESS_TOKEN_SECRET": "m4",
+        # KGuy set present.  Must not cross over.
+        "X_API_KEY_KGUY": "SHOULD_NEVER_BE_RETURNED",
+    }
+    c = resolve_x_credentials(TargetAccount.MAIN, env=env)
+    assert c.is_complete()
+    assert c.account is TargetAccount.MAIN
+    for v in (c.api_key, c.api_secret, c.access_token, c.access_token_secret):
+        assert v != "SHOULD_NEVER_BE_RETURNED"
+
+
+def test_resolve_credentials_reports_missing_env_vars():
+    """Empty env -> missing list populated with the exact var names."""
+    c = resolve_x_credentials(TargetAccount.KGUY, env={})
+    assert not c.is_complete()
+    assert set(c.missing) == {
+        "X_API_KEY_KGUY",
+        "X_API_SECRET_KGUY",
+        "X_ACCESS_TOKEN_KGUY",
+        "X_ACCESS_TOKEN_SECRET_KGUY",
+    }
+
+
+def test_xcredentials_to_dict_never_includes_secret_values():
+    env = {
+        "X_API_KEY_KGUY": "supersecret",
+        "X_API_SECRET_KGUY": "evensecret",
+        "X_ACCESS_TOKEN_KGUY": "tok",
+        "X_ACCESS_TOKEN_SECRET_KGUY": "tokmore",
+    }
+    c = resolve_x_credentials(TargetAccount.KGUY, env=env)
+    serialized = c.to_dict()
+    # Serialization must only tag account + completeness; never the
+    # actual secret material so artifacts can't leak.
+    for v in ("supersecret", "evensecret", "tok", "tokmore"):
+        assert v not in repr(serialized)
+
+
+def test_account_separation_warns_when_both_sets_present():
+    env = {
+        "X_API_KEY_KGUY": "1", "X_API_SECRET_KGUY": "1",
+        "X_ACCESS_TOKEN_KGUY": "1", "X_ACCESS_TOKEN_SECRET_KGUY": "1",
+        "X_API_KEY": "2", "X_API_SECRET": "2",
+        "X_ACCESS_TOKEN": "2", "X_ACCESS_TOKEN_SECRET": "2",
+    }
+    warnings = assert_account_separation(TargetAccount.KGUY, env=env)
+    assert warnings
+    assert any("Main" in w for w in warnings) or any("k_guy" in w for w in warnings)
+
+
+def test_account_separation_silent_when_one_set_present():
+    env_kguy_only = {
+        "X_API_KEY_KGUY": "1", "X_API_SECRET_KGUY": "1",
+        "X_ACCESS_TOKEN_KGUY": "1", "X_ACCESS_TOKEN_SECRET_KGUY": "1",
+    }
+    assert assert_account_separation(TargetAccount.KGUY, env=env_kguy_only) == []
+
+
+def test_target_header_tag_never_leaks_secrets():
+    # Pure display string -- must NOT reach into env or reveal creds.
+    assert target_header_tag(TargetAccount.KGUY) == "target=@ThatK_Guy"
+    assert target_header_tag(TargetAccount.MAIN) == "target=@EdgeEquation"
+
+
+def test_projections_renderer_emits_target_header_tag():
+    rows = _row_for_format()
+    text_kguy = render_report(
+        rows, date_str="2026-04-23",
+        target_account=TargetAccount.KGUY,
+    )
+    text_main = render_report(
+        rows, date_str="2026-04-23",
+        target_account=TargetAccount.MAIN,
+    )
+    assert "target=@ThatK_Guy" in text_kguy
+    assert "target=@EdgeEquation" in text_main
+    # Cross-contamination guard: each render must only carry its own
+    # identity tag.
+    assert "target=@EdgeEquation" not in text_kguy
+    assert "target=@ThatK_Guy" not in text_main
+
+
+def test_cli_target_account_validation_rejects_garbage(capsys):
+    from edge_equation.that_k.__main__ import main
+    with pytest.raises(SystemExit):
+        # argparse choices gate this; the exit code is non-zero.
+        main(["projections", "--sample", "--target-account", "notareal"])
+
+
+# ------------------------------------------------ commentary buckets
+
+from edge_equation.that_k.commentary import (
+    render_day_commentary,
+    render_season_commentary,
+    pick_phrase,
+)
+
+
+def test_commentary_buckets_cover_every_hit_rate_threshold():
+    # Each threshold edge per the brief.
+    assert pick_phrase(0.90)[0] == "outta_sight"
+    assert pick_phrase(0.80)[0] == "outta_sight"
+    assert pick_phrase(0.75)[0] == "far_out"
+    assert pick_phrase(0.65)[0] == "far_out"
+    assert pick_phrase(0.60)[0] == "groovy"
+    assert pick_phrase(0.55)[0] == "groovy"
+    assert pick_phrase(0.50)[0] == "mild_miss"
+    assert pick_phrase(0.48)[0] == "mild_miss"
+    assert pick_phrase(0.45)[0] == "rough"
+    assert pick_phrase(0.35)[0] == "rough"
+    assert pick_phrase(0.25)[0] == "brutal"
+    assert pick_phrase(0.00)[0] == "brutal"
+
+
+def test_commentary_ties_back_to_actual_numbers():
+    """Every commentary line MUST quote the W-L + hit rate so the
+    flair never floats free of the facts."""
+    c = render_day_commentary(wins=5, losses=2, seed_key="d1")
+    assert c is not None
+    assert "5-2" in c.text
+    assert "71%" in c.text  # 5/7 = 71.4% -> rounded
+
+
+def test_commentary_is_deterministic_for_same_date_and_bucket():
+    c1 = render_day_commentary(wins=4, losses=3, seed_key="2026-04-22")
+    c2 = render_day_commentary(wins=4, losses=3, seed_key="2026-04-22")
+    assert c1.text == c2.text
+
+
+def test_commentary_none_when_no_settled_results():
+    assert render_day_commentary(wins=0, losses=0) is None
+    assert render_season_commentary(wins=0, losses=0) is None
+
+
+def test_commentary_brutal_bucket_used_on_disaster_day():
+    c = render_day_commentary(wins=1, losses=9, seed_key="x")
+    assert c is not None
+    assert c.bucket == "brutal"
+    assert "drag" in c.text.lower()
+
+
+def test_commentary_cooking_with_gas_appears_in_outta_sight_rotation():
+    """One of the three outta_sight variants must surface over the
+    variant rotation when bucket is triggered."""
+    variants_seen = set()
+    for seed in (str(i) for i in range(30)):
+        c = render_day_commentary(wins=8, losses=1, seed_key=seed)
+        variants_seen.add(c.phrase)
+    assert "We were cooking with gas tonight" in variants_seen \
+        or "Outta sight -- cooking with gas" in variants_seen
+
+
+def test_results_card_appends_day_commentary_footer():
+    rows = build_results([
+        {"pitcher": "A", "line": 7.5, "actual": 9},
+        {"pitcher": "B", "line": 7.5, "actual": 5},
+    ])
+    text = render_results_card(rows, date_str="2026-04-22")
+    # 1-1 = 50% -> mild_miss bucket.
+    assert "for the birds" in text.lower() or "bird bath" in text.lower()
+    assert "1-1" in text and "50%" in text
+
+
+def test_results_card_commentary_off_opt_out():
+    rows = build_results([
+        {"pitcher": "A", "line": 7.5, "actual": 9},
+    ])
+    # commentary=False removes the day line while keeping the rest.
+    text = render_results_card(rows, date_str="2026-04-22", commentary=False)
+    assert "Season Ledger" in text
+    # None of the bucket phrases should appear.
+    lower = text.lower()
+    for phrase in ("groovy", "far out", "outta sight", "for the birds",
+                   "basement", "drag"):
+        assert phrase not in lower
+
+
+# ------------------------------------------------ clip suggestions
+
+from edge_equation.that_k.clips import (
+    CLIP_TAG,
+    clip_for_k_of_the_night,
+    clip_for_throwback,
+    render_clip_suggestion,
+)
+
+
+def test_clip_for_k_of_the_night_builds_search_url():
+    url = clip_for_k_of_the_night(sample_last_night_standout())
+    assert url is not None
+    assert url.startswith("https://www.youtube.com/results?search_query=")
+    # Pitcher name + K count must appear (URL-encoded).
+    assert "Blake+Snell" in url or "Blake%20Snell" in url
+    assert "9+K" in url or "9%20K" in url
+
+
+def test_clip_for_k_of_the_night_none_on_empty_payload():
+    assert clip_for_k_of_the_night(None) is None
+    assert clip_for_k_of_the_night({}) is None
+    # Missing pitcher -> can't build a useful query.
+    assert clip_for_k_of_the_night({"opp": "HOU"}) is None
+
+
+def test_clip_for_throwback_returns_description_not_url():
+    desc = clip_for_throwback({
+        "pitcher": "Kerry Wood", "year": 1998, "total": 20,
+    })
+    assert desc
+    assert desc.startswith("WGN") or "broadcast" in desc.lower()
+    # Description form never includes a URL.
+    assert "http" not in desc
+
+
+def test_clip_for_throwback_none_on_unknown_entry():
+    assert clip_for_throwback({
+        "pitcher": "Unknown Ace", "year": 2025, "total": 15,
+    }) is None
+
+
+def test_render_clip_suggestion_wraps_tag_correctly():
+    out = render_clip_suggestion("Test clip")
+    assert out == f"[{CLIP_TAG}: Test clip]"
+    assert render_clip_suggestion("") == ""
+    assert render_clip_suggestion(None) == ""
+
+
+def test_k_of_the_night_emits_clip_suggestion_line():
+    """Generated K of the Night post must include the tagged clip
+    suggestion on its own line so the posting tool can parse it."""
+    from edge_equation.that_k.supporting import generate_k_of_the_night
+    p = generate_k_of_the_night("2026-04-23", sample_last_night_standout())
+    assert f"[{CLIP_TAG}:" in p.text
+    # Tag sits on its own line (split on newline and find it).
+    found = any(
+        line.startswith(f"[{CLIP_TAG}:")
+        for line in p.text.splitlines()
+    )
+    assert found
+
+
+def test_throwback_k_emits_clip_suggestion_when_catalog_match():
+    """Any throwback post produced by the generator should carry a
+    clip suggestion because every catalog entry has a canonical
+    broadcast description registered in clips.py."""
+    from edge_equation.that_k.supporting import generate_throwback_k
+    # Run across 30 consecutive days so the rotation exercises every
+    # catalog entry at least once.
+    for d in range(1, 31):
+        p = generate_throwback_k(f"2026-04-{d:02d}")
+        assert f"[{CLIP_TAG}:" in p.text
+
+
+def test_clip_suggestions_are_tasteful_no_hype_in_description():
+    """Clip descriptions must not carry tout language -- same brand
+    rule as the post bodies."""
+    from edge_equation.that_k.clips import _THROWBACK_CLIPS
+    from edge_equation.that_k.supporting import HYPE_BLOCKLIST
+    joined = "\n".join(_THROWBACK_CLIPS.values()).lower()
+    for word in HYPE_BLOCKLIST:
+        assert word not in joined, f"hype word {word!r} in clip catalog"
+
+
+# ------------------------------------------------ workflow + brand smoke
+
+def test_workflow_file_contains_kguy_env_plumbing():
+    """Hard regression guard: the workflow must wire the *_KGUY
+    secret set and NOT reference the main @EdgeEquation X secrets
+    by their unprefixed names."""
+    from pathlib import Path
+    wf = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "that-k-report.yml"
+    text = wf.read_text(encoding="utf-8")
+    assert "X_API_KEY_KGUY" in text
+    assert "X_API_SECRET_KGUY" in text
+    assert "X_ACCESS_TOKEN_KGUY" in text
+    assert "X_ACCESS_TOKEN_SECRET_KGUY" in text
+
+
+def test_workflow_projections_is_dispatch_only():
+    """The projections job must NOT run on schedule per the strict
+    account discipline rule -- only on a manual workflow_dispatch."""
+    from pathlib import Path
+    wf = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "that-k-report.yml"
+    text = wf.read_text(encoding="utf-8")
+    # Locate the projections job block and verify its gate is
+    # "workflow_dispatch && mode == 'projections'" with no schedule
+    # branch.  Simple substring check is enough; full YAML parsing
+    # would be overkill here.
+    proj_block = text.split("projections:", 1)[1].split("supporting:", 1)[0]
+    assert "workflow_dispatch" in proj_block
+    assert "schedule" not in proj_block

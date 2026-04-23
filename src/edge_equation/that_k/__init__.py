@@ -73,3 +73,19 @@ from edge_equation.that_k.supporting import (  # noqa: F401
     render_supporting,
     select_types_for_day,
 )
+from edge_equation.that_k.config import (  # noqa: F401
+    TargetAccount,
+    XCredentials,
+    resolve_x_credentials,
+    target_header_tag,
+)
+from edge_equation.that_k.commentary import (  # noqa: F401
+    render_day_commentary,
+    render_season_commentary,
+)
+from edge_equation.that_k.clips import (  # noqa: F401
+    CLIP_TAG,
+    clip_for_k_of_the_night,
+    clip_for_throwback,
+    render_clip_suggestion,
+)

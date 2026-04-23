@@ -39,6 +39,12 @@ import random
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from edge_equation.that_k.clips import (
+    clip_for_k_of_the_night,
+    clip_for_throwback,
+    render_clip_suggestion,
+)
+
 
 # Tag labels -- emitted verbatim in rendered output so the posting
 # tool can split on them trivially.
@@ -256,7 +262,15 @@ def generate_k_of_the_night(
     if line is not None and ks is not None and ks > line:
         line_note = f" Line closed at {line}; start finished at {ks}."
 
-    text = f"[{TAG_K_OF_THE_NIGHT}] {intro} {head}: {tie}{line_note}"
+    # Attach a tasteful CLIP_SUGGESTION when we have enough info to
+    # build a useful highlight search. Stays on its own line so the
+    # posting tool can grep [CLIP_SUGGESTION: ...] cleanly and queue
+    # the clip step separately from the tweet body.
+    clip_url = clip_for_k_of_the_night(last_night)
+    clip_line = render_clip_suggestion(clip_url)
+    clip_tail = f"\n{clip_line}" if clip_line else ""
+
+    text = f"[{TAG_K_OF_THE_NIGHT}] {intro} {head}: {tie}{line_note}{clip_tail}"
     return SupportingPost(tag=TAG_K_OF_THE_NIGHT, text=text)
 
 
@@ -329,13 +343,18 @@ def generate_stat_drop(
 
 def generate_throwback_k(date_str: str) -> SupportingPost:
     """Pull one curated throwback + modern tie-in.  Rotates through
-    the catalog deterministically by date."""
+    the catalog deterministically by date.  When the catalog has a
+    matching canonical broadcast description, attach it as a
+    CLIP_SUGGESTION on a separate line."""
     rng = random.Random(_seed_int(date_str, "throwback"))
     intro = _pick(rng, _INTRO_70S)
     item = _pick(rng, _THROWBACKS)
+    clip_desc = clip_for_throwback(item)
+    clip_line = render_clip_suggestion(clip_desc)
+    clip_tail = f"\n{clip_line}" if clip_line else ""
     text = (
         f"[{TAG_THROWBACK_K}] {intro} {item['hook']} "
-        f"{item['analytic']}"
+        f"{item['analytic']}{clip_tail}"
     )
     return SupportingPost(tag=TAG_THROWBACK_K, text=text)
 

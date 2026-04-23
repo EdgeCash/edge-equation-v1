@@ -36,6 +36,7 @@ from decimal import Decimal
 from typing import Iterable, List, Optional
 
 from edge_equation.math.scoring import ConfidenceScorer
+from edge_equation.that_k.config import TargetAccount, target_header_tag
 from edge_equation.that_k.model import (
     GameContext,
     KProjectionInputs,
@@ -213,6 +214,7 @@ def render_report(
     date_str: str,
     top_n: Optional[int] = DEFAULT_TOP_N,
     intro_70s: bool = False,
+    target_account: TargetAccount = TargetAccount.KGUY,
 ) -> str:
     """Render the full text report.  `date_str` is a YYYY-MM-DD string
     (caller passes run-date; the module doesn't reach for the clock).
@@ -221,6 +223,11 @@ def render_report(
     "Tonight's Pitcher K Projections" header, per the brand allowance
     in the task spec.  Default False so scheduled runs stay strictly
     analytical unless the operator opts in.
+
+    target_account stamps an audit-only header tag under the date
+    line (e.g. "(target=@ThatK_Guy)") so artifacts carry a visible
+    trail of which identity they were built for.  No secret material
+    ever lands in the header.
     """
     rows = list(rows)
     # Rank by probability-space edge magnitude, ties broken by raw K
@@ -237,6 +244,7 @@ def render_report(
     # Brief specifies an em-dash ("That K Report — [Date]") so we match
     # verbatim.  Em-dash renders cleanly in all modern mail/X clients.
     out.append(f"That K Report — {date_str}")
+    out.append(f"  ({target_header_tag(target_account)})")
     if intro_70s:
         out.append(_intro_for(date_str))
     out.append(BRAND_HEADER)
