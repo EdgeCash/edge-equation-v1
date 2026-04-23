@@ -1,0 +1,290 @@
+name: That K Report
+
+# Three jobs, strict account discipline per the brief:
+#
+#   projections -- workflow_dispatch ONLY. Operator runs, reviews,
+#                  then manually posts to @ThatK_Guy. Zero scheduled
+#                  automation so a half-baked slate never tweets on
+#                  its own.
+#   supporting  -- scheduled daily 9:00 CT + dispatch. Generates
+#                  1-2 rotated posts (K of the Night / Stat Drop /
+#                  Throwback Classic K). Text artifact only; the
+#                  tweet step is still a separate manual queue.
+#   results     -- workflow_dispatch ONLY. Ledger updates persist
+#                  across runs via a cache pair.
+#
+# Credential discipline: every job exposes the *_KGUY X-secret set
+# and NEVER the main @EdgeEquation X secrets.  The config.py module
+# hard-isolates the two identities -- any future poster step that
+# reads creds picks exactly one bucket based on the --target-account
+# input below.
+
+on:
+  schedule:
+    - cron: "0 14 * * *"   # 9:00 CT during CDT (supporting)
+    - cron: "0 15 * * *"   # 9:00 CT during CST (supporting)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "projections | results | supporting | spotlight"
+        default: "projections"
+      source:
+        description: "sample (dry-run) | json (requires data/ files)"
+        default: "sample"
+      top_n:
+        description: "Max pitchers in the projections report"
+        default: "8"
+      intro_70s:
+        description: "Prepend a tasteful 70s intro line"
+        default: "false"
+      target_account:
+        description: "k_guy (@ThatK_Guy) or main (@EdgeEquation)"
+        default: "k_guy"
+
+jobs:
+  projections:
+    # Dispatch-only. Removed the prior 3pm CT cron so nothing auto-ships.
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.mode == 'projections'
+    runs-on: ubuntu-latest
+    env:
+      # K-Guy X credentials only. Main account secrets intentionally
+      # left unset in this job's env so a typo in a future poster
+      # script can't route to the wrong identity.
+      X_API_KEY_KGUY:              ${{ secrets.X_API_KEY_KGUY }}
+      X_API_SECRET_KGUY:           ${{ secrets.X_API_SECRET_KGUY }}
+      X_ACCESS_TOKEN_KGUY:         ${{ secrets.X_ACCESS_TOKEN_KGUY }}
+      X_ACCESS_TOKEN_SECRET_KGUY:  ${{ secrets.X_ACCESS_TOKEN_SECRET_KGUY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Resolve date
+        id: date
+        shell: bash
+        run: echo "run_date=$(TZ='America/Chicago' date +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Generate projections
+        shell: bash
+        run: |
+          mkdir -p data
+          SOURCE_FLAG="--sample"
+          if [ "${{ github.event.inputs.source }}" = "json" ]; then
+            SOURCE_FLAG="--slate data/thatk_slate.json"
+          fi
+          INTRO_FLAG=""
+          if [ "${{ github.event.inputs.intro_70s }}" = "true" ]; then
+            INTRO_FLAG="--intro-70s"
+          fi
+          TOP_N="${{ github.event.inputs.top_n }}"; TOP_N="${TOP_N:-8}"
+          TARGET="${{ github.event.inputs.target_account }}"; TARGET="${TARGET:-k_guy}"
+          # Testing Ground: every projections run also writes a
+          # debug metrics JSON (calibration baseline + feature
+          # importance + A/B variant comparison).  The file feeds the
+          # main Edge Equation engine's future weight-tuning pass.
+          python -m edge_equation.that_k projections \
+            $SOURCE_FLAG $INTRO_FLAG \
+            --target-account "$TARGET" \
+            --date "${{ steps.date.outputs.run_date }}" \
+            --top-n "$TOP_N" \
+            --out "data/thatk_projections.txt" \
+            --metrics-out "data/thatk_metrics.json"
+          echo "===== PROJECTIONS ====="
+          cat data/thatk_projections.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: thatk-projections-${{ steps.date.outputs.run_date }}
+          path: |
+            data/thatk_projections.txt
+            data/thatk_metrics.json
+
+  supporting:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.mode == 'supporting'
+      || (github.event_name == 'schedule' &&
+          (github.event.schedule == '0 14 * * *' ||
+           github.event.schedule == '0 15 * * *'))
+    runs-on: ubuntu-latest
+    env:
+      X_API_KEY_KGUY:              ${{ secrets.X_API_KEY_KGUY }}
+      X_API_SECRET_KGUY:           ${{ secrets.X_API_SECRET_KGUY }}
+      X_ACCESS_TOKEN_KGUY:         ${{ secrets.X_ACCESS_TOKEN_KGUY }}
+      X_ACCESS_TOKEN_SECRET_KGUY:  ${{ secrets.X_ACCESS_TOKEN_SECRET_KGUY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+
+      - name: CT-hour guard (9 = 9am)
+        id: guard
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          now = datetime.now(ZoneInfo("America/Chicago"))
+          print(f"should_run={'true' if now.hour == 9 else 'false'}")
+          PY
+
+      - name: Install
+        if: steps.guard.outputs.should_run == 'true'
+        run: pip install -e .
+
+      - name: Resolve date
+        if: steps.guard.outputs.should_run == 'true'
+        id: date
+        shell: bash
+        run: echo "run_date=$(TZ='America/Chicago' date +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Generate supporting content
+        if: steps.guard.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          mkdir -p data
+          SOURCE_FLAG="--sample"
+          if [ "${{ github.event.inputs.source }}" = "json" ]; then
+            [ -f data/thatk_last_night.json ] && \
+              SOURCE_FLAG="$SOURCE_FLAG --last-night data/thatk_last_night.json"
+            [ -f data/thatk_slate_hooks.json ] && \
+              SOURCE_FLAG="$SOURCE_FLAG --slate-hooks data/thatk_slate_hooks.json"
+            [ "$SOURCE_FLAG" = "--sample" ] || SOURCE_FLAG="${SOURCE_FLAG#--sample }"
+          fi
+          TARGET="${{ github.event.inputs.target_account }}"; TARGET="${TARGET:-k_guy}"
+          python -m edge_equation.that_k supporting \
+            $SOURCE_FLAG \
+            --target-account "$TARGET" \
+            --date "${{ steps.date.outputs.run_date }}" \
+            --n 2 \
+            --out "data/thatk_supporting.txt"
+          echo "===== SUPPORTING ====="
+          cat data/thatk_supporting.txt
+
+      - uses: actions/upload-artifact@v4
+        if: steps.guard.outputs.should_run == 'true'
+        with:
+          name: thatk-supporting-${{ steps.date.outputs.run_date }}
+          path: data/thatk_supporting.txt
+
+  spotlight:
+    # Weekly Pitcher Spotlight -- long-form feature, dispatch-only
+    # per the brief (operator curates the arsenal/movement breakdown
+    # before publishing).  No schedule; operator triggers Monday
+    # morning after building the subject JSON for the week.
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.mode == 'spotlight'
+    runs-on: ubuntu-latest
+    env:
+      X_API_KEY_KGUY:              ${{ secrets.X_API_KEY_KGUY }}
+      X_API_SECRET_KGUY:           ${{ secrets.X_API_SECRET_KGUY }}
+      X_ACCESS_TOKEN_KGUY:         ${{ secrets.X_ACCESS_TOKEN_KGUY }}
+      X_ACCESS_TOKEN_SECRET_KGUY:  ${{ secrets.X_ACCESS_TOKEN_SECRET_KGUY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Resolve date
+        id: date
+        shell: bash
+        run: echo "week_of=$(TZ='America/Chicago' date +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Render Spotlight
+        shell: bash
+        run: |
+          mkdir -p data
+          SOURCE_FLAG="--sample"
+          if [ "${{ github.event.inputs.source }}" = "json" ]; then
+            SOURCE_FLAG="--subject data/thatk_spotlight.json"
+          fi
+          TARGET="${{ github.event.inputs.target_account }}"; TARGET="${TARGET:-k_guy}"
+          python -m edge_equation.that_k spotlight \
+            $SOURCE_FLAG \
+            --target-account "$TARGET" \
+            --week-of "${{ steps.date.outputs.week_of }}" \
+            --out data/thatk_spotlight.txt
+          echo "===== SPOTLIGHT ====="
+          cat data/thatk_spotlight.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: thatk-spotlight-${{ steps.date.outputs.week_of }}
+          path: data/thatk_spotlight.txt
+
+  results:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.mode == 'results'
+    runs-on: ubuntu-latest
+    env:
+      X_API_KEY_KGUY:              ${{ secrets.X_API_KEY_KGUY }}
+      X_API_SECRET_KGUY:           ${{ secrets.X_API_SECRET_KGUY }}
+      X_ACCESS_TOKEN_KGUY:         ${{ secrets.X_ACCESS_TOKEN_KGUY }}
+      X_ACCESS_TOKEN_SECRET_KGUY:  ${{ secrets.X_ACCESS_TOKEN_SECRET_KGUY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Resolve date
+        id: date
+        shell: bash
+        run: echo "run_date=$(TZ='America/Chicago' date +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore ledger
+        uses: actions/cache/restore@v4
+        with:
+          path: data/thatk_ledger.json
+          key: thatk-ledger-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            thatk-ledger-${{ github.ref_name }}-
+            thatk-ledger-
+
+      - name: Render Results card
+        shell: bash
+        run: |
+          mkdir -p data
+          SOURCE_FLAG="--sample"
+          if [ "${{ github.event.inputs.source }}" = "json" ]; then
+            SOURCE_FLAG="--results data/thatk_results.json"
+          fi
+          INTRO_FLAG=""
+          if [ "${{ github.event.inputs.intro_70s }}" = "true" ]; then
+            INTRO_FLAG="--intro-70s"
+          fi
+          TARGET="${{ github.event.inputs.target_account }}"; TARGET="${TARGET:-k_guy}"
+          python -m edge_equation.that_k results \
+            $SOURCE_FLAG $INTRO_FLAG \
+            --target-account "$TARGET" \
+            --date "${{ steps.date.outputs.run_date }}" \
+            --ledger data/thatk_ledger.json \
+            --out data/thatk_results.txt
+          echo "===== RESULTS ====="
+          cat data/thatk_results.txt
+
+      - name: Save ledger
+        uses: actions/cache/save@v4
+        with:
+          path: data/thatk_ledger.json
+          key: thatk-ledger-${{ github.ref_name }}-${{ github.run_id }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: thatk-results-${{ steps.date.outputs.run_date }}
+          path: data/thatk_results.txt
