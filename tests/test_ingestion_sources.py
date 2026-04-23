@@ -139,37 +139,61 @@ def test_nfl_source_emits_spread_both_sides():
 
 # ---------------------------------------------------------------------------
 # End-to-end: run a mock slate through run_slate and verify that
-# Spread-family picks on both sides of a game are actually graded
-# (i.e. fair_prob is non-None on both home and away selections, which
-# was the regression PR #42 fixed).
-#
-# NOTE: complementary-fair_prob assertion is intentionally omitted --
-# testing revealed that MarketInfo.line is outcome-centric (-3.5 for
-# the home outcome, +3.5 for the away outcome) while
-# ProbabilityCalculator's Spread branch assumes a home-centric line,
-# so both-sides picks sum to <1 instead of 1. Fix requires a slate_runner
-# line-sign normalization (tracked as a follow-up PR).
+# Spread-family picks on both sides of a game (1) both grade and
+# (2) their fair_probs sum to 1. The second invariant requires
+# slate_runner to normalize the outcome-centric MarketInfo.line into
+# a home-centric line before the math layer sees it. Otherwise
+# feeding the away-outcome's +3.5 as-is into ProbabilityCalculator
+# (which assumes home-centric input) breaks the complement.
 # ---------------------------------------------------------------------------
 
-def test_run_slate_grades_both_sides_of_spread_markets():
-    from edge_equation.engine.slate_runner import run_slate
-
-    source = NflSource()
-    games = source.get_raw_games(RUN)
-    markets = source.get_raw_markets(RUN)
-    slate = normalize_slate(games, markets)
-
-    picks = run_slate(slate, sport="NFL", public_mode=False)
-    spread_picks = {}
+def _assert_spread_picks_are_complementary(picks, market_type):
+    from decimal import Decimal as D
+    by_game = {}
     for p in picks:
-        if p.market_type != "Spread":
+        if p.market_type != market_type:
             continue
-        spread_picks.setdefault(p.game_id, []).append(p)
-
-    assert spread_picks, "expected at least one Spread pick from the NFL mock"
-    for gid, pair in spread_picks.items():
+        by_game.setdefault(p.game_id, []).append(p)
+    assert by_game, f"expected at least one {market_type} pick"
+    for gid, pair in by_game.items():
         assert len(pair) == 2, \
-            f"game {gid} has {len(pair)} Spread picks, expected 2"
+            f"game {gid}: {len(pair)} {market_type} picks, expected 2"
         fps = [p.fair_prob for p in pair]
         assert all(fp is not None for fp in fps), \
-            f"game {gid}: a Spread pick is ungradeable ({pair})"
+            f"game {gid}: a {market_type} pick is ungradeable ({pair})"
+        total = fps[0] + fps[1]
+        assert abs(total - D("1")) < D("0.00001"), \
+            f"game {gid}: {market_type} fair_probs {fps} don't sum to 1"
+
+
+def test_run_slate_nfl_spread_picks_are_complementary():
+    from edge_equation.engine.slate_runner import run_slate
+    source = NflSource()
+    slate = normalize_slate(
+        source.get_raw_games(RUN), source.get_raw_markets(RUN),
+    )
+    _assert_spread_picks_are_complementary(
+        run_slate(slate, sport="NFL", public_mode=False), "Spread",
+    )
+
+
+def test_run_slate_nba_spread_picks_are_complementary():
+    from edge_equation.engine.slate_runner import run_slate
+    source = NbaSource()
+    slate = normalize_slate(
+        source.get_raw_games(RUN), source.get_raw_markets(RUN),
+    )
+    _assert_spread_picks_are_complementary(
+        run_slate(slate, sport="NBA", public_mode=False), "Spread",
+    )
+
+
+def test_run_slate_mlb_run_line_picks_are_complementary():
+    from edge_equation.engine.slate_runner import run_slate
+    source = MlbLikeSource("MLB")
+    slate = normalize_slate(
+        source.get_raw_games(RUN), source.get_raw_markets(RUN),
+    )
+    _assert_spread_picks_are_complementary(
+        run_slate(slate, sport="MLB", public_mode=False), "Run_Line",
+    )
