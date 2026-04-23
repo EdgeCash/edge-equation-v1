@@ -67,6 +67,34 @@ class ProbabilityCalculator:
                 "clamped_universal_sum": clamped_univ,
             }
 
+        # Spread / Run_Line / Puck_Line: BT home-centric prob adjusted by the
+        # line, where the line is normalized against half the league baseline
+        # total as a conservative points-to-probability shift.
+        if market_type in ("Spread", "Run_Line", "Puck_Line"):
+            base_prob = ProbabilityCalculator.bradley_terry(
+                inputs["strength_home"],
+                inputs["strength_away"],
+                inputs.get("home_adv", 0.115),
+            )
+            _, _, baseline = ProbabilityCalculator._get_weights_and_baseline(sport)
+            line_val = Decimal(str(inputs.get("line", 0.0)))
+            # Conservative: a full half-baseline of points ~= one side of the
+            # scoring distribution; line is expressed from the home side
+            # (negative = home favored).
+            line_adj = -line_val / (baseline * Decimal('0.5'))
+            clamped_univ = DeterministicStats.clamp_universal_prob(raw_univ)
+            fair_prob = base_prob + line_adj + clamped_univ * ml_weight
+            if fair_prob < Decimal('0.01'):
+                fair_prob = Decimal('0.01')
+            if fair_prob > Decimal('0.99'):
+                fair_prob = Decimal('0.99')
+            fair_prob = fair_prob.quantize(Decimal('0.000001'))
+            return {
+                "fair_prob": fair_prob,
+                "raw_universal_sum": raw_univ,
+                "clamped_universal_sum": clamped_univ,
+            }
+
         # Totals: league_baseline_total * env_factor + DC adj, then 2-decimal rounding
         if market_type in ["Total", "Game_Total"]:
             dixon_coles_adj = inputs.get("dixon_coles_adj", 0.0)
@@ -104,6 +132,31 @@ class ProbabilityCalculator:
             p0_home = math.exp(-home_lambda)
             p0_away = math.exp(-away_lambda)
             base_prob = 1 - (p0_home * p0_away)
+            clamped_univ = DeterministicStats.clamp_universal_prob(raw_univ)
+            fair_prob = Decimal(str(base_prob)) + clamped_univ * ml_weight
+            if fair_prob < Decimal('0.01'):
+                fair_prob = Decimal('0.01')
+            if fair_prob > Decimal('0.99'):
+                fair_prob = Decimal('0.99')
+            fair_prob = fair_prob.quantize(Decimal('0.000001'))
+            return {
+                "fair_prob": fair_prob,
+                "raw_universal_sum": raw_univ,
+                "clamped_universal_sum": clamped_univ,
+            }
+
+        # NRFI / YRFI: first-inning Poisson. Reuses the BTTS-style lambdas,
+        # scaled down to a single inning when explicit first-inning lambdas
+        # weren't provided. NRFI = P(no runs in inning 1 by either team);
+        # YRFI = 1 - NRFI.
+        if market_type in ("NRFI", "YRFI"):
+            import math
+            home_lambda = inputs.get("home_lambda", 1.2)
+            away_lambda = inputs.get("away_lambda", 1.1)
+            home_first = inputs.get("home_first_inning_lambda", home_lambda / 9.0)
+            away_first = inputs.get("away_first_inning_lambda", away_lambda / 9.0)
+            nrfi_prob = math.exp(-home_first) * math.exp(-away_first)
+            base_prob = nrfi_prob if market_type == "NRFI" else 1.0 - nrfi_prob
             clamped_univ = DeterministicStats.clamp_universal_prob(raw_univ)
             fair_prob = Decimal(str(base_prob)) + clamped_univ * ml_weight
             if fair_prob < Decimal('0.01'):

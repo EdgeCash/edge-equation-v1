@@ -6,6 +6,10 @@ from edge_equation.ingestion.schema import Slate, MarketInfo, GameInfo, LEAGUE_T
 from edge_equation.engine.feature_builder import FeatureBuilder
 from edge_equation.engine.betting_engine import BettingEngine
 from edge_equation.engine.pick_schema import Pick, Line
+from edge_equation.utils.logging import get_logger
+
+
+_logger = get_logger("edge-equation.slate_runner")
 
 
 def _league_filter_matches(league: str, filter_value: str) -> bool:
@@ -56,13 +60,15 @@ def _evaluate_market(game: GameInfo, market: MarketInfo, public_mode: bool) -> O
             selection=market.selection,
             metadata=bundle_meta,
         )
-    except ValueError:
+    except ValueError as exc:
+        _logger.warning(f"Dropped market {market.market_type} for {market.game_id}: {exc}")
         return None
 
     line = Line(odds=market.odds if market.odds is not None else -110, number=market.line)
     try:
         return BettingEngine.evaluate(bundle, line, public_mode=public_mode)
-    except ValueError:
+    except ValueError as exc:
+        _logger.warning(f"Dropped market {market.market_type} for {market.game_id}: {exc}")
         return None
 
 

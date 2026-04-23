@@ -26,6 +26,7 @@ from edge_equation.utils.logging import get_logger
 _logger = get_logger("edge-equation.engine")
 
 PROB_MARKETS = {"ML", "Run_Line", "Puck_Line", "Spread", "BTTS"}
+FIRST_INNING_MARKETS = {"NRFI", "YRFI"}
 EXPECTATION_MARKETS = {
     "Total", "Game_Total",
     "HR", "K", "Passing_Yards", "Rushing_Yards", "Receiving_Yards",
@@ -452,6 +453,51 @@ class BettingEngine:
                 expected_value = fv["expected_value"]
             edge = None
             kelly = None
+
+        elif market in FIRST_INNING_MARKETS:
+            # NRFI / YRFI: fair_prob comes from the first-inning Poisson
+            # helper in ProbabilityCalculator. Selection maps Yes->home,
+            # No->away the same way BTTS does.
+            fair_prob = fv.get("fair_prob")
+            if fair_prob is not None:
+                sel_lower = selection.strip().lower() if selection else ""
+                if sel_lower in ("no", "nrfi"):
+                    # "No runs" side matches NRFI's home-centric fair_prob
+                    # directly; for a YRFI market we mirror.
+                    if market == "YRFI":
+                        fair_prob = (Decimal("1") - fair_prob).quantize(
+                            Decimal("0.000001")
+                        )
+                elif sel_lower in ("yes", "yrfi"):
+                    if market == "NRFI":
+                        fair_prob = (Decimal("1") - fair_prob).quantize(
+                            Decimal("0.000001")
+                        )
+            calib = EVCalculator.calibrate(
+                public_mode,
+                {"fair_prob": fair_prob},
+                {"odds": line.odds},
+            )
+            edge = calib["edge"]
+            kelly = calib["kelly"]
+            if edge is not None and edge > _MAX_REASONABLE_EDGE:
+                sanity_reason = (
+                    f"edge={edge} exceeds +{_MAX_REASONABLE_EDGE} sanity "
+                    f"ceiling on {market} (likely overconfident inputs)"
+                )
+                _logger.warning(
+                    f"BettingEngine: rejecting impossible edge -- "
+                    f"sport={sport} market={market} selection={selection!r} "
+                    f"odds={line.odds} fair_prob={fair_prob} edge={edge}. "
+                    f"{sanity_reason}"
+                )
+                edge = None
+                kelly = None
+                grade = "C"
+                realization = 47
+            elif not public_mode and edge is not None:
+                grade = ConfidenceScorer.grade(edge)
+                realization = ConfidenceScorer.realization_for_grade(grade)
 
         else:
             raise ValueError(f"BettingEngine: unsupported market {market}")
