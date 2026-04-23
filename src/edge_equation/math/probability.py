@@ -89,6 +89,8 @@ class ProbabilityCalculator:
             )
             _, _, baseline = ProbabilityCalculator._get_weights_and_baseline(sport)
             raw_line = inputs.get("line")
+            if _debug_enabled():
+                print(f"[DEBUG] {market_type} received line={raw_line} (baseline={baseline})")
             line_val = Decimal(str(raw_line)) if raw_line is not None else Decimal('0')
             # Line is expressed from the home side (negative = home favored).
             # Covering a negative line is HARDER than winning outright, so a
