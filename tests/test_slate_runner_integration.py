@@ -31,7 +31,9 @@ def test_run_slate_mlb_produces_picks():
     for p in picks:
         assert isinstance(p, Pick)
         assert p.sport == "MLB"
-        assert p.market_type in {"ML", "Total", "K", "HR"}
+        assert p.market_type in {
+            "ML", "Total", "K", "HR", "Run_Line", "NRFI", "YRFI",
+        }
 
 
 def test_run_slate_nba_produces_picks():

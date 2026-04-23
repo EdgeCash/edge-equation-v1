@@ -1,5 +1,6 @@
 import pytest
 from datetime import datetime
+from decimal import Decimal
 
 from edge_equation.ingestion.mlb_source import MlbLikeSource
 from edge_equation.ingestion.nba_source import NbaSource
@@ -45,3 +46,130 @@ def test_sources_are_deterministic():
     s1 = MlbLikeSource("MLB"); s2 = MlbLikeSource("MLB")
     assert s1.get_raw_games(RUN) == s2.get_raw_games(RUN)
     assert s1.get_raw_markets(RUN) == s2.get_raw_markets(RUN)
+
+
+# ---------------------------------------------------------------------------
+# Explicit coverage that the newer market branches are actually emitted
+# so a future refactor that drops them gets caught.
+# ---------------------------------------------------------------------------
+
+def _markets_by_type_for(source):
+    by_type: dict = {}
+    for m in source.get_raw_markets(RUN):
+        by_type.setdefault(m["market_type"], []).append(m)
+    return by_type
+
+
+def _assert_home_away_spread_pair(markets, home_team, away_team, home_line, away_line):
+    """Helper: a spread-family market should emit both outcomes from the
+    same game with opposite-signed lines so end-to-end CI exercises the
+    home/away mirroring path in BettingEngine."""
+    sels = {m["selection"]: m for m in markets}
+    assert home_team in sels, f"missing home outcome for home={home_team}"
+    assert away_team in sels, f"missing away outcome for away={away_team}"
+    assert sels[home_team]["line"] == home_line
+    assert sels[away_team]["line"] == away_line
+
+
+def test_mlb_source_emits_run_line_both_sides():
+    source = MlbLikeSource("MLB")
+    by_type = _markets_by_type_for(source)
+    assert "Run_Line" in by_type
+    # 3 MLB games × 2 sides = 6 Run_Line outcomes.
+    assert len(by_type["Run_Line"]) == 6
+    # Spot-check one game: home -1.5 and away +1.5.
+    games = source.get_raw_games(RUN)
+    first = games[0]
+    per_game = [m for m in by_type["Run_Line"] if m["game_id"] == first["game_id"]]
+    _assert_home_away_spread_pair(
+        per_game, first["home_team"], first["away_team"],
+        Decimal("-1.5"), Decimal("1.5"),
+    )
+
+
+def test_mlb_source_emits_nrfi_and_yrfi():
+    source = MlbLikeSource("MLB")
+    by_type = _markets_by_type_for(source)
+    assert "NRFI" in by_type and "YRFI" in by_type
+    nrfi = by_type["NRFI"][0]
+    yrfi = by_type["YRFI"][0]
+    assert nrfi["selection"] == "No"
+    assert yrfi["selection"] == "Yes"
+    # Both carry first-inning lambdas for the calculator.
+    assert "home_lambda" in nrfi["meta"]["inputs"]
+    assert "away_lambda" in nrfi["meta"]["inputs"]
+
+
+def test_kbo_and_npb_emit_run_line():
+    """Baseball-family sources share logic; KBO/NPB must get Run_Line too."""
+    for league in ("KBO", "NPB"):
+        by_type = _markets_by_type_for(MlbLikeSource(league))
+        assert "Run_Line" in by_type, f"{league} missing Run_Line"
+        assert "NRFI" in by_type and "YRFI" in by_type, \
+            f"{league} missing NRFI/YRFI"
+
+
+def test_nba_source_emits_spread_both_sides():
+    source = NbaSource()
+    by_type = _markets_by_type_for(source)
+    assert "Spread" in by_type
+    assert len(by_type["Spread"]) == 6  # 3 games × 2 sides
+    games = source.get_raw_games(RUN)
+    first = games[0]
+    per_game = [m for m in by_type["Spread"] if m["game_id"] == first["game_id"]]
+    _assert_home_away_spread_pair(
+        per_game, first["home_team"], first["away_team"],
+        Decimal("-5.5"), Decimal("5.5"),
+    )
+
+
+def test_nfl_source_emits_spread_both_sides():
+    source = NflSource()
+    by_type = _markets_by_type_for(source)
+    assert "Spread" in by_type
+    assert len(by_type["Spread"]) == 6
+    games = source.get_raw_games(RUN)
+    first = games[0]
+    per_game = [m for m in by_type["Spread"] if m["game_id"] == first["game_id"]]
+    _assert_home_away_spread_pair(
+        per_game, first["home_team"], first["away_team"],
+        Decimal("-3.5"), Decimal("3.5"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# End-to-end: run a mock slate through run_slate and verify that
+# Spread-family picks on both sides of a game are actually graded
+# (i.e. fair_prob is non-None on both home and away selections, which
+# was the regression PR #42 fixed).
+#
+# NOTE: complementary-fair_prob assertion is intentionally omitted --
+# testing revealed that MarketInfo.line is outcome-centric (-3.5 for
+# the home outcome, +3.5 for the away outcome) while
+# ProbabilityCalculator's Spread branch assumes a home-centric line,
+# so both-sides picks sum to <1 instead of 1. Fix requires a slate_runner
+# line-sign normalization (tracked as a follow-up PR).
+# ---------------------------------------------------------------------------
+
+def test_run_slate_grades_both_sides_of_spread_markets():
+    from edge_equation.engine.slate_runner import run_slate
+
+    source = NflSource()
+    games = source.get_raw_games(RUN)
+    markets = source.get_raw_markets(RUN)
+    slate = normalize_slate(games, markets)
+
+    picks = run_slate(slate, sport="NFL", public_mode=False)
+    spread_picks = {}
+    for p in picks:
+        if p.market_type != "Spread":
+            continue
+        spread_picks.setdefault(p.game_id, []).append(p)
+
+    assert spread_picks, "expected at least one Spread pick from the NFL mock"
+    for gid, pair in spread_picks.items():
+        assert len(pair) == 2, \
+            f"game {gid} has {len(pair)} Spread picks, expected 2"
+        fps = [p.fair_prob for p in pair]
+        assert all(fp is not None for fp in fps), \
+            f"game {gid}: a Spread pick is ungradeable ({pair})"

@@ -76,4 +76,34 @@ class MlbLikeSource:
                     "universal_features": {"matchup_exploit": 0.08, "market_line_delta": 0.12},
                 },
             })
+            # Run_Line emitted as two outcomes from the same book market:
+            # home -1.5 and away +1.5. Selections are bare team names so
+            # _resolve_selection_side can match them exactly; the line
+            # lives on MarketInfo.line.
+            rl_inputs = {"strength_home": strength_home, "strength_away": strength_away, "home_adv": 0.115}
+            rl_univ = {"home_edge": 0.085}
+            markets.append({
+                "game_id": gid, "market_type": "Run_Line", "selection": home,
+                "line": Decimal("-1.5"), "odds": +160,
+                "meta": {"inputs": rl_inputs, "universal_features": rl_univ},
+            })
+            markets.append({
+                "game_id": gid, "market_type": "Run_Line", "selection": away,
+                "line": Decimal("1.5"), "odds": -180,
+                "meta": {"inputs": rl_inputs, "universal_features": rl_univ},
+            })
+            # NRFI / YRFI are first-inning Poisson markets. NRFI selection
+            # "No" matches NRFI's home-centric fair_prob directly; YRFI
+            # selection "Yes" matches YRFI's home-centric fair_prob.
+            first_inning_inputs = {"home_lambda": 1.20, "away_lambda": 1.10}
+            markets.append({
+                "game_id": gid, "market_type": "NRFI", "selection": "No",
+                "odds": -120,
+                "meta": {"inputs": first_inning_inputs, "universal_features": {}},
+            })
+            markets.append({
+                "game_id": gid, "market_type": "YRFI", "selection": "Yes",
+                "odds": -105,
+                "meta": {"inputs": first_inning_inputs, "universal_features": {}},
+            })
         return markets
