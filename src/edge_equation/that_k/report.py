@@ -184,13 +184,44 @@ def render_row(row: KReportRow) -> List[str]:
     return lines
 
 
+# Optional 70s intro line. Pulled from a small rotation keyed to the
+# run date so repeat opens never feel stale.  STRICTLY intro-only --
+# the analytical body of every row stays clean per brand rules.
+_INTRO_70S_ROTATION = (
+    "Groovy K Report for tonight—",
+    "Right on, tonight's K read—",
+    "Far out K slate locked in—",
+    "Keep on whiffin'—tonight's K projections—",
+    "Tonight's K slate, clean and factual—",
+)
+
+
+def _intro_for(date_str: str) -> str:
+    """Pick a deterministic intro for `date_str` from the rotation.
+    No RNG: the ordinal-date modulo the rotation length indexes
+    directly so the same date always produces the same intro."""
+    import datetime as _dt
+    try:
+        base = _dt.date.fromisoformat(date_str).toordinal()
+    except (TypeError, ValueError):
+        base = abs(hash(date_str))
+    return _INTRO_70S_ROTATION[base % len(_INTRO_70S_ROTATION)]
+
+
 def render_report(
     rows: Iterable[KReportRow],
     date_str: str,
     top_n: Optional[int] = DEFAULT_TOP_N,
+    intro_70s: bool = False,
 ) -> str:
     """Render the full text report.  `date_str` is a YYYY-MM-DD string
-    (caller passes run-date; the module doesn't reach for the clock)."""
+    (caller passes run-date; the module doesn't reach for the clock).
+
+    intro_70s=True prepends a light personality line above the
+    "Tonight's Pitcher K Projections" header, per the brand allowance
+    in the task spec.  Default False so scheduled runs stay strictly
+    analytical unless the operator opts in.
+    """
     rows = list(rows)
     # Rank by probability-space edge magnitude, ties broken by raw K
     # edge magnitude so two equally-graded rows still order
@@ -206,6 +237,8 @@ def render_report(
     # Brief specifies an em-dash ("That K Report — [Date]") so we match
     # verbatim.  Em-dash renders cleanly in all modern mail/X clients.
     out.append(f"That K Report — {date_str}")
+    if intro_70s:
+        out.append(_intro_for(date_str))
     out.append(BRAND_HEADER)
     out.append("")
     for i, row in enumerate(rows):

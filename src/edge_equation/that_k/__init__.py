@@ -35,10 +35,18 @@ __all__ = [
     "OpponentLineup",
     "GameContext",
     "KProjection",
+    "KResult",
+    "Ledger",
+    "SupportingPost",
     "project_strikeouts",
     "simulate_strikeouts",
     "render_report",
+    "render_results_card",
+    "render_supporting",
     "build_projections",
+    "build_results",
+    "generate_supporting",
+    "select_types_for_day",
 ]
 
 from edge_equation.that_k.model import (  # noqa: F401
@@ -53,3 +61,15 @@ from edge_equation.that_k.simulator import (  # noqa: F401
 )
 from edge_equation.that_k.report import render_report  # noqa: F401
 from edge_equation.that_k.runner import build_projections  # noqa: F401
+from edge_equation.that_k.results import (  # noqa: F401
+    KResult,
+    build_results,
+    render_results_card,
+)
+from edge_equation.that_k.ledger import Ledger  # noqa: F401
+from edge_equation.that_k.supporting import (  # noqa: F401
+    SupportingPost,
+    generate_supporting,
+    render_supporting,
+    select_types_for_day,
+)

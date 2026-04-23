@@ -10,10 +10,16 @@ Covers:
   4. render_report obeys the exact output format the brief requires.
   5. The sample-slate + runner dry-run path completes cleanly and
      emits a usable text report.
+  6. Ledger load / record / flush is idempotent on the dedup key.
+  7. Results card verdict tagging (Hit / Miss / Push) + ledger
+     footer renders correctly on a mixed slate.
+  8. Supporting content: deterministic, rotates by date, no hype
+     words, all three generators emit the correct tag prefix.
 """
 from __future__ import annotations
 
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -364,3 +370,339 @@ def test_pitcher_row_parser_handles_missing_optional_fields():
     assert p.name == "X"
     assert p.team == "Y"
     assert p.k_per_bf == LEAGUE_K_PER_BF
+
+
+# ------------------------------------------------ Ledger
+
+from edge_equation.that_k.ledger import (
+    Ledger,
+    VERDICT_HIT,
+    VERDICT_MISS,
+    VERDICT_PUSH,
+    verdict_for_line,
+)
+
+
+def test_verdict_for_line_classifies_correctly():
+    assert verdict_for_line(9, 7.5) == VERDICT_HIT
+    assert verdict_for_line(6, 7.5) == VERDICT_MISS
+    # Whole-number line can push.
+    assert verdict_for_line(7, 7.0) == VERDICT_PUSH
+    assert verdict_for_line(8, 7.0) == VERDICT_HIT
+
+
+def test_ledger_starts_empty_on_missing_file(tmp_path):
+    led = Ledger(tmp_path / "absent.json")
+    snap = led.summary()
+    assert snap.wins == 0 and snap.losses == 0 and snap.pushes == 0
+    assert snap.total_graded() == 0
+    assert snap.hit_rate() == 0.0
+
+
+def test_ledger_records_and_flushes(tmp_path):
+    path = tmp_path / "ledger.json"
+    led = Ledger(path)
+    assert led.record("2026-04-22", "Cole", "7.5", VERDICT_HIT) is True
+    assert led.record("2026-04-22", "Skubal", "8.5", VERDICT_MISS) is True
+    assert led.record("2026-04-22", "Morton", "5.5", VERDICT_PUSH) is True
+    led.flush()
+    assert path.exists()
+
+    # Reload from disk; totals persist.
+    led2 = Ledger(path)
+    snap = led2.summary()
+    assert snap.wins == 1 and snap.losses == 1 and snap.pushes == 1
+    assert snap.total_graded() == 2
+
+
+def test_ledger_dedup_on_rerun(tmp_path):
+    """Recording the same (date, pitcher, line) twice must not
+    double-count season totals."""
+    led = Ledger(tmp_path / "ledger.json")
+    assert led.record("2026-04-22", "Cole", "7.5", VERDICT_HIT) is True
+    assert led.record("2026-04-22", "Cole", "7.5", VERDICT_HIT) is False
+    assert led.summary().wins == 1
+
+
+def test_ledger_rejects_unknown_verdict(tmp_path):
+    led = Ledger(tmp_path / "ledger.json")
+    with pytest.raises(ValueError):
+        led.record("2026-04-22", "X", "7.5", "win")
+
+
+# ------------------------------------------------ Results card
+
+from edge_equation.that_k.results import (
+    build_results,
+    render_results_card,
+)
+from edge_equation.that_k.sample_results import (
+    sample_last_night_standout,
+    sample_results,
+    sample_slate_hooks,
+)
+
+
+def test_results_card_exact_format_without_ledger():
+    rows = build_results([
+        {"pitcher": "Gerrit Cole", "line": 7.5, "actual": 9},
+        {"pitcher": "Tarik Skubal", "line": 8.5, "actual": 6},
+        {"pitcher": "Charlie Morton", "line": 5.0, "actual": 5},  # push
+    ])
+    text = render_results_card(rows, date_str="2026-04-22")
+    assert text.startswith("That K Report — Results · 2026-04-22\n")
+    assert "Yesterday's K Projections" in text
+    assert "• Gerrit Cole 7.5 → 9 K (Hit)" in text
+    assert "• Tarik Skubal 8.5 → 6 K (Miss)" in text
+    assert "• Charlie Morton 5 → 5 K (Push)" in text
+    assert "Season Ledger (K Props)" in text
+    # 1 W, 1 L, 1 push => 1-1 with 1 push marker.
+    assert "1-1 (50% hit rate)" in text
+    assert text.rstrip().endswith("Powered by Edge Equation")
+
+
+def test_results_card_empty_slate_produces_honest_placeholder():
+    text = render_results_card([], date_str="2026-04-22")
+    assert "no settled K projections" in text
+
+
+def test_results_card_updates_ledger(tmp_path):
+    led = Ledger(tmp_path / "led.json")
+    rows = build_results([
+        {"pitcher": "A", "line": 7.5, "actual": 9},
+        {"pitcher": "B", "line": 6.5, "actual": 5},
+    ])
+    render_results_card(rows, date_str="2026-04-22", ledger=led)
+    snap = led.summary()
+    assert snap.wins == 1
+    assert snap.losses == 1
+
+
+def test_results_card_rerun_does_not_double_count(tmp_path):
+    led = Ledger(tmp_path / "led.json")
+    rows = build_results([
+        {"pitcher": "A", "line": 7.5, "actual": 9},
+    ])
+    for _ in range(3):
+        render_results_card(rows, date_str="2026-04-22", ledger=led)
+    assert led.summary().wins == 1
+
+
+def test_results_card_no_ledger_flag_keeps_disk_clean(tmp_path):
+    path = tmp_path / "led.json"
+    led = Ledger(path)
+    rows = build_results([{"pitcher": "A", "line": 7.5, "actual": 9}])
+    render_results_card(
+        rows, date_str="2026-04-22",
+        ledger=led, update_ledger=False,
+    )
+    # update_ledger=False means the ledger.flush() never fires.
+    assert not path.exists()
+
+
+def test_results_card_sample_dry_run_roundtrip():
+    """Sample slate + sample results must line up by pitcher name so
+    operators can run the full loop end-to-end."""
+    from edge_equation.that_k.sample_slate import sample_slate
+    slate_names = {row["pitcher"]["name"] for row in sample_slate()}
+    result_names = {r["pitcher"] for r in sample_results()}
+    assert result_names == slate_names
+
+
+# ------------------------------------------------ Supporting content
+
+from edge_equation.that_k.supporting import (
+    ALL_TAGS,
+    HYPE_BLOCKLIST,
+    TAG_K_OF_THE_NIGHT,
+    TAG_STAT_DROP,
+    TAG_THROWBACK_K,
+    generate_k_of_the_night,
+    generate_stat_drop,
+    generate_supporting,
+    generate_throwback_k,
+    render_supporting,
+    select_types_for_day,
+)
+
+
+def test_select_types_rotates_by_date():
+    picks = {select_types_for_day(f"2026-04-{d:02d}")[0] for d in range(1, 21)}
+    # Over 20 days all three tags should appear at least once.
+    assert picks == set(ALL_TAGS)
+
+
+def test_select_types_caps_at_two_per_day():
+    picks = select_types_for_day("2026-04-23", n=5)
+    assert 1 <= len(picks) <= 2
+    assert len(set(picks)) == len(picks)  # paired types differ
+
+
+def test_k_of_the_night_is_tagged_and_deterministic():
+    p1 = generate_k_of_the_night(
+        "2026-04-23", sample_last_night_standout()
+    )
+    p2 = generate_k_of_the_night(
+        "2026-04-23", sample_last_night_standout()
+    )
+    assert p1.tag == TAG_K_OF_THE_NIGHT
+    assert p1.text.startswith(f"[{TAG_K_OF_THE_NIGHT}]")
+    assert p1.text == p2.text
+    assert "Blake Snell" in p1.text
+    assert "9 K" in p1.text
+
+
+def test_k_of_the_night_handles_missing_payload():
+    """No data -> honest fallback, no invented numbers."""
+    p = generate_k_of_the_night("2026-04-23", None)
+    assert p.tag == TAG_K_OF_THE_NIGHT
+    # Fallback message must NOT make up a player / line / K count.
+    assert "K-of-the-Night bar" in p.text
+
+
+def test_stat_drop_always_produces_a_factual_line():
+    """Even with empty slate hooks the generator must emit *something*
+    factual -- brand rule: 1-2 supporting posts per day, no blank
+    slots."""
+    p = generate_stat_drop("2026-04-23", None)
+    assert p.tag == TAG_STAT_DROP
+    assert p.text.startswith(f"[{TAG_STAT_DROP}]")
+    assert "23.5%" in p.text  # league baseline fallback.
+
+
+def test_stat_drop_uses_provided_hooks():
+    p = generate_stat_drop("2026-04-23", sample_slate_hooks())
+    assert p.tag == TAG_STAT_DROP
+    # One of the four hook types must appear in the output.
+    assert any(
+        fragment in p.text
+        for fragment in (
+            "D. Bellino", "CHW", "Tarik Skubal", "Paul Skenes",
+        )
+    )
+
+
+def test_throwback_k_draws_from_curated_catalog():
+    p = generate_throwback_k("2026-04-23")
+    assert p.tag == TAG_THROWBACK_K
+    assert p.text.startswith(f"[{TAG_THROWBACK_K}]")
+    # Every catalog item ends with an analytical tie-in -- the post
+    # body should contain a percentage OR a raw count reference.
+    assert "%" in p.text or "K" in p.text
+
+
+def test_generate_supporting_respects_type_rotation():
+    posts = generate_supporting("2026-04-23", n=2)
+    assert 1 <= len(posts) <= 2
+    tags = [p.tag for p in posts]
+    # Paired posts never duplicate a tag.
+    assert len(set(tags)) == len(tags)
+
+
+def test_supporting_output_contains_no_hype_language():
+    """Brand rule: Facts Not Feelings. Any hype phrase in rendered
+    supporting content fails the test suite."""
+    # Run the generator across 30 consecutive days so the rotation
+    # hits every type + every throwback entry at least once.
+    full_text = ""
+    for d in range(1, 31):
+        posts = generate_supporting(
+            f"2026-04-{d:02d}", n=2,
+            last_night=sample_last_night_standout(),
+            slate_hooks=sample_slate_hooks(),
+        )
+        full_text += render_supporting(posts)
+    lower = full_text.lower()
+    for word in HYPE_BLOCKLIST:
+        assert word not in lower, (
+            f"hype phrase {word!r} leaked into supporting content"
+        )
+
+
+def test_supporting_variety_across_month():
+    """30 consecutive days must exercise all three tag types so
+    subscribers see a real rotation, not the same post 30x."""
+    tag_sightings = set()
+    for d in range(1, 31):
+        posts = generate_supporting(f"2026-04-{d:02d}", n=1)
+        for p in posts:
+            tag_sightings.add(p.tag)
+    assert tag_sightings == set(ALL_TAGS)
+
+
+def test_render_supporting_emits_tag_prefix_per_line():
+    posts = generate_supporting("2026-04-23", n=2,
+                                last_night=sample_last_night_standout(),
+                                slate_hooks=sample_slate_hooks())
+    text = render_supporting(posts)
+    for p in posts:
+        assert f"[{p.tag}]" in text
+
+
+# ------------------------------------------------ 70s intro on projections
+
+def test_report_70s_intro_opt_in_only():
+    rows = _row_for_format()
+    without = render_report(rows, date_str="2026-04-23")
+    with_intro = render_report(rows, date_str="2026-04-23", intro_70s=True)
+    assert "Groovy" in with_intro or "Right on" in with_intro \
+        or "Far out" in with_intro or "Keep on whiffin'" in with_intro \
+        or "clean and factual" in with_intro
+    # Default path is still the strictly-analytical header.
+    assert "Groovy" not in without
+    assert "Right on" not in without
+
+
+def test_report_70s_intro_stays_out_of_analytical_body():
+    """Body of every Edge line must remain analytical -- flair lives
+    on a single intro line above the section header."""
+    rows = _row_for_format()
+    text = render_report(rows, date_str="2026-04-23", intro_70s=True)
+    body_lines = [
+        ln for ln in text.splitlines()
+        if ln.startswith("  Edge:")
+    ]
+    lower_body = "\n".join(body_lines).lower()
+    for flair in ("groovy", "right on", "far out", "keep on"):
+        assert flair not in lower_body
+
+
+# ------------------------------------------------ CLI subcommands
+
+def test_cli_results_sample_dry_run(tmp_path, capsys):
+    """results subcommand with --sample --no-ledger prints the card
+    without touching disk."""
+    from edge_equation.that_k.__main__ import main
+    rc = main([
+        "results", "--sample",
+        "--date", "2026-04-22",
+        "--no-ledger",
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert out.startswith("That K Report — Results · 2026-04-22\n")
+    assert "Powered by Edge Equation" in out
+
+
+def test_cli_supporting_sample_dry_run(capsys):
+    from edge_equation.that_k.__main__ import main
+    rc = main([
+        "supporting", "--sample",
+        "--date", "2026-04-23",
+        "--n", "2",
+    ])
+    assert rc == 0
+    out = capsys.readouterr().out
+    # At least one tagged block must render.
+    tagged = sum(1 for t in ALL_TAGS if f"[{t}]" in out)
+    assert tagged >= 1
+
+
+def test_cli_projections_backcompat_flag(capsys):
+    """Back-compat: the original `--sample` invocation (no subcommand)
+    still routes to the projections path so pre-migration callers
+    don't break."""
+    from edge_equation.that_k.__main__ import main
+    rc = main(["--sample", "--date", "2026-04-23"])
+    assert rc == 0
+    assert capsys.readouterr().out.startswith("That K Report — 2026-04-23\n")
