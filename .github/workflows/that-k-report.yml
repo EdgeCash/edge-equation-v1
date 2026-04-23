@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "projections | results | supporting"
+        description: "projections | results | supporting | spotlight"
         default: "projections"
       source:
         description: "sample (dry-run) | json (requires data/ files)"
@@ -83,19 +83,26 @@ jobs:
           fi
           TOP_N="${{ github.event.inputs.top_n }}"; TOP_N="${TOP_N:-8}"
           TARGET="${{ github.event.inputs.target_account }}"; TARGET="${TARGET:-k_guy}"
+          # Testing Ground: every projections run also writes a
+          # debug metrics JSON (calibration baseline + feature
+          # importance + A/B variant comparison).  The file feeds the
+          # main Edge Equation engine's future weight-tuning pass.
           python -m edge_equation.that_k projections \
             $SOURCE_FLAG $INTRO_FLAG \
             --target-account "$TARGET" \
             --date "${{ steps.date.outputs.run_date }}" \
             --top-n "$TOP_N" \
-            --out "data/thatk_projections.txt"
+            --out "data/thatk_projections.txt" \
+            --metrics-out "data/thatk_metrics.json"
           echo "===== PROJECTIONS ====="
           cat data/thatk_projections.txt
 
       - uses: actions/upload-artifact@v4
         with:
           name: thatk-projections-${{ steps.date.outputs.run_date }}
-          path: data/thatk_projections.txt
+          path: |
+            data/thatk_projections.txt
+            data/thatk_metrics.json
 
   supporting:
     if: >-
@@ -167,6 +174,55 @@ jobs:
         with:
           name: thatk-supporting-${{ steps.date.outputs.run_date }}
           path: data/thatk_supporting.txt
+
+  spotlight:
+    # Weekly Pitcher Spotlight -- long-form feature, dispatch-only
+    # per the brief (operator curates the arsenal/movement breakdown
+    # before publishing).  No schedule; operator triggers Monday
+    # morning after building the subject JSON for the week.
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.mode == 'spotlight'
+    runs-on: ubuntu-latest
+    env:
+      X_API_KEY_KGUY:              ${{ secrets.X_API_KEY_KGUY }}
+      X_API_SECRET_KGUY:           ${{ secrets.X_API_SECRET_KGUY }}
+      X_ACCESS_TOKEN_KGUY:         ${{ secrets.X_ACCESS_TOKEN_KGUY }}
+      X_ACCESS_TOKEN_SECRET_KGUY:  ${{ secrets.X_ACCESS_TOKEN_SECRET_KGUY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Resolve date
+        id: date
+        shell: bash
+        run: echo "week_of=$(TZ='America/Chicago' date +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Render Spotlight
+        shell: bash
+        run: |
+          mkdir -p data
+          SOURCE_FLAG="--sample"
+          if [ "${{ github.event.inputs.source }}" = "json" ]; then
+            SOURCE_FLAG="--subject data/thatk_spotlight.json"
+          fi
+          TARGET="${{ github.event.inputs.target_account }}"; TARGET="${TARGET:-k_guy}"
+          python -m edge_equation.that_k spotlight \
+            $SOURCE_FLAG \
+            --target-account "$TARGET" \
+            --week-of "${{ steps.date.outputs.week_of }}" \
+            --out data/thatk_spotlight.txt
+          echo "===== SPOTLIGHT ====="
+          cat data/thatk_spotlight.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: thatk-spotlight-${{ steps.date.outputs.week_of }}
+          path: data/thatk_spotlight.txt
 
   results:
     if: >-

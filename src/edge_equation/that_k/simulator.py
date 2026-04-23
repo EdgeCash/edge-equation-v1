@@ -32,7 +32,10 @@ from decimal import Decimal
 from typing import List, Optional
 
 
-DEFAULT_N_SIMS = 5000
+# Bumped in the final task pass to 10k per the brand brief's
+# "Monte Carlo (10k sims recommended)" note. Stays a module-level
+# constant so callers can still dial it down for fast unit tests.
+DEFAULT_N_SIMS = 10_000
 
 
 @dataclass(frozen=True)

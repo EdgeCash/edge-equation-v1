@@ -16,6 +16,10 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Iterable, List, Sequence
 
+from edge_equation.that_k.features import (
+    FeatureImportanceRow,
+    importance_for_row,
+)
 from edge_equation.that_k.model import (
     GameContext,
     OpponentLineup,
@@ -24,6 +28,12 @@ from edge_equation.that_k.model import (
 )
 from edge_equation.that_k.report import KReportRow, grade_row
 from edge_equation.that_k.simulator import DEFAULT_N_SIMS, simulate_strikeouts
+from edge_equation.that_k.variants import (
+    ABEntry,
+    VariantProjection,
+    nb_projection_as_variant,
+    project_beta_binomial,
+)
 
 
 def _pitcher_from_row(row: dict) -> PitcherProfile:
@@ -115,3 +125,33 @@ def build_projections(
         )
         out.append(row_out)
     return out
+
+
+def build_ab_entries(rows: Sequence[KReportRow]) -> List[ABEntry]:
+    """For each produced KReportRow, run the Beta-Binomial variant
+    alongside the NB+MC projection and pair them into ABEntry rows
+    the metrics JSON logs.  Actuals are None here -- the results CLI
+    fills them in when settlements come back."""
+    ab: List[ABEntry] = []
+    for r in rows:
+        bb = project_beta_binomial(r.pitcher, r.lineup, r.context)
+        nb = nb_projection_as_variant(float(r.projection.mean))
+        ab.append(ABEntry(
+            pitcher=r.pitcher.name,
+            team=r.pitcher.team,
+            opponent=r.lineup.team,
+            nb_mean=nb.projected_mean,
+            bb_mean=bb.projected_mean,
+            line=float(r.projection.line),
+        ))
+    return ab
+
+
+def build_feature_importance(
+    rows: Sequence[KReportRow],
+) -> List[FeatureImportanceRow]:
+    """Per-pitcher log-decomposition of the total multiplier into
+    per-factor shares.  The metrics artifact aggregates these into a
+    slate-level summary feeding the main Edge Equation engine's
+    feature-weight mining."""
+    return [importance_for_row(r.pitcher.name, r.inputs) for r in rows]

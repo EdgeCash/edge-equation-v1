@@ -89,3 +89,36 @@ from edge_equation.that_k.clips import (  # noqa: F401
     clip_for_throwback,
     render_clip_suggestion,
 )
+from edge_equation.that_k.grading import (  # noqa: F401
+    TOP_PLAY_GRADES,
+    grade_k_edge,
+    grade_rank,
+    is_top_play,
+)
+from edge_equation.that_k.calibration import (  # noqa: F401
+    CalibrationSnapshot,
+    SettledRow,
+    build_settled_rows,
+    compute_calibration,
+)
+from edge_equation.that_k.variants import (  # noqa: F401
+    ABEntry,
+    VariantProjection,
+    ab_summary,
+    project_beta_binomial,
+)
+from edge_equation.that_k.features import (  # noqa: F401
+    FeatureImportanceRow,
+    aggregate_importance,
+    importance_for_row,
+)
+from edge_equation.that_k.spotlight import (  # noqa: F401
+    SpotlightSubject,
+    render_spotlight,
+    sample_spotlight,
+)
+from edge_equation.that_k.metrics import (  # noqa: F401
+    METRICS_MODEL_VERSION,
+    build_metrics_payload,
+    write_metrics,
+)

@@ -45,8 +45,18 @@ from edge_equation.that_k.sample_results import (
     sample_results,
     sample_slate_hooks,
 )
+from edge_equation.that_k.metrics import build_metrics_payload, write_metrics
+from edge_equation.that_k.runner import (
+    build_ab_entries,
+    build_feature_importance,
+)
 from edge_equation.that_k.sample_slate import sample_slate
 from edge_equation.that_k.simulator import DEFAULT_N_SIMS
+from edge_equation.that_k.spotlight import (
+    SpotlightSubject,
+    render_spotlight,
+    sample_spotlight,
+)
 from edge_equation.that_k.supporting import (
     generate_supporting,
     render_supporting,
@@ -115,6 +125,47 @@ def _cmd_projections(args) -> int:
     text = render_report(
         rows, date_str=args.date, top_n=args.top_n, intro_70s=args.intro_70s,
         target_account=account,
+    )
+    _emit(text, args.out)
+    # Optional Testing-Ground debug artifact.  Opt-in so routine
+    # manual runs stay lightweight; the testing-ground workflow
+    # wires it in every time.
+    metrics_out = getattr(args, "metrics_out", None)
+    if metrics_out is not None:
+        ab_entries = build_ab_entries(rows)
+        feature_rows = build_feature_importance(rows)
+        payload = build_metrics_payload(
+            rows=rows, ab_entries=ab_entries, feature_rows=feature_rows,
+            date_str=args.date, target_account=account,
+        )
+        write_metrics(Path(metrics_out), payload)
+    return 0
+
+
+def _cmd_spotlight(args) -> int:
+    account = _resolve_target(args.target_account)
+    _preflight_account(account)
+    if args.sample:
+        subject = sample_spotlight()
+    else:
+        if not args.subject:
+            raise SystemExit("spotlight: --subject or --sample required")
+        raw = _load_json(args.subject)
+        subject = SpotlightSubject(
+            pitcher=raw["pitcher"],
+            team=raw["team"],
+            opponent=raw.get("opponent"),
+            throws=raw.get("throws", "R"),
+            arsenal=raw.get("arsenal"),
+            movement=raw.get("movement"),
+            edge_read=raw.get("edge_read"),
+            projection_mean=raw.get("projection_mean"),
+            projection_line=raw.get("projection_line"),
+            projection_grade=raw.get("projection_grade"),
+            clip=raw.get("clip"),
+        )
+    text = render_spotlight(
+        subject, week_of=args.week_of, target_account=account,
     )
     _emit(text, args.out)
     return 0
@@ -210,10 +261,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--target-account", default=TargetAccount.KGUY.value,
         help=argparse.SUPPRESS,
     )
-    # Results-only back-compat: the top-level doesn't hit results but
-    # tests hit _cmd_results directly with the parsed namespace so the
-    # attribute needs to exist.
-    root.set_defaults(no_commentary=False)
+    # Back-compat defaults so a top-level `--sample` invocation (no
+    # subcommand) doesn't AttributeError on subcommand-only flags.
+    root.set_defaults(no_commentary=False, metrics_out=None)
 
     sub = root.add_subparsers(dest="cmd")
 
@@ -243,6 +293,32 @@ def _build_parser() -> argparse.ArgumentParser:
              "header.",
     )
     pp.add_argument(
+        "--target-account", default=TargetAccount.KGUY.value,
+        choices=[a.value for a in TargetAccount], help=TARGET_HELP,
+    )
+    pp.add_argument(
+        "--metrics-out", type=Path, default=None,
+        help="Optional path to write a debug metrics JSON "
+             "(calibration + feature importance + A/B variants).",
+    )
+
+    # --- spotlight -------------------------------------------------
+    wp = sub.add_parser(
+        "spotlight",
+        help="Render the weekly Pitcher Spotlight card.",
+    )
+    wp.add_argument("--sample", action="store_true")
+    wp.add_argument(
+        "--subject", type=Path,
+        help="JSON file with a single SpotlightSubject dict "
+             "(pitcher/arsenal/movement/edge_read/...).",
+    )
+    wp.add_argument(
+        "--week-of", default=_today(),
+        help="Monday of the feature week, YYYY-MM-DD.",
+    )
+    wp.add_argument("--out", type=Path, default=None)
+    wp.add_argument(
         "--target-account", default=TargetAccount.KGUY.value,
         choices=[a.value for a in TargetAccount], help=TARGET_HELP,
     )
@@ -329,6 +405,8 @@ def main(argv=None) -> int:
         return _cmd_results(args)
     if args.cmd == "supporting":
         return _cmd_supporting(args)
+    if args.cmd == "spotlight":
+        return _cmd_spotlight(args)
     parser.print_help()
     return 2
 

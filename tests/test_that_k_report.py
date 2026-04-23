@@ -18,6 +18,7 @@ Covers:
 """
 from __future__ import annotations
 
+import math
 from decimal import Decimal
 from pathlib import Path
 
@@ -296,7 +297,9 @@ def test_report_obeys_exact_output_format():
     text = render_report(rows, date_str="2026-04-23")
     # Header + brand lines are verbatim per the spec.
     assert text.startswith("That K Report — 2026-04-23\n")
-    assert "Tonight's Pitcher K Projections" in text
+    # Final-pass layout: two sections (Top Plays + Full Slate).
+    assert "Tonight's Top Plays (A- and higher)" in text
+    assert "Full Slate Projections" in text
     assert text.rstrip().endswith("Powered by Edge Equation")
     # Block structure for the pitcher.
     assert "• Gerrit Cole (NYY) vs. BOS" in text
@@ -314,24 +317,33 @@ def test_report_obeys_exact_output_format():
         assert word not in lower, f"hype word {word!r} leaked into report"
 
 
-def test_report_caps_at_top_n():
+def test_report_caps_full_slate_via_top_n():
+    """Final-pass layout: --top-n caps the Full Slate section.  Top
+    Plays has its own separate cap (TOP_PLAYS_MAX=6)."""
     slate = sample_slate()
     rows = build_projections(slate)
     text = render_report(rows, date_str="2026-04-23", top_n=3)
-    # Only three pitcher bullets render.
-    bullet_count = text.count("\n• ")
-    # "\n• " before each block plus one leading (check split).
     assert text.startswith("That K Report")
-    assert len([ln for ln in text.splitlines() if ln.startswith("• ")]) == 3
+    # Full Slate section must cap at 3; Top Plays may add more rows
+    # above it, so we slice to the Full Slate block before counting.
+    if "Full Slate Projections" in text:
+        fs_block = text.split("Full Slate Projections", 1)[1]
+        fs_bullets = [ln for ln in fs_block.splitlines() if ln.startswith("• ")]
+        assert len(fs_bullets) == 3
 
 
-def test_report_orders_by_edge_prob_desc():
+def test_report_orders_by_grade_then_edge():
+    """Final-pass: rows sort by (grade_rank desc, edge_prob desc).
+    The first bullet in the rendered text must be the top-ranked
+    pitcher on that composite key."""
     slate = sample_slate()
     rows = build_projections(slate)
     text = render_report(rows, date_str="2026-04-23", top_n=DEFAULT_TOP_N)
-    # The first pitcher bullet must correspond to the row with the
-    # highest edge_prob -- not the first in slate order.
-    best = max(rows, key=lambda r: r.projection.edge_prob)
+    from edge_equation.that_k.grading import grade_rank
+    best = max(
+        rows,
+        key=lambda r: (grade_rank(r.grade), r.projection.edge_prob),
+    )
     first_bullet = next(ln for ln in text.splitlines() if ln.startswith("• "))
     assert best.pitcher.name in first_bullet
 
@@ -444,20 +456,31 @@ from edge_equation.that_k.sample_results import (
 
 
 def test_results_card_exact_format_without_ledger():
+    """Final-pass three-section layout. Without grade info on the
+    rows, Top Plays section renders its empty-state line and the
+    Full Slate Calibration carries the W-L + MAE."""
     rows = build_results([
-        {"pitcher": "Gerrit Cole", "line": 7.5, "actual": 9},
-        {"pitcher": "Tarik Skubal", "line": 8.5, "actual": 6},
-        {"pitcher": "Charlie Morton", "line": 5.0, "actual": 5},  # push
+        {"pitcher": "Gerrit Cole", "line": 7.5, "actual": 9,
+         "grade": "A+", "projected_mean": 8.5},
+        {"pitcher": "Tarik Skubal", "line": 8.5, "actual": 6,
+         "grade": "A-", "projected_mean": 8.2},
+        {"pitcher": "Charlie Morton", "line": 5.0, "actual": 5,
+         "grade": "C", "projected_mean": 5.3},  # push, not a Top Play
     ])
     text = render_results_card(rows, date_str="2026-04-22")
     assert text.startswith("That K Report — Results · 2026-04-22\n")
-    assert "Yesterday's K Projections" in text
+    # Three headlined sections.
+    assert "Yesterday's Top Plays (A- and higher)" in text
+    assert "Full Slate Calibration" in text
+    assert "Season Ledger (A- and higher only)" in text
+    # Per-row roster under Top Plays (grades A+ and A-).
     assert "• Gerrit Cole 7.5 → 9 K (Hit)" in text
     assert "• Tarik Skubal 8.5 → 6 K (Miss)" in text
-    assert "• Charlie Morton 5 → 5 K (Push)" in text
-    assert "Season Ledger (K Props)" in text
-    # 1 W, 1 L, 1 push => 1-1 with 1 push marker.
-    assert "1-1 (50% hit rate)" in text
+    # Full Slate line carries the 1-1 on the line + MAE.
+    assert "All projections:" in text
+    assert "Average error:" in text
+    # Morton push counts in the Full Slate "push" but is not a Top Play.
+    assert "push" in text.lower()
     assert text.rstrip().endswith("Powered by Edge Equation")
 
 
@@ -467,31 +490,43 @@ def test_results_card_empty_slate_produces_honest_placeholder():
 
 
 def test_results_card_updates_ledger(tmp_path):
+    """Final-pass: Top Plays ledger (`wins`/`losses`) increments only
+    on A-or-higher rows.  Full-slate track (`full_wins`/`full_losses`)
+    covers every row regardless of grade."""
     led = Ledger(tmp_path / "led.json")
     rows = build_results([
-        {"pitcher": "A", "line": 7.5, "actual": 9},
-        {"pitcher": "B", "line": 6.5, "actual": 5},
+        {"pitcher": "A", "line": 7.5, "actual": 9, "grade": "A+"},
+        {"pitcher": "B", "line": 6.5, "actual": 5, "grade": "A-"},
+        {"pitcher": "C", "line": 7.5, "actual": 9, "grade": "C"},
     ])
     render_results_card(rows, date_str="2026-04-22", ledger=led)
     snap = led.summary()
+    # Top Plays: A+ hit + A- miss = 1-1.  C row excluded.
     assert snap.wins == 1
     assert snap.losses == 1
+    # Full slate: all three rows counted.
+    assert snap.full_wins == 2
+    assert snap.full_losses == 1
 
 
 def test_results_card_rerun_does_not_double_count(tmp_path):
     led = Ledger(tmp_path / "led.json")
     rows = build_results([
-        {"pitcher": "A", "line": 7.5, "actual": 9},
+        {"pitcher": "A", "line": 7.5, "actual": 9, "grade": "A+"},
     ])
     for _ in range(3):
         render_results_card(rows, date_str="2026-04-22", ledger=led)
-    assert led.summary().wins == 1
+    snap = led.summary()
+    assert snap.wins == 1
+    assert snap.full_wins == 1
 
 
 def test_results_card_no_ledger_flag_keeps_disk_clean(tmp_path):
     path = tmp_path / "led.json"
     led = Ledger(path)
-    rows = build_results([{"pitcher": "A", "line": 7.5, "actual": 9}])
+    rows = build_results([
+        {"pitcher": "A", "line": 7.5, "actual": 9, "grade": "A+"},
+    ])
     render_results_card(
         rows, date_str="2026-04-22",
         ledger=led, update_ledger=False,
@@ -901,22 +936,25 @@ def test_commentary_cooking_with_gas_appears_in_outta_sight_rotation():
         or "Outta sight -- cooking with gas" in variants_seen
 
 
-def test_results_card_appends_day_commentary_footer():
+def test_results_card_appends_day_commentary_to_top_plays():
+    """Final-pass: commentary rides on the Top Plays rollup line --
+    '2-1 (67%) -- Far out, man' -- so it ties to the headline W-L."""
     rows = build_results([
-        {"pitcher": "A", "line": 7.5, "actual": 9},
-        {"pitcher": "B", "line": 7.5, "actual": 5},
+        {"pitcher": "A", "line": 7.5, "actual": 9, "grade": "A+"},
+        {"pitcher": "B", "line": 7.5, "actual": 5, "grade": "A-"},
     ])
     text = render_results_card(rows, date_str="2026-04-22")
-    # 1-1 = 50% -> mild_miss bucket.
+    # 1-1 Top Plays = 50% -> mild_miss bucket commentary attaches.
     assert "for the birds" in text.lower() or "bird bath" in text.lower()
     assert "1-1" in text and "50%" in text
 
 
 def test_results_card_commentary_off_opt_out():
     rows = build_results([
-        {"pitcher": "A", "line": 7.5, "actual": 9},
+        {"pitcher": "A", "line": 7.5, "actual": 9, "grade": "A+"},
     ])
-    # commentary=False removes the day line while keeping the rest.
+    # commentary=False removes the rollup's trailing phrase while
+    # keeping the rest of the structure.
     text = render_results_card(rows, date_str="2026-04-22", commentary=False)
     assert "Season Ledger" in text
     # None of the bucket phrases should appear.
@@ -1039,3 +1077,423 @@ def test_workflow_projections_is_dispatch_only():
     proj_block = text.split("projections:", 1)[1].split("supporting:", 1)[0]
     assert "workflow_dispatch" in proj_block
     assert "schedule" not in proj_block
+
+
+# ------------------------------------------------ K grading ladder
+
+from edge_equation.that_k.grading import (
+    K_A_MINUS,
+    K_A_PLUS,
+    TOP_PLAY_GRADES,
+    grade_k_edge,
+    grade_rank,
+    is_top_play,
+)
+
+
+def test_k_grader_matches_brief_thresholds_verbatim():
+    """Per the final brief: A+ at +10%, A at +7%, A- at +4.5%,
+    B at +2%, C band +/- 1.9%, D floor -5.9%, F below."""
+    # Grade boundaries.
+    assert grade_k_edge(Decimal("0.100")) == "A+"
+    assert grade_k_edge(Decimal("0.099")) == "A"
+    assert grade_k_edge(Decimal("0.070")) == "A"
+    assert grade_k_edge(Decimal("0.069")) == "A-"
+    assert grade_k_edge(Decimal("0.045")) == "A-"
+    assert grade_k_edge(Decimal("0.044")) == "B"
+    assert grade_k_edge(Decimal("0.020")) == "B"
+    assert grade_k_edge(Decimal("0.019")) == "C"
+    assert grade_k_edge(Decimal("-0.019")) == "C"
+    assert grade_k_edge(Decimal("-0.020")) == "D"
+    assert grade_k_edge(Decimal("-0.059")) == "D"
+    assert grade_k_edge(Decimal("-0.060")) == "F"
+    # Null-safe.
+    assert grade_k_edge(None) == "C"
+
+
+def test_is_top_play_covers_a_minus_and_above_only():
+    assert TOP_PLAY_GRADES == frozenset({"A+", "A", "A-"})
+    for g in ("A+", "A", "A-"):
+        assert is_top_play(g) is True
+    for g in ("B", "C", "D", "F", "", "X"):
+        assert is_top_play(g) is False
+
+
+def test_grade_rank_orders_correctly():
+    seq = ["C", "A+", "F", "A-", "B", "A", "D"]
+    sorted_seq = sorted(seq, key=grade_rank, reverse=True)
+    assert sorted_seq == ["A+", "A", "A-", "B", "C", "D", "F"]
+
+
+# ------------------------------------------------ Calibration snapshot
+
+from edge_equation.that_k.calibration import (
+    CalibrationSnapshot,
+    SettledRow,
+    compute_calibration,
+)
+
+
+def test_compute_calibration_splits_top_plays_from_full_slate():
+    snap = compute_calibration([
+        SettledRow(pitcher="A", line=7.5, actual=9, projected_mean=8.2, grade="A+"),
+        SettledRow(pitcher="B", line=7.5, actual=5, projected_mean=8.0, grade="A-"),
+        SettledRow(pitcher="C", line=7.5, actual=9, projected_mean=8.5, grade="C"),
+    ])
+    # Top Plays: A+ Hit + A- Miss = 1-1.
+    assert snap.top_plays_wins == 1
+    assert snap.top_plays_losses == 1
+    # Full slate counts C too.
+    assert snap.full_wins == 2
+    assert snap.full_losses == 1
+
+
+def test_compute_calibration_mae_and_rmse():
+    """MAE / RMSE only count rows with a projected_mean attached --
+    bare results-only rows are excluded."""
+    snap = compute_calibration([
+        SettledRow(pitcher="A", line=7.5, actual=9, projected_mean=8.0, grade="A+"),
+        # error 1.0
+        SettledRow(pitcher="B", line=6.5, actual=3, projected_mean=6.0, grade="A-"),
+        # error -3.0
+        SettledRow(pitcher="C", line=7.5, actual=9, projected_mean=None, grade="C"),
+        # excluded from MAE (no projected_mean)
+    ])
+    assert snap.n_projections == 2
+    assert snap.mae_ks == pytest.approx(2.0)
+    assert snap.rmse_ks == pytest.approx(math.sqrt(10 / 2))
+
+
+def test_compute_calibration_empty_returns_zeros_and_none_mae():
+    snap = compute_calibration([])
+    assert snap.top_plays_wins == 0
+    assert snap.full_wins == 0
+    assert snap.mae_ks is None
+    assert snap.rmse_ks is None
+
+
+def test_results_card_mae_line_reads_correct_number():
+    rows = build_results([
+        {"pitcher": "A", "line": 7.5, "actual": 9,
+         "grade": "A+", "projected_mean": 8.0},
+        {"pitcher": "B", "line": 6.5, "actual": 3,
+         "grade": "A-", "projected_mean": 6.0},
+    ])
+    text = render_results_card(rows, date_str="2026-04-22")
+    # MAE across (|9-8|, |3-6|) = (1, 3) -> 2.0 K.
+    assert "Average error: 2.0 K" in text
+
+
+# ------------------------------------------------ Ledger split tracks
+
+def test_ledger_records_top_plays_and_full_separately(tmp_path):
+    from edge_equation.that_k.ledger import Ledger
+    led = Ledger(tmp_path / "t.json")
+    # Top Play hit.
+    assert led.record("2026-04-22", "A", "7.5", "hit", is_top_play=True) is True
+    # Full-slate-only miss.
+    assert led.record("2026-04-22", "B", "6.5", "miss", is_top_play=False) is True
+    snap = led.summary()
+    # Top Play headline track: 1-0.
+    assert snap.wins == 1 and snap.losses == 0
+    # Full-slate: 1-1 (Top Play also counts here).
+    assert snap.full_wins == 1 and snap.full_losses == 1
+
+
+def test_ledger_record_many_accepts_legacy_3_tuple(tmp_path):
+    """Back-compat: old callers using 3-tuples still work and default
+    to Top Plays routing so nothing regresses silently."""
+    from edge_equation.that_k.ledger import Ledger
+    led = Ledger(tmp_path / "t.json")
+    led.record_many("2026-04-22", [("A", "7.5", "hit")])
+    assert led.summary().wins == 1
+
+
+# ------------------------------------------------ Beta-Binomial A/B
+
+from edge_equation.that_k.variants import (
+    ABEntry,
+    ab_summary,
+    project_beta_binomial,
+)
+
+
+def test_beta_binomial_projects_reasonable_mean_for_hot_pitcher():
+    from edge_equation.that_k.model import (
+        GameContext,
+        OpponentLineup,
+        PitcherProfile,
+    )
+    # Elite K/BF + expected 25 BF -> projected mean well north of
+    # the 0.235 * 25 = 5.9 league baseline.
+    hot = PitcherProfile(
+        name="Hot", team="X", throws="R",
+        k_per_bf=0.305, expected_bf=25,
+        recent_k_per_bf=[(0.33, 3), (0.30, 9), (0.31, 15)],
+    )
+    neutral_lineup = OpponentLineup(team="Y")
+    neutral_ctx = GameContext(dome=True)
+    proj = project_beta_binomial(hot, neutral_lineup, neutral_ctx)
+    assert proj.variant == "beta_binomial"
+    assert float(proj.projected_mean) > 6.0
+
+
+def test_beta_binomial_shrinks_toward_league_on_thin_history():
+    """Shrinkage discipline: a pitcher with ZERO recent starts should
+    post a projection much closer to the league baseline than their
+    nominal season K/BF would imply."""
+    from edge_equation.that_k.model import (
+        GameContext,
+        LEAGUE_K_PER_BF,
+        OpponentLineup,
+        PitcherProfile,
+    )
+    sparse = PitcherProfile(
+        name="Sparse", team="X", throws="R",
+        k_per_bf=0.320, expected_bf=25,
+        recent_k_per_bf=[],
+    )
+    neutral_lineup = OpponentLineup(team="Y")
+    neutral_ctx = GameContext(dome=True)
+    proj = project_beta_binomial(sparse, neutral_lineup, neutral_ctx)
+    # With no recent history the posterior p_hat drags toward
+    # league mean 0.235 -- so projected mean should sit well below
+    # the 0.320 * 25 = 8.0 naive estimate.
+    assert float(proj.projected_mean) < 0.320 * 25
+
+
+def test_ab_summary_reports_mae_per_variant():
+    entries = [
+        ABEntry(pitcher="A", team="X", opponent="Y",
+                nb_mean=Decimal("8.0"), bb_mean=Decimal("7.5"),
+                line=7.5, actual=9),
+        ABEntry(pitcher="B", team="X", opponent="Y",
+                nb_mean=Decimal("7.0"), bb_mean=Decimal("6.5"),
+                line=7.5, actual=5),
+    ]
+    summary = ab_summary(entries)
+    assert summary["n_settled"] == 2
+    # NB errors: |9-8|=1, |5-7|=2 -> MAE 1.5
+    # BB errors: |9-7.5|=1.5, |5-6.5|=1.5 -> MAE 1.5
+    assert summary["nb_mae"] == pytest.approx(1.5)
+    assert summary["bb_mae"] == pytest.approx(1.5)
+
+
+def test_ab_summary_skips_unsettled_rows():
+    entries = [
+        ABEntry(pitcher="A", team="X", opponent="Y",
+                nb_mean=Decimal("8.0"), bb_mean=Decimal("7.5"),
+                line=7.5),  # actual not set
+    ]
+    summary = ab_summary(entries)
+    assert summary["n_settled"] == 0
+    assert summary["nb_mae"] is None and summary["bb_mae"] is None
+
+
+# ------------------------------------------------ Feature importance
+
+from edge_equation.that_k.features import (
+    aggregate_importance,
+    contributions_for_inputs,
+    importance_for_row,
+)
+from edge_equation.that_k.runner import (
+    build_ab_entries,
+    build_feature_importance,
+)
+
+
+def test_feature_importance_sums_to_total_log_abs():
+    from edge_equation.that_k.model import (
+        GameContext,
+        OpponentLineup,
+        PitcherProfile,
+        project_strikeouts,
+    )
+    inputs = project_strikeouts(
+        PitcherProfile(
+            name="X", team="T",
+            k_per_bf=0.28, expected_bf=25,
+            recent_k_per_bf=[(0.30, 3), (0.28, 9), (0.31, 15)],
+        ),
+        OpponentLineup(team="O", swstr_pct=0.128),
+        GameContext(dome=False, temp_f=58, umpire_k_factor=1.06),
+    )
+    row = importance_for_row("X", inputs)
+    assert row.total_log_abs > 0
+    shares = row.shares()
+    # Shares sum to ~1.0 (barring a tiny float tolerance).
+    assert abs(sum(shares.values()) - 1.0) < 1e-9
+
+
+def test_feature_importance_aggregate_flags_top_driver():
+    """Slate-level aggregate picks the factor that led the move on
+    most pitchers."""
+    from edge_equation.that_k.model import (
+        GameContext,
+        OpponentLineup,
+        PitcherProfile,
+        project_strikeouts,
+    )
+    # Build two slate rows where umpire_adj is the dominant factor.
+    rows = []
+    for seed in range(2):
+        inputs = project_strikeouts(
+            PitcherProfile(
+                name=f"P{seed}", team="T",
+                k_per_bf=0.235, expected_bf=24,
+                recent_k_per_bf=[(0.235, 5)],
+            ),
+            OpponentLineup(team="O"),  # neutral
+            GameContext(dome=True, umpire_k_factor=1.10),  # strong +K ump
+        )
+        rows.append(importance_for_row(f"P{seed}", inputs))
+    agg = aggregate_importance(rows)
+    assert agg["n_rows"] == 2
+    assert agg["lead_count"]["umpire"] == 2
+
+
+def test_build_ab_entries_pairs_nb_and_bb_per_pitcher():
+    """Runner helper produces one ABEntry per projection row with
+    both NB-mean and BB-mean populated and line carried through."""
+    slate = sample_slate()
+    rows = build_projections(slate)
+    entries = build_ab_entries(rows)
+    assert len(entries) == len(rows)
+    for e in entries:
+        assert e.nb_mean > 0
+        assert e.bb_mean > 0
+        assert e.line is not None
+
+
+def test_build_feature_importance_returns_one_row_per_pitcher():
+    slate = sample_slate()
+    rows = build_projections(slate)
+    fi = build_feature_importance(rows)
+    assert {f.pitcher for f in fi} == {r.pitcher.name for r in rows}
+
+
+# ------------------------------------------------ Spotlight
+
+from edge_equation.that_k.spotlight import (
+    SpotlightSubject,
+    render_spotlight,
+    sample_spotlight,
+)
+
+
+def test_spotlight_sample_renders_all_required_sections():
+    text = render_spotlight(sample_spotlight(), week_of="2026-04-20")
+    assert text.startswith("That K Report — Pitcher Spotlight · Week of 2026-04-20\n")
+    assert "Arsenal Breakdown" in text
+    assert "Movement & Release" in text
+    assert "Edge Read" in text
+    # Tie-in block appears when projection fields are present.
+    assert "Projection Tie-In" in text
+    # Clip suggestion attaches on its own line.
+    assert "[CLIP_SUGGESTION:" in text
+    assert text.rstrip().endswith("Powered by Edge Equation")
+
+
+def test_spotlight_degrades_gracefully_on_missing_fields():
+    subject = SpotlightSubject(
+        pitcher="Test Guy", team="XYZ", throws="R",
+    )
+    text = render_spotlight(subject, week_of="2026-04-20")
+    # Section headers still appear so subscribers see the layout.
+    assert "Arsenal Breakdown" in text
+    assert "Movement & Release" in text
+    assert "Edge Read" in text
+    # Missing-data placeholders are factual ("not supplied"), not
+    # apologetic or tout-y.
+    assert "not supplied" in text
+
+
+def test_spotlight_contains_no_hype_language():
+    """Brand rule: Spotlight stays 100% analytical."""
+    text = render_spotlight(sample_spotlight(), week_of="2026-04-20")
+    lower = text.lower()
+    for word in ("lock", "smash", "take the over", "hammer", "slam dunk"):
+        assert word not in lower
+
+
+def test_cli_spotlight_sample_dry_run(capsys):
+    from edge_equation.that_k.__main__ import main
+    rc = main(["spotlight", "--sample", "--week-of", "2026-04-20"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert out.startswith("That K Report — Pitcher Spotlight · Week of 2026-04-20\n")
+
+
+# ------------------------------------------------ Metrics / debug JSON
+
+from edge_equation.that_k.metrics import (
+    METRICS_MODEL_VERSION,
+    build_metrics_payload,
+    write_metrics,
+)
+
+
+def test_metrics_payload_shape_and_version():
+    slate = sample_slate()
+    rows = build_projections(slate)
+    ab = build_ab_entries(rows)
+    fi = build_feature_importance(rows)
+    payload = build_metrics_payload(
+        rows=rows, ab_entries=ab, feature_rows=fi,
+        date_str="2026-04-23", target_account=TargetAccount.KGUY,
+    )
+    assert payload["model_version"] == METRICS_MODEL_VERSION
+    assert payload["run_date"] == "2026-04-23"
+    assert payload["target_account"] == "k_guy"
+    assert payload["n_pitchers"] == len(rows)
+    assert "feature_importance_aggregate" in payload
+    assert "ab_summary" in payload
+    # Every per-pitcher entry carries both NB+MC and BB variant means.
+    for p in payload["pitchers"]:
+        assert "projection" in p and "ab_variant" in p
+        assert p["projection"]["nb_mc_mean"]
+        assert p["ab_variant"]["bb_mean"] if p["ab_variant"] else True
+
+
+def test_metrics_write_creates_parents_and_valid_json(tmp_path):
+    import json
+    slate = sample_slate()
+    rows = build_projections(slate)
+    payload = build_metrics_payload(
+        rows=rows, ab_entries=build_ab_entries(rows),
+        feature_rows=build_feature_importance(rows),
+        date_str="2026-04-23", target_account=TargetAccount.KGUY,
+    )
+    out = tmp_path / "nested/dir/metrics.json"
+    write_metrics(out, payload)
+    assert out.exists()
+    roundtrip = json.loads(out.read_text(encoding="utf-8"))
+    assert roundtrip["model_version"] == METRICS_MODEL_VERSION
+
+
+def test_cli_projections_metrics_out_writes_file(tmp_path):
+    """Projections CLI with --metrics-out emits a valid JSON blob
+    alongside the text artifact."""
+    import json
+    from edge_equation.that_k.__main__ import main
+    metrics_path = tmp_path / "m.json"
+    rc = main([
+        "projections", "--sample",
+        "--date", "2026-04-23",
+        "--out", str(tmp_path / "p.txt"),
+        "--metrics-out", str(metrics_path),
+    ])
+    assert rc == 0
+    assert metrics_path.exists()
+    data = json.loads(metrics_path.read_text(encoding="utf-8"))
+    assert data["n_pitchers"] > 0
+    assert "pitchers" in data
+
+
+# ------------------------------------------------ 10k MC default
+
+def test_default_n_sims_bumped_to_at_least_10k():
+    """Final-pass brief: 'Monte Carlo (10k sims recommended)'."""
+    from edge_equation.that_k.simulator import DEFAULT_N_SIMS
+    assert DEFAULT_N_SIMS >= 10_000

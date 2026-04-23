@@ -35,8 +35,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Iterable, List, Optional
 
-from edge_equation.math.scoring import ConfidenceScorer
 from edge_equation.that_k.config import TargetAccount, target_header_tag
+from edge_equation.that_k.grading import grade_k_edge, grade_rank, is_top_play
 from edge_equation.that_k.model import (
     GameContext,
     KProjectionInputs,
@@ -51,9 +51,12 @@ from edge_equation.that_k.simulator import KProjection
 
 BRAND_HEADER = "Tonight's Pitcher K Projections"
 BRAND_FOOTER = "Powered by Edge Equation"
-# Default slate cap matches the brief: "every qualifying starter or
-# top 8".  Callers can override; the CLI surfaces --top-n.
+# Back-compat default for legacy --top-n usage; new two-section
+# output uses TOP_PLAYS_MIN/MAX below.
 DEFAULT_TOP_N = 8
+# Top Plays section size per the final-pass brief: "3-6 entries".
+TOP_PLAYS_MIN = 3
+TOP_PLAYS_MAX = 6
 
 
 @dataclass(frozen=True)
@@ -78,14 +81,14 @@ class KReportRow:
 
 
 def grade_row(projection: KProjection) -> str:
-    """Translate the MC probability-edge into an A+/A/B/C/D/F grade.
+    """Translate the MC probability-edge into a K-prop grade.
 
-    Same ConfidenceScorer thresholds the main engine uses so the
-    brand stays calibration-consistent.  Probability-space edge is
-    the natural K-prop signal: prob_over - 0.5 (signed), magnitude
-    consumed here so under-leans and over-leans are graded identically.
+    Phase: switched from ConfidenceScorer to the K-specific ladder in
+    grading.py so Top Plays surface at the correct tier.  Probability-
+    space edge is the natural K-prop signal: |prob_over - 0.5|, so
+    over-leans and under-leans are graded identically.
     """
-    return ConfidenceScorer.grade(projection.edge_prob)
+    return grade_k_edge(projection.edge_prob)
 
 
 def _edge_read(row: KReportRow) -> str:
@@ -215,30 +218,54 @@ def render_report(
     top_n: Optional[int] = DEFAULT_TOP_N,
     intro_70s: bool = False,
     target_account: TargetAccount = TargetAccount.KGUY,
+    *,
+    full_slate: bool = True,
+    top_plays_max: int = TOP_PLAYS_MAX,
+    top_plays_min: int = TOP_PLAYS_MIN,
 ) -> str:
-    """Render the full text report.  `date_str` is a YYYY-MM-DD string
-    (caller passes run-date; the module doesn't reach for the clock).
+    """Render the full text report.
 
-    intro_70s=True prepends a light personality line above the
-    "Tonight's Pitcher K Projections" header, per the brand allowance
-    in the task spec.  Default False so scheduled runs stay strictly
-    analytical unless the operator opts in.
+    Two-section layout per the final-pass brief:
 
-    target_account stamps an audit-only header tag under the date
-    line (e.g. "(target=@ThatK_Guy)") so artifacts carry a visible
-    trail of which identity they were built for.  No secret material
-    ever lands in the header.
+        That K Report — 2026-04-23
+          (target=@ThatK_Guy)
+        Tonight's Top Plays (A- and higher)
+        • Paul Skenes (PIT) vs. HOU  Line: 7.5  K Projection: 9.2
+          K Grade: A+  Edge: ...
+        ...
+
+        Full Slate Projections
+        • Gerrit Cole (NYY) vs. BOS  Line: 7.5  ...
+        ...
+
+        Powered by Edge Equation
+
+    Top Plays = rows graded A- or higher (K-specific grader).  The
+    section caps at `top_plays_max` (default 6).  When fewer than
+    `top_plays_min` rows qualify, the Top Plays section renders an
+    explicit empty-state line rather than get skipped silently --
+    subscribers need to see the slot exists.
+
+    full_slate=False collapses the output to just the Top Plays
+    section -- useful for short-form X posts where the full list
+    would exceed the character cap.
     """
     rows = list(rows)
-    # Rank by probability-space edge magnitude, ties broken by raw K
-    # edge magnitude so two equally-graded rows still order
-    # deterministically.
+    # Rank by (grade_rank desc, edge_prob desc, |edge_ks| desc) so
+    # two rows with the same grade still order deterministically.
     rows.sort(
-        key=lambda r: (r.projection.edge_prob, abs(r.projection.edge_ks)),
+        key=lambda r: (
+            grade_rank(r.grade),
+            r.projection.edge_prob,
+            abs(r.projection.edge_ks),
+        ),
         reverse=True,
     )
-    if top_n is not None and top_n > 0:
-        rows = rows[:top_n]
+    # Back-compat: legacy top_n applies only to the Full Slate
+    # section so callers that passed --top-n 8 still see a capped
+    # output.  Top Plays has its own explicit cap.
+    full_slate_rows = rows if top_n in (None, 0) else rows[:top_n]
+    top_plays = [r for r in rows if is_top_play(r.grade)][:top_plays_max]
 
     out: List[str] = []
     # Brief specifies an em-dash ("That K Report — [Date]") so we match
@@ -247,12 +274,33 @@ def render_report(
     out.append(f"  ({target_header_tag(target_account)})")
     if intro_70s:
         out.append(_intro_for(date_str))
-    out.append(BRAND_HEADER)
     out.append("")
-    for i, row in enumerate(rows):
-        if i > 0:
-            out.append("")
-        out.extend(render_row(row))
+
+    # ----- Tonight's Top Plays (A- and higher) ------------------------
+    out.append("Tonight's Top Plays (A- and higher)")
+    if len(top_plays) < top_plays_min:
+        out.append(
+            f"  (no edges cleared the A- threshold tonight -- {len(top_plays)} "
+            f"of {len(rows)} starters qualified)"
+        )
+    else:
+        for i, row in enumerate(top_plays):
+            if i > 0:
+                out.append("")
+            out.extend(render_row(row))
     out.append("")
+
+    # ----- Full Slate Projections -------------------------------------
+    if full_slate:
+        out.append("Full Slate Projections")
+        if not full_slate_rows:
+            out.append("  (no probable starters on tonight's board)")
+        else:
+            for i, row in enumerate(full_slate_rows):
+                if i > 0:
+                    out.append("")
+                out.extend(render_row(row))
+        out.append("")
+
     out.append(BRAND_FOOTER)
     return "\n".join(out).rstrip() + "\n"

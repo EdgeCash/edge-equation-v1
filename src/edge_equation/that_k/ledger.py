@@ -35,10 +35,24 @@ _ALLOWED_VERDICTS = frozenset({VERDICT_HIT, VERDICT_MISS, VERDICT_PUSH})
 
 @dataclass
 class LedgerSnapshot:
-    """Current all-time totals for the account."""
+    """Current all-time totals for the account.
+
+    Split into two parallel buckets per the final-pass brief:
+      * Top Plays (A- and higher) -- the public Season Ledger.
+      * Full Slate -- every projection we shipped, used for overall
+        model-accuracy tracking on the Results card.
+    `wins/losses/pushes` stay on the top-level snapshot for back-compat
+    (they mirror the top_plays_* totals since that's the headline
+    figure), so older callers reading `snap.wins` don't break.
+    """
     wins: int = 0
     losses: int = 0
     pushes: int = 0
+    # Full-slate parallel track for overall calibration on the Results
+    # card. Populated from every settled row regardless of grade.
+    full_wins: int = 0
+    full_losses: int = 0
+    full_pushes: int = 0
     updated_at: Optional[str] = None
     # Dedup keys we've already counted -- tuple (date, pitcher, line).
     seen: List[List[str]] = field(default_factory=list)
@@ -54,11 +68,23 @@ class LedgerSnapshot:
             return 0.0
         return self.wins / n
 
+    def full_total_graded(self) -> int:
+        return self.full_wins + self.full_losses
+
+    def full_hit_rate(self) -> float:
+        n = self.full_total_graded()
+        if n == 0:
+            return 0.0
+        return self.full_wins / n
+
     def to_dict(self) -> dict:
         return {
             "wins": int(self.wins),
             "losses": int(self.losses),
             "pushes": int(self.pushes),
+            "full_wins": int(self.full_wins),
+            "full_losses": int(self.full_losses),
+            "full_pushes": int(self.full_pushes),
             "updated_at": self.updated_at,
             "seen": [list(k) for k in self.seen],
         }
@@ -70,6 +96,9 @@ class LedgerSnapshot:
             wins=int(d.get("wins", 0)),
             losses=int(d.get("losses", 0)),
             pushes=int(d.get("pushes", 0)),
+            full_wins=int(d.get("full_wins", 0)),
+            full_losses=int(d.get("full_losses", 0)),
+            full_pushes=int(d.get("full_pushes", 0)),
             updated_at=d.get("updated_at"),
             seen=[list(k) for k in (d.get("seen") or [])],
         )
@@ -124,10 +153,21 @@ class Ledger:
         pitcher: str,
         line: str,
         verdict: str,
+        *,
+        is_top_play: bool = True,
     ) -> bool:
         """Mark one result against the book's line. Returns True when
         the row was newly counted; False when it was a dedup hit so
-        the caller can log re-runs honestly."""
+        the caller can log re-runs honestly.
+
+        is_top_play governs which bucket the verdict lands in:
+          * True  -> Top Plays track (headline Season Ledger).  The
+                     full-slate track also increments so every row
+                     contributes to the calibration line.
+          * False -> Full Slate track only.  The headline Season
+                     Ledger stays at A-or-higher picks only, per
+                     the final-pass brief's discipline.
+        """
         if verdict not in _ALLOWED_VERDICTS:
             raise ValueError(
                 f"verdict must be one of {_ALLOWED_VERDICTS}, got {verdict!r}"
@@ -137,23 +177,48 @@ class Ledger:
         key_list = list(key)
         if key_list in self._snap.seen:
             return False
+        if is_top_play:
+            if verdict == VERDICT_HIT:
+                self._snap.wins += 1
+            elif verdict == VERDICT_MISS:
+                self._snap.losses += 1
+            else:
+                self._snap.pushes += 1
+        # Full-slate always increments regardless of grade tier.
         if verdict == VERDICT_HIT:
-            self._snap.wins += 1
+            self._snap.full_wins += 1
         elif verdict == VERDICT_MISS:
-            self._snap.losses += 1
-        else:  # push
-            self._snap.pushes += 1
+            self._snap.full_losses += 1
+        else:
+            self._snap.full_pushes += 1
         self._snap.seen.append(key_list)
         return True
 
     def record_many(
-        self, date: str, rows: Iterable[Tuple[str, str, str]],
+        self, date: str, rows: Iterable[Tuple],
     ) -> int:
-        """Bulk record: rows is an iterable of (pitcher, line, verdict).
-        Returns the number of rows newly counted."""
+        """Bulk record.  Rows are 3- or 4-tuples:
+            (pitcher, line, verdict)                    -- legacy,
+              treated as Top Plays so existing callers behave the same.
+            (pitcher, line, verdict, is_top_play:bool)  -- new,
+              routes to the Top Plays / Full Slate tracks per flag.
+        Returns the count of rows newly counted (dedup-aware).
+        """
         counted = 0
-        for pitcher, line, verdict in rows:
-            if self.record(date=date, pitcher=pitcher, line=line, verdict=verdict):
+        for row in rows:
+            if len(row) == 3:
+                pitcher, line, verdict = row
+                itp = True
+            elif len(row) == 4:
+                pitcher, line, verdict, itp = row
+            else:
+                raise ValueError(
+                    f"record_many row must be 3- or 4-tuple, got {row!r}"
+                )
+            if self.record(
+                date=date, pitcher=pitcher, line=line,
+                verdict=verdict, is_top_play=bool(itp),
+            ):
                 counted += 1
         return counted
 
