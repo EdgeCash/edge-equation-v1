@@ -1,4 +1,5 @@
 """Slate runner: glue between ingestion and the Phase-3 engine."""
+import os
 from decimal import Decimal
 from typing import Optional
 
@@ -6,6 +7,38 @@ from edge_equation.ingestion.schema import Slate, MarketInfo, GameInfo, LEAGUE_T
 from edge_equation.engine.feature_builder import FeatureBuilder
 from edge_equation.engine.betting_engine import BettingEngine
 from edge_equation.engine.pick_schema import Pick, Line
+from edge_equation.utils.logging import get_logger
+
+
+_logger = get_logger("edge-equation.slate_runner")
+
+
+# Process-wide debug counters populated when DEBUG=1. Cheap, additive,
+# and safe to ignore in normal runs -- consumers (e.g. the --debug CLI
+# summary) read via get_debug_stats() and can reset via reset_debug_stats().
+_DEBUG_STATS: dict = {
+    "markets_processed": 0,
+    "markets_with_picks": 0,
+    "supported_markets_seen": set(),
+}
+
+
+def _debug_enabled() -> bool:
+    return os.getenv("DEBUG") == "1"
+
+
+def get_debug_stats() -> dict:
+    return {
+        "markets_processed": _DEBUG_STATS["markets_processed"],
+        "markets_with_picks": _DEBUG_STATS["markets_with_picks"],
+        "supported_markets_seen": sorted(_DEBUG_STATS["supported_markets_seen"]),
+    }
+
+
+def reset_debug_stats() -> None:
+    _DEBUG_STATS["markets_processed"] = 0
+    _DEBUG_STATS["markets_with_picks"] = 0
+    _DEBUG_STATS["supported_markets_seen"] = set()
 
 
 def _league_filter_matches(league: str, filter_value: str) -> bool:
@@ -21,6 +54,14 @@ def _evaluate_market(game: GameInfo, market: MarketInfo, public_mode: bool) -> O
     inputs = meta.get("inputs")
     if inputs is None:
         return None
+    # Local copy so we can enrich without mutating the upstream meta dict
+    # and so the downstream math sees market.line / game_id without the
+    # composer needing to duplicate them into inputs itself.
+    inputs = dict(inputs)
+    if market.line is not None and "line" not in inputs:
+        inputs["line"] = market.line
+    if game.game_id and "game_id" not in inputs:
+        inputs["game_id"] = game.game_id
     universal = meta.get("universal_features", {})
 
     # Phase 31: forward read_context (and any pitcher / weather / umpire
@@ -56,13 +97,15 @@ def _evaluate_market(game: GameInfo, market: MarketInfo, public_mode: bool) -> O
             selection=market.selection,
             metadata=bundle_meta,
         )
-    except ValueError:
+    except ValueError as exc:
+        _logger.warning(f"Dropped market {market.market_type} for {market.game_id}: {exc}")
         return None
 
     line = Line(odds=market.odds if market.odds is not None else -110, number=market.line)
     try:
         return BettingEngine.evaluate(bundle, line, public_mode=public_mode)
-    except ValueError:
+    except ValueError as exc:
+        _logger.warning(f"Dropped market {market.market_type} for {market.game_id}: {exc}")
         return None
 
 
@@ -76,6 +119,17 @@ def run_slate(slate: Slate, sport: str, public_mode: bool = False) -> list:
         if not _league_filter_matches(game.league, sport):
             continue
         pick = _evaluate_market(game, market, public_mode=public_mode)
+        if _debug_enabled():
+            _DEBUG_STATS["markets_processed"] += 1
+            if pick is not None:
+                _DEBUG_STATS["markets_with_picks"] += 1
+                _DEBUG_STATS["supported_markets_seen"].add(pick.market_type)
+                print(
+                    f"[OUTPUT] Produced pick: {pick.market_type} | "
+                    f"{pick.game_id} | Edge: {getattr(pick, 'edge', 'N/A')}"
+                )
+            else:
+                print(f"[SKIPPED] Market: {market.market_type}")
         if pick is not None:
             picks.append(pick)
     return picks

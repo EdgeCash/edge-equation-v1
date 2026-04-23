@@ -22,6 +22,10 @@ on:
       prefer_mock:
         description: "Use mock ingestion sources (skip the odds API even if a key is set)"
         default: "true"
+      debug:
+        description: "Enable --debug (per-market [OUTPUT]/[SKIPPED] prints + TEST SUMMARY)"
+        type: boolean
+        default: false
 
 jobs:
   preview:
@@ -63,6 +67,10 @@ jobs:
           if [ "${{ inputs.prefer_mock }}" = "true" ]; then
             MOCK_FLAG="--prefer-mock"
           fi
+          DEBUG_FLAG=""
+          if [ "${{ inputs.debug }}" = "true" ]; then
+            DEBUG_FLAG="--debug"
+          fi
           LEAGUES="--leagues ${{ inputs.leagues }}"
           OVERSEAS="--leagues ${{ inputs.overseas_leagues }}"
           # --force so a cached DB's idempotency check doesn't silently
@@ -70,11 +78,11 @@ jobs:
           COMMON="--no-publish --dry-run --public-mode --preview-dir previews --force $MOCK_FLAG"
 
           set -x
-          python -m edge_equation ledger   $COMMON $LEAGUES
-          python -m edge_equation daily    $COMMON $LEAGUES
-          python -m edge_equation spotlight $COMMON $LEAGUES
-          python -m edge_equation evening  $COMMON $LEAGUES
-          python -m edge_equation overseas $COMMON $OVERSEAS
+          python -m edge_equation $DEBUG_FLAG ledger    $COMMON $LEAGUES
+          python -m edge_equation $DEBUG_FLAG daily     $COMMON $LEAGUES
+          python -m edge_equation $DEBUG_FLAG spotlight $COMMON $LEAGUES
+          python -m edge_equation $DEBUG_FLAG evening   $COMMON $LEAGUES
+          python -m edge_equation $DEBUG_FLAG overseas  $COMMON $OVERSEAS
           set +x
 
       - name: Show rendered text (first 2000 chars each)

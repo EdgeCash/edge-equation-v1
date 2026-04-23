@@ -37,6 +37,7 @@ Common flags:
 import argparse
 import csv
 import json
+import os
 import sys
 from datetime import datetime
 from typing import List, Optional
@@ -618,6 +619,12 @@ def _add_slate_flags(p: argparse.ArgumentParser) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="edge-equation")
+    parser.add_argument(
+        "--debug", action="store_true", default=False,
+        help="Enable DEBUG=1: per-market [OUTPUT]/[SKIPPED] prints in the "
+             "slate runner, [DEBUG] prints in ProbabilityCalculator, and a "
+             "final TEST SUMMARY after the command finishes.",
+    )
     sub = parser.add_subparsers(dest="subcommand", required=False)
 
     p_ledger = sub.add_parser("ledger", help="Run The Ledger card (9am CT)")
@@ -708,10 +715,27 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    debug_mode = getattr(args, "debug", False)
+    if debug_mode:
+        os.environ["DEBUG"] = "1"
+        # Lazy import so slate_runner isn't pulled in for subcommands that
+        # never touch it (e.g. settle / load-results).
+        from edge_equation.engine import slate_runner
+        slate_runner.reset_debug_stats()
     if getattr(args, "func", None) is None:
         # Legacy back-compat: invoke the pipeline demo.
-        return _cmd_pipeline(argparse.Namespace(mode=getattr(args, "mode", "daily")))
-    return args.func(args)
+        rc = _cmd_pipeline(argparse.Namespace(mode=getattr(args, "mode", "daily")))
+    else:
+        rc = args.func(args)
+    if debug_mode:
+        from edge_equation.engine import slate_runner
+        stats = slate_runner.get_debug_stats()
+        seen = ", ".join(stats["supported_markets_seen"]) or "(none)"
+        print("=== TEST SUMMARY ===")
+        print(f"Markets processed: {stats['markets_processed']}")
+        print(f"Markets with picks: {stats['markets_with_picks']}")
+        print(f"Supported markets seen: {seen}")
+    return rc
 
 
 if __name__ == "__main__":
