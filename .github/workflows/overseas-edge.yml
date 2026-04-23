@@ -18,8 +18,8 @@ on:
         description: "Comma-separated league codes (overseas default)"
         default: "KBO,NPB,EPL,UCL"
       publish:
-        description: "Invoke real publishers (X, Discord, Email)?"
-        default: "true"
+        description: "Invoke real publishers (X, Discord, Email)? Default OFF for shadow-mode -- picks are saved but nothing is posted."
+        default: "false"
       dry_run:
         description: "Dry run mode (no real posts)?"
         default: "false"
@@ -89,14 +89,18 @@ jobs:
         if: steps.guard.outputs.should_run == 'true'
         run: |
           mkdir -p data/failsafes
-          PUBLISH_FLAG="--publish"
-          DRY_RUN_FLAG="--no-dry-run"
+          # Shadow-mode default: scheduled runs save picks to the DB but
+          # never invoke publishers. To go public, dispatch manually with
+          # publish=true.
+          PUBLISH_FLAG="--no-publish"
+          DRY_RUN_FLAG="--dry-run"
           LEAGUES=""
           # Manual dispatches rebuild the slate unconditionally; cron stays idempotent.
           FORCE_FLAG=""
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            [ "${{ inputs.publish }}" = "true" ] || PUBLISH_FLAG="--no-publish"
-            [ "${{ inputs.dry_run }}" = "false" ] || DRY_RUN_FLAG="--dry-run"
+            # Upgrade to live publishing only when explicitly requested.
+            [ "${{ inputs.publish }}" = "true" ] && PUBLISH_FLAG="--publish"
+            [ "${{ inputs.dry_run }}" = "false" ] && DRY_RUN_FLAG="--no-dry-run"
             LEAGUES="--leagues ${{ inputs.leagues }}"
             FORCE_FLAG="--force"
           fi

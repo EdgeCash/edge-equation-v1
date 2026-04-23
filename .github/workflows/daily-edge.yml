@@ -13,8 +13,8 @@ on:
         description: "Comma-separated US-majors league codes (Daily Edge is domestic-only; overseas runs in the 11pm Overseas Edge)"
         default: "MLB,NFL,NHL,NBA"
       publish:
-        description: "Invoke real publishers (X, Discord, Email)?"
-        default: "true"
+        description: "Invoke real publishers (X, Discord, Email)? Default OFF for shadow-mode -- picks are saved but nothing is posted."
+        default: "false"
       dry_run:
         description: "Dry run mode (no real posts)?"
         default: "false"
@@ -88,8 +88,12 @@ jobs:
         if: steps.guard.outputs.should_run == 'true'
         run: |
           mkdir -p data/failsafes
-          PUBLISH_FLAG="--publish"
-          DRY_RUN_FLAG="--no-dry-run"
+          # Shadow-mode default: scheduled runs save picks to the DB but
+          # never invoke publishers. Results settler still settles picks
+          # normally. To go public, trigger the workflow manually with
+          # publish=true.
+          PUBLISH_FLAG="--no-publish"
+          DRY_RUN_FLAG="--dry-run"
           LEAGUES=""
           # Manual dispatches always --force so a cached SQLite DB from a
           # prior run doesn't silently short-circuit on the slate-already-
@@ -97,8 +101,10 @@ jobs:
           # OFF so double-posting is prevented.
           FORCE_FLAG=""
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            [ "${{ inputs.publish }}" = "true" ] || PUBLISH_FLAG="--no-publish"
-            [ "${{ inputs.dry_run }}" = "false" ] || DRY_RUN_FLAG="--dry-run"
+            # Shadow-mode defaults above. Upgrade to live publishing only
+            # when the dispatcher explicitly asks for it.
+            [ "${{ inputs.publish }}" = "true" ] && PUBLISH_FLAG="--publish"
+            [ "${{ inputs.dry_run }}" = "false" ] && DRY_RUN_FLAG="--no-dry-run"
             LEAGUES="--leagues ${{ inputs.leagues }}"
             FORCE_FLAG="--force"
           fi
