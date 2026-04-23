@@ -54,6 +54,14 @@ def _evaluate_market(game: GameInfo, market: MarketInfo, public_mode: bool) -> O
     inputs = meta.get("inputs")
     if inputs is None:
         return None
+    # Local copy so we can enrich without mutating the upstream meta dict
+    # and so the downstream math sees market.line / game_id without the
+    # composer needing to duplicate them into inputs itself.
+    inputs = dict(inputs)
+    if market.line is not None and "line" not in inputs:
+        inputs["line"] = market.line
+    if game.game_id and "game_id" not in inputs:
+        inputs["game_id"] = game.game_id
     universal = meta.get("universal_features", {})
 
     # Phase 31: forward read_context (and any pitcher / weather / umpire

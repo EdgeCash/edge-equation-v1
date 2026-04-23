@@ -88,11 +88,13 @@ class ProbabilityCalculator:
                 inputs.get("home_adv", 0.115),
             )
             _, _, baseline = ProbabilityCalculator._get_weights_and_baseline(sport)
-            line_val = Decimal(str(inputs.get("line", 0.0)))
-            # Conservative: a full half-baseline of points ~= one side of the
-            # scoring distribution; line is expressed from the home side
-            # (negative = home favored).
-            line_adj = -line_val / (baseline * Decimal('0.5'))
+            raw_line = inputs.get("line")
+            line_val = Decimal(str(raw_line)) if raw_line is not None else Decimal('0')
+            # Line is expressed from the home side (negative = home favored).
+            # Covering a negative line is HARDER than winning outright, so a
+            # negative line must REDUCE home_prob: adjustment carries the
+            # same sign as the line itself.
+            line_adj = line_val / (baseline * Decimal('0.5'))
             clamped_univ = DeterministicStats.clamp_universal_prob(raw_univ)
             fair_prob = base_prob + line_adj + clamped_univ * ml_weight
             if fair_prob < Decimal('0.01'):
