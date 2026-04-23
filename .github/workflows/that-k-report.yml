@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "projections | results | supporting | spotlight"
+        description: "projections | results | supporting | spotlight | post"
         default: "projections"
       source:
         description: "sample (dry-run) | json (requires data/ files)"
@@ -40,6 +40,12 @@ on:
       target_account:
         description: "k_guy (@ThatK_Guy) or main (@EdgeEquation)"
         default: "k_guy"
+      post_text:
+        description: "Tweet body for mode=post (ignored unless mode=post). Empty = use canned --test message."
+        default: ""
+      live:
+        description: "mode=post only: 'true' actually fires the X API call. Default DRY-RUN."
+        default: "false"
 
 jobs:
   projections:
@@ -288,3 +294,49 @@ jobs:
         with:
           name: thatk-results-${{ steps.date.outputs.run_date }}
           path: data/thatk_results.txt
+
+  post:
+    # Dispatch-only single-tweet poster. Hard-gated to k_guy in the
+    # CLI; this job further locks `target_account` to k_guy at the
+    # workflow boundary so the operator can't accidentally route to
+    # the main @EdgeEquation X identity. Default behavior is DRY-RUN
+    # -- the operator must set the `live` input to "true" AND have
+    # the four *_KGUY secrets configured for an actual API call.
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.mode == 'post'
+    runs-on: ubuntu-latest
+    env:
+      X_API_KEY_KGUY:              ${{ secrets.X_API_KEY_KGUY }}
+      X_API_SECRET_KGUY:           ${{ secrets.X_API_SECRET_KGUY }}
+      X_ACCESS_TOKEN_KGUY:         ${{ secrets.X_ACCESS_TOKEN_KGUY }}
+      X_ACCESS_TOKEN_SECRET_KGUY:  ${{ secrets.X_ACCESS_TOKEN_SECRET_KGUY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Send tweet
+        shell: bash
+        run: |
+          LIVE_FLAG=""
+          if [ "${{ github.event.inputs.live }}" = "true" ]; then
+            LIVE_FLAG="--live"
+            echo "::warning::mode=post LIVE -- this will publish to @ThatK_Guy."
+          else
+            echo "::notice::mode=post DRY-RUN -- nothing will hit X. Set 'live: true' on dispatch to fire."
+          fi
+          # Empty post_text -> use the canned --test message so a
+          # one-click dispatch always has SOMETHING safe to send.
+          if [ -z "${{ github.event.inputs.post_text }}" ]; then
+            python -m edge_equation.that_k post \
+              --target-account k_guy --test $LIVE_FLAG
+          else
+            python -m edge_equation.that_k post \
+              --target-account k_guy \
+              --text "${{ github.event.inputs.post_text }}" \
+              $LIVE_FLAG
+          fi
