@@ -60,12 +60,23 @@ jobs:
             echo "should_run=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           python - <<'PY' >> "$GITHUB_OUTPUT"
-          from datetime import datetime
+          # GitHub cron is regularly delayed; accept any fire within a
+          # 4-hour window after the expected UTC fire time. Idempotency
+          # prevents double-processing if both DST twins sneak through.
+          from datetime import datetime, timezone
           from zoneinfo import ZoneInfo
-          expected = 23
-          now = datetime.now(ZoneInfo("America/Chicago"))
-          print(f"should_run={'true' if now.hour == expected else 'false'}")
-          print(f"ct_hour={now.hour}")
+          expected_ct = 23
+          delay_tolerance = 4
+          now_ct = datetime.now(ZoneInfo("America/Chicago"))
+          dst_active = bool(now_ct.dst())
+          expected_utc = (expected_ct + (5 if dst_active else 6)) % 24
+          now_utc = datetime.now(timezone.utc)
+          hours_since = (now_utc.hour - expected_utc) % 24
+          should_run = hours_since <= delay_tolerance
+          print(f"should_run={'true' if should_run else 'false'}")
+          print(f"ct_hour={now_ct.hour} utc_hour={now_utc.hour} "
+                f"expected_utc={expected_utc} hours_since={hours_since} "
+                f"dst_active={dst_active}")
           PY
 
       - name: Install package
