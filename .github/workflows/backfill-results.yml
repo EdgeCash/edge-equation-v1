@@ -26,6 +26,7 @@ jobs:
     env:
       EDGE_EQUATION_DB: ${{ secrets.EDGE_EQUATION_DB || 'edge_equation.db' }}
       TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+      THESPORTSDB_API_KEY: ${{ secrets.THESPORTSDB_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
