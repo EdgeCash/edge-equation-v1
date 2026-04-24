@@ -31,8 +31,19 @@ Final blend in log-strength space, weighted by SPORT_CONFIG["strength_blend"]:
 
 Missing components (no Elo, no pitching inputs, zero games) get weight 0;
 remaining weights renormalize to 1 so the result is always well-defined.
-The final strength is clamped to [0.1, 10.0] so downstream Bradley-Terry
-probabilities stay in a sane range (roughly [0.01, 0.99] at equal odds).
+The final strength is clamped to [0.6, 1.6] so downstream
+Bradley-Terry probabilities stay in a realistic range. The old
+[0.1, 10.0] window was a legacy from early development; in
+practice real-world Bradley-Terry team strengths span roughly
+[0.6, 1.6] (odds-form equivalent of win rates 0.375 to 0.615).
+Anything wider is a thin-data artifact that inflates projected
+edge vs. the market -- the exact over-confidence pathology the
+Apr 24 Premium Daily exposed (strength values at 10.0, 5.3,
+0.14, Kelly suggesting 25% of bankroll on every other pick).
+The tighter clamp caps a home favorite's projected win
+probability at ~65% vs. a league-average opponent, which is the
+right ceiling while we're still calibrating against real
+settled-game history.
 
 Phase 31: when EVERY component is unavailable (cold start, no settled
 games for either side) we no longer return the literal 1.0 -- two teams
@@ -57,8 +68,8 @@ from edge_equation.stats.elo import EloRatings, STARTING_RATING
 from edge_equation.stats.results import GameResult
 
 
-STRENGTH_FLOOR = Decimal('0.10')
-STRENGTH_CEIL = Decimal('10.00')
+STRENGTH_FLOOR = Decimal('0.60')
+STRENGTH_CEIL = Decimal('1.60')
 NEUTRAL_STRENGTH = Decimal('1.000000')
 
 # Phase 31: cap on the cold-start seed perturbation. ~+/-3% multiplicative
