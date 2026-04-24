@@ -645,6 +645,20 @@ def _cmd_diag(args: argparse.Namespace) -> int:
             "FROM slates s ORDER BY s.generated_at DESC LIMIT 5"
         )
 
+        # Historical game results -- the source the engine's Pythagorean
+        # / form / Elo ratings are built from. If this table is sparse
+        # or empty, every team's Bradley-Terry strength collapses toward
+        # ~1.0 and the engine finds phantom edges vs the market.
+        game_results_total = scalar("SELECT COUNT(*) FROM game_results")
+        game_results_by_league = rows(
+            "SELECT league, COUNT(*) AS n, "
+            "  MIN(start_time) AS earliest, MAX(start_time) AS latest "
+            "FROM game_results GROUP BY league ORDER BY n DESC"
+        )
+        game_results_finaled = scalar(
+            "SELECT COUNT(*) FROM game_results WHERE status = 'final'"
+        )
+
         summary = {
             "slates": {
                 "total": slates_total,
@@ -664,6 +678,11 @@ def _cmd_diag(args: argparse.Namespace) -> int:
                 "rows_in_realizations_table": realizations_total,
                 "picks_with_csv_realization": picks_with_csv_realization,
                 "picks_with_final_game_result": picks_with_final_game,
+            },
+            "game_results": {
+                "total": game_results_total,
+                "finalized": game_results_finaled,
+                "by_league": game_results_by_league,
             },
             "recent_slates": recent_slates,
         }

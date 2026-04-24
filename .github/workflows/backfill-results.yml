@@ -1,0 +1,63 @@
+name: Backfill Historical Results
+
+# One-off seed: pull N days of finished-game scores from TheSportsDB
+# into the game_results table. Fixes the engine's cold-start problem
+# (every team defaulting to Bradley-Terry strength ~1.0 because no
+# settled history exists). The ongoing 2 AM CT results-settler cron
+# will keep it current after this backfill lands.
+#
+# Manual-only. Never scheduled. Uses the free TheSportsDB key that
+# the ingestor already has hardcoded -- no new secret required.
+#
+# Typical usage:
+#   Actions -> Backfill Historical Results -> Run workflow ->
+#     days: 90 -> Run workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Days of history to pull (default 90; covers roughly a full US-majors season window)."
+        default: "90"
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    env:
+      EDGE_EQUATION_DB: ${{ secrets.EDGE_EQUATION_DB || 'edge_equation.db' }}
+      TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Restore SQLite from cache
+        # Read-write: the backfill writes to game_results. The cache
+        # save step below persists the updated DB so subsequent
+        # cadence runs see the seeded history.
+        uses: actions/cache/restore@v4
+        with:
+          path: edge_equation.db
+          key: edge-equation-db-${{ github.ref_name }}-read-${{ github.run_id }}
+          restore-keys: |
+            edge-equation-db-${{ github.ref_name }}-
+            edge-equation-db-
+
+      - name: Backfill historical game results
+        run: |
+          python -m edge_equation backfill-results --days ${{ inputs.days }}
+
+      - name: Save updated DB to cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: edge_equation.db
+          key: edge-equation-db-${{ github.ref_name }}-backfill-${{ github.run_id }}
