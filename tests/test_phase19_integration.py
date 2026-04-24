@@ -122,7 +122,12 @@ def test_full_slate_runner_flow_end_to_end():
 
 
 def test_pitching_inputs_affect_strength_for_mlb():
-    games = [_g(f"G{i}", "A", "B", 5, 4) for i in range(15)]
+    # Mid-range record (10-5) so the team's blended strength doesn't
+    # already saturate at the ceiling -- with a perfect 15-0 record
+    # both great-pitching and awful-pitching variants would clamp to
+    # STRENGTH_CEIL and the pitching differential would be invisible.
+    games = [_g(f"W{i}", "A", "B", 5, 3) for i in range(10)]
+    games += [_g(f"L{i}", "A", "B", 2, 4) for i in range(5)]
     elo = EloCalculator.replay("MLB", games)
 
     # Team A with elite pitching

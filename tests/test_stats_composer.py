@@ -80,13 +80,20 @@ def test_compose_supplied_elo_is_used():
     # Phase 19: strength now blends Pythagorean + form + Elo + pitching.
     # With empty results, Pythagorean/form are unavailable and the Elo
     # component carries the full weight -> strength == rating_to_strength.
+    #
+    # Rating 1600 maps to exp((1600-1500)/400) = exp(0.25) ~= 1.284
+    # which sits cleanly inside the [0.60, 1.60] strength clamp. The
+    # prior fixture used 1700 (-> exp(0.5) ~= 1.649) which now gets
+    # clamped to 1.60 -- that behavior is separately exercised in
+    # test_build_strength_clamped_to_ceiling. This test verifies the
+    # unclamped Elo -> strength conversion in its normal range.
     elo = EloRatings(
         league="KBO",
-        ratings={"A": Decimal('1700'), "B": Decimal('1500')},
+        ratings={"A": Decimal('1600'), "B": Decimal('1500')},
         games_seen={"A": 10, "B": 10},
     )
     features = FeatureComposer.compose("A", "B", "KBO", [], elo=elo)
-    assert abs(features.ml_inputs["strength_home"] - math.exp(0.5)) < 1e-4
+    assert abs(features.ml_inputs["strength_home"] - math.exp(0.25)) < 1e-4
     # Away team at starting Elo -> strength 1.0.
     assert abs(features.ml_inputs["strength_away"] - 1.0) < 1e-4
 

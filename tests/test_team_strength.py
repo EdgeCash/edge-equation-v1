@@ -359,6 +359,26 @@ def test_build_strength_clamped_to_floor():
     assert ts.strength >= STRENGTH_FLOOR
 
 
+def test_strength_clamp_bounds_are_narrow_enough_to_tame_thin_data():
+    """Regression guard: the clamp range was [0.10, 10.00] in early
+    development, which let thin-sample strengths inflate to 10x the
+    league average and produced phantom 25-28% edges on the Apr 24
+    Premium Daily email. Narrowing to [0.60, 1.60] caps a home
+    favorite's projected ML probability at roughly 65% vs a
+    league-average opponent -- realistic, and cheap insurance against
+    cold-start over-confidence. If these bounds widen again the
+    over-confidence pathology will return, so pin the exact values
+    here rather than just checking that clamping happens."""
+    assert STRENGTH_FLOOR == Decimal('0.60'), (
+        "STRENGTH_FLOOR should be 0.60; widening below this lets "
+        "thin-sample weak-team strengths create phantom edges."
+    )
+    assert STRENGTH_CEIL == Decimal('1.60'), (
+        "STRENGTH_CEIL should be 1.60; widening above this lets "
+        "thin-sample strong-team strengths create phantom edges."
+    )
+
+
 def test_build_deterministic():
     games = [_g(f"G{i}", "A", "B", 7, 3) for i in range(12)]
     elo = EloCalculator.replay("MLB", games)
