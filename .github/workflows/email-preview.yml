@@ -23,8 +23,8 @@ on:
         description: "Overseas leagues (KBO/NPB/EPL/UCL)"
         default: "KBO,NPB"
       prefer_mock:
-        description: "Use mock ingestion sources (skip the odds API even if a key is set)"
-        default: "true"
+        description: "Use mock ingestion sources instead of the live odds cache. DEFAULT OFF -- flip to true only for pipeline-only smoke tests."
+        default: "false"
 
 jobs:
   email:
