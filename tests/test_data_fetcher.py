@@ -163,6 +163,43 @@ def test_sportsdb_team_by_id(conn):
     assert team["strTeam"] == "New York Yankees"
 
 
+# ---------------------------------------------- API key precedence
+
+
+def test_sportsdb_api_key_explicit_arg_wins(monkeypatch):
+    """Explicit api_key= must take precedence over env var and free
+    fallback so injected test keys behave deterministically."""
+    monkeypatch.setenv("THESPORTSDB_API_KEY", "from-env")
+    sdb = TheSportsDBClient(api_key="explicit-arg")
+    try:
+        assert sdb._api_key == "explicit-arg"
+    finally:
+        sdb.close()
+
+
+def test_sportsdb_api_key_falls_back_to_env_var(monkeypatch):
+    """When no explicit key is passed, the env var (the production
+    path -- THESPORTSDB_API_KEY secret -> workflow env) is used."""
+    monkeypatch.setenv("THESPORTSDB_API_KEY", "574774")
+    sdb = TheSportsDBClient()
+    try:
+        assert sdb._api_key == "574774"
+    finally:
+        sdb.close()
+
+
+def test_sportsdb_api_key_falls_back_to_free_when_unset(monkeypatch):
+    """When neither an explicit key nor the env var is set, fall back
+    to the documented free key '3' rather than crashing. The engine
+    keeps running on thin data instead of failing hard."""
+    monkeypatch.delenv("THESPORTSDB_API_KEY", raising=False)
+    sdb = TheSportsDBClient()
+    try:
+        assert sdb._api_key == "3"
+    finally:
+        sdb.close()
+
+
 # ---------------------------------------------- Scraper skeletons
 
 

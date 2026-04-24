@@ -176,18 +176,29 @@ def _with_retries(
 
 class TheSportsDBClient:
     """
-    Minimal TheSportsDB wrapper. Free tier, no auth; key "3" is the
-    documented public key. Calls are cached via OddsCache under distinct
-    prefixes so they don't collide with The Odds API entries.
+    Minimal TheSportsDB wrapper. The constructor resolves the API key
+    in this precedence order:
+        1. Explicit `api_key` argument (used by tests for dependency
+           injection).
+        2. THESPORTSDB_API_KEY environment variable -- production path
+           where the operator's paid Patreon key is provisioned via the
+           workflow secret of the same name.
+        3. THESPORTSDB_FREE_KEY ("3") -- the documented public key, used
+           as a last-resort fallback so a missing env var never crashes
+           the engine, just thins the data.
+    Calls are cached via OddsCache under distinct prefixes so they
+    don't collide with The Odds API entries.
     """
 
     def __init__(
         self,
         http_client: Optional[httpx.Client] = None,
-        api_key: str = THESPORTSDB_FREE_KEY,
+        api_key: Optional[str] = None,
         base_url: str = THESPORTSDB_BASE,
         throttle: Optional[_Throttle] = None,
     ):
+        if api_key is None:
+            api_key = os.getenv("THESPORTSDB_API_KEY") or THESPORTSDB_FREE_KEY
         self._api_key = api_key
         self._base = base_url.rstrip("/")
         self._owns_client = http_client is None
