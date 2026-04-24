@@ -71,8 +71,13 @@ def test_workflow_has_ct_hour_guard(filename, hour_ct, subcommand):
     assert 'ZoneInfo("America/Chicago")' in text, (
         f"{filename} missing zoneinfo CT-hour guard"
     )
-    assert f"expected = {hour_ct}" in text, (
+    assert f"expected_ct = {hour_ct}" in text, (
         f"{filename} must guard on CT hour {hour_ct}"
+    )
+    # The guard must tolerate GitHub cron delay (observed 2-9h in
+    # practice) instead of requiring an exact hour match.
+    assert "delay_tolerance" in text, (
+        f"{filename} must define delay_tolerance for the CT-hour guard"
     )
     assert "should_run" in text, f"{filename} must emit should_run output"
 

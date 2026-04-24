@@ -179,8 +179,11 @@ def test_refresher_workflow_runs_at_7am_and_3pm_ct():
     # 15:00 CT -> UTC 20 (CDT) / UTC 21 (CST).
     assert 'cron: "0 20 * * *"' in text
     assert 'cron: "0 21 * * *"' in text
-    # CT-hour guard picks exactly one slot per day.
-    assert "now.hour in (7, 15)" in text
+    # CT-hour guard anchors on 7 AM and 3 PM CT, with delay tolerance
+    # to survive GitHub cron slippage. The refresher overwrites cache
+    # entries, so a duplicate fire is harmless.
+    assert "expected_cts = (7, 15)" in text
+    assert "delay_tolerance" in text
 
 
 def test_refresher_workflow_never_passes_cached_only():

@@ -673,6 +673,244 @@ def _cmd_diag(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_picks_csv(args: argparse.Namespace) -> int:
+    """Dump picks for a given date to a CSV for operator QC.
+
+    One row per pick, sorted by grade tier (A+ > A > A- > B > C > D > F)
+    then by edge descending within the tier. Columns are the same
+    whether the pick has been settled yet or not -- the settlement
+    columns (Result, Final Score, Units +/-) are blank for pending
+    games and filled in after the nightly results-settler has run.
+
+    Scope: picks whose slate.generated_at falls on --date (UTC). If
+    --date is omitted, today's UTC date is used.
+    """
+    import csv as _csv
+    import os as _os
+    import sys as _sys
+    import math as _math
+    from datetime import datetime, timezone
+
+    # ---- date window ----------------------------------------------------
+    target_date = args.date or datetime.now(timezone.utc).date().isoformat()
+
+    # ---- output destination --------------------------------------------
+    out_path = args.out or f"picks_{target_date}.csv"
+
+    # ---- grade ordering -------------------------------------------------
+    _GRADE_RANK = {"A+": 0, "A": 1, "A-": 2, "B": 3, "C": 4, "D": 5, "F": 6}
+
+    def _grade_rank(grade):
+        return _GRADE_RANK.get(grade or "", 99)
+
+    # ---- helpers --------------------------------------------------------
+    def _implied_prob(american_odds):
+        """American odds -> implied probability as Decimal."""
+        from decimal import Decimal
+        if american_odds is None:
+            return None
+        odds = int(american_odds)
+        if odds > 0:
+            return Decimal(100) / Decimal(odds + 100)
+        return Decimal(-odds) / Decimal(-odds + 100)
+
+    def _units_pl(grade_row, odds, result):
+        """Flat 1-unit P&L given American odds and a result.
+
+        Win at -150 returns +0.67u, at +180 returns +1.80u.
+        Loss is -1.00u. Push / pending is 0.00u.
+        """
+        if result not in ("W", "L"):
+            return "0.00"
+        if odds is None:
+            return ""
+        o = int(odds)
+        if result == "W":
+            if o > 0:
+                return f"{o / 100:+.2f}"
+            return f"{100 / -o:+.2f}"
+        return "-1.00"
+
+    def _format_projection(market_type, fair_prob, expected_value):
+        """Single-column projection with market-appropriate units."""
+        if fair_prob is not None:
+            return f"{float(fair_prob) * 100:.1f}%"
+        if expected_value is None:
+            return ""
+        # Rate / total markets -- include a unit label for readability.
+        suffix_by_market = {
+            "Total": " runs/pts",
+            "Game_Total": " runs/pts",
+            "K": " K",
+            "HR": " HR",
+            "Passing_Yards": " yd",
+            "Rushing_Yards": " yd",
+            "Receiving_Yards": " yd",
+            "Points": " pts",
+            "Rebounds": " reb",
+            "Assists": " ast",
+            "SOG": " SOG",
+        }
+        suffix = suffix_by_market.get(market_type, "")
+        return f"{float(expected_value):.2f}{suffix}"
+
+    def _mc_band(metadata):
+        """Extract MC band as P10-P90 string if present in metadata."""
+        mc = (metadata or {}).get("mc_stability") or {}
+        p10 = mc.get("p10")
+        p90 = mc.get("p90")
+        if p10 is None or p90 is None:
+            return ""
+        try:
+            return f"{float(p10):.2f}-{float(p90):.2f}"
+        except (TypeError, ValueError):
+            return ""
+
+    def _sanity_rejected(metadata):
+        return "Yes" if (metadata or {}).get("sanity_rejected_reason") else ""
+
+    def _key_factors(metadata):
+        return ((metadata or {}).get("read_notes") or "").strip()
+
+    # ---- query ---------------------------------------------------------
+    conn = _open_db(args.db)
+    try:
+        cur = conn.cursor()
+        rows = cur.execute(
+            """
+            SELECT p.*, s.card_type AS slate_card_type,
+                   s.generated_at AS slate_generated_at
+              FROM picks p
+              LEFT JOIN slates s ON s.slate_id = p.slate_id
+             WHERE date(COALESCE(s.generated_at, p.recorded_at)) = ?
+            """,
+            (target_date,),
+        ).fetchall()
+
+        # Settlement lookups keyed by game_id.
+        game_results = {
+            r["game_id"]: r
+            for r in cur.execute(
+                "SELECT game_id, home_team, away_team, home_score, "
+                "away_score, status FROM game_results"
+            ).fetchall()
+        }
+
+        records = []
+        for row in rows:
+            import json as _json
+            from decimal import Decimal
+            meta = {}
+            if row["metadata_json"]:
+                try:
+                    meta = _json.loads(row["metadata_json"])
+                except (ValueError, TypeError):
+                    meta = {}
+            fair_prob = Decimal(row["fair_prob"]) if row["fair_prob"] else None
+            expected_value = (
+                Decimal(row["expected_value"]) if row["expected_value"] else None
+            )
+            edge = Decimal(row["edge"]) if row["edge"] else None
+            kelly = Decimal(row["kelly"]) if row["kelly"] else None
+            implied = _implied_prob(row["odds"])
+
+            home = meta.get("home_team") or ""
+            away = meta.get("away_team") or ""
+            matchup = (
+                f"{away} @ {home}" if home and away else (row["game_id"] or "")
+            )
+
+            # Settlement status from picks.realization and game_results.
+            gr = game_results.get(row["game_id"])
+            result = ""
+            if gr and gr["status"] == "final":
+                # Use RealizationTracker logic if possible, but just showing
+                # W/L/Push/Pending based on realization value (same mapping
+                # the nightly settler uses).
+                r_val = row["realization"]
+                if r_val is None or r_val == 47:
+                    result = "Pending"
+                elif r_val >= 60:
+                    result = "W"
+                elif r_val <= 30:
+                    result = "L"
+                else:
+                    result = "Push"
+            else:
+                result = "Pending"
+
+            final_score = ""
+            if gr and gr["status"] == "final":
+                final_score = (
+                    f"{gr['home_team']} {gr['home_score']}, "
+                    f"{gr['away_team']} {gr['away_score']}"
+                )
+
+            records.append({
+                "Date": target_date,
+                "Card": row["slate_card_type"] or "",
+                "Sport": row["sport"] or "",
+                "Matchup": matchup,
+                "Market": row["market_type"] or "",
+                "Selection": row["selection"] or "",
+                "Line": "" if row["line_number"] is None else str(row["line_number"]),
+                "Odds": "" if row["odds"] is None else str(row["odds"]),
+                "Engine Projection": _format_projection(
+                    row["market_type"], fair_prob, expected_value,
+                ),
+                "Implied %": "" if implied is None else f"{float(implied) * 100:.1f}%",
+                "Edge %": "" if edge is None else f"{float(edge) * 100:+.2f}%",
+                "Kelly %": "" if kelly is None else f"{float(kelly) * 100:.2f}%",
+                "Grade": row["grade"] or "",
+                "MC Band (P10-P90)": _mc_band(meta),
+                "Sanity Rejected": _sanity_rejected(meta),
+                "Key Factors": _key_factors(meta),
+                "Result": result,
+                "Final Score": final_score,
+                "Units +/-": _units_pl(
+                    row["grade"], row["odds"], result,
+                ),
+                "_grade_rank": _grade_rank(row["grade"]),
+                "_edge_sort": -float(edge) if edge is not None else 0.0,
+            })
+
+        # Sort: grade tier asc (A+ first), then edge desc within tier.
+        records.sort(key=lambda r: (r["_grade_rank"], r["_edge_sort"]))
+        # Strip sort helpers from final output.
+        for r in records:
+            r.pop("_grade_rank", None)
+            r.pop("_edge_sort", None)
+    finally:
+        conn.close()
+
+    if not records:
+        _sys.stderr.write(
+            f"No picks found for date={target_date}. Wrote empty CSV.\n"
+        )
+        # Still emit the header so downstream consumers don't choke.
+        fieldnames = [
+            "Date", "Card", "Sport", "Matchup", "Market", "Selection",
+            "Line", "Odds", "Engine Projection", "Implied %", "Edge %",
+            "Kelly %", "Grade", "MC Band (P10-P90)", "Sanity Rejected",
+            "Key Factors", "Result", "Final Score", "Units +/-",
+        ]
+    else:
+        fieldnames = list(records[0].keys())
+
+    # Ensure parent dir exists if caller asked for a nested path.
+    parent = _os.path.dirname(_os.path.abspath(out_path))
+    if parent:
+        _os.makedirs(parent, exist_ok=True)
+    with open(out_path, "w", newline="", encoding="utf-8") as fh:
+        writer = _csv.DictWriter(fh, fieldnames=fieldnames)
+        writer.writeheader()
+        for r in records:
+            writer.writerow(r)
+
+    print(f"Wrote {len(records)} picks to {out_path}")
+    return 0
+
+
 def _cmd_pipeline(args: argparse.Namespace) -> int:
     # Phase-1 demo pipeline retained for backwards compatibility.
     from edge_equation.engine.modes import PipelineMode
@@ -822,6 +1060,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_diag.add_argument("--db", type=str, default=None)
     p_diag.set_defaults(func=_cmd_diag)
+
+    p_csv = sub.add_parser(
+        "picks-csv",
+        help="Dump picks for a given date to a CSV spreadsheet for "
+             "operator QC. Columns cover projection, grade, edge, "
+             "Kelly, MC band, and (once settled) result + units P&L.",
+    )
+    p_csv.add_argument("--db", type=str, default=None)
+    p_csv.add_argument(
+        "--date", type=str, default=None,
+        help="UTC date in YYYY-MM-DD form. Default: today (UTC).",
+    )
+    p_csv.add_argument(
+        "--out", type=str, default=None,
+        help="Output path. Default: picks_<date>.csv in the working dir.",
+    )
+    p_csv.set_defaults(func=_cmd_picks_csv)
 
     p_pipe = sub.add_parser("pipeline", help="Legacy Phase-1 pipeline demo")
     p_pipe.add_argument("--mode", type=str, default="daily")

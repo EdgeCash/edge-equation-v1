@@ -386,8 +386,11 @@ def test_results_settler_workflow_has_2am_ct_dual_cron():
     # 02:00 CT -> UTC 07 (CDT), UTC 08 (CST).
     assert 'cron: "0 7 * * *"' in text
     assert 'cron: "0 8 * * *"' in text
-    # CT-hour guard pins hour == 2.
-    assert "now.hour == 2" in text
+    # CT-hour guard anchors on 2 AM CT with delay tolerance for
+    # GitHub cron slippage; settler is idempotent so a second fire
+    # is a safe no-op.
+    assert "expected_ct = 2" in text
+    assert "delay_tolerance" in text
 
 
 def test_results_settler_workflow_invokes_auto_settle():

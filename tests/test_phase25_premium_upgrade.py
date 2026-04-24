@@ -235,7 +235,10 @@ def test_premium_workflow_has_10am_ct_dual_cron():
 
 def test_premium_workflow_has_ct_hour_guard_at_ten():
     text = (WORKFLOWS / "premium-daily-preview.yml").read_text(encoding="utf-8")
-    assert "expected = 10" in text
+    assert "expected_ct = 10" in text
+    assert "delay_tolerance" in text, (
+        "Premium Daily guard must tolerate GitHub cron delay"
+    )
     assert 'ZoneInfo("America/Chicago")' in text
 
 

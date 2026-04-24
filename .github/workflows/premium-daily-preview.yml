@@ -53,16 +53,32 @@ jobs:
         run: |
           # Manual dispatches always run; scheduled dual-cron picks the
           # line that matches the current CT hour (10).
+          #
+          # GitHub's scheduled cron is regularly delayed under load (we've
+          # observed 2-9 hours of delay). The guard therefore accepts any
+          # fire within a 4-hour window AFTER the expected UTC fire time
+          # for the current DST state, not just the exact hour. This
+          # tolerates delayed runs while idempotency (slate-already-built
+          # short-circuit) prevents double-processing when both DST twins
+          # sneak through on the same day.
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           python - <<'PY' >> "$GITHUB_OUTPUT"
-          from datetime import datetime
+          from datetime import datetime, timezone
           from zoneinfo import ZoneInfo
-          expected = 10
-          now = datetime.now(ZoneInfo("America/Chicago"))
-          print(f"should_run={'true' if now.hour == expected else 'false'}")
-          print(f"ct_hour={now.hour}")
+          expected_ct = 10
+          delay_tolerance = 4  # hours
+          now_ct = datetime.now(ZoneInfo("America/Chicago"))
+          dst_active = bool(now_ct.dst())
+          expected_utc = (expected_ct + (5 if dst_active else 6)) % 24
+          now_utc = datetime.now(timezone.utc)
+          hours_since = (now_utc.hour - expected_utc) % 24
+          should_run = hours_since <= delay_tolerance
+          print(f"should_run={'true' if should_run else 'false'}")
+          print(f"ct_hour={now_ct.hour} utc_hour={now_utc.hour} "
+                f"expected_utc={expected_utc} hours_since={hours_since} "
+                f"dst_active={dst_active}")
           PY
 
       - name: Install package
@@ -93,12 +109,38 @@ jobs:
           # --cached-only: the 7am data-refresher is the sole live-API
           # consumer, so premium reads from the morning-refreshed cache
           # and never burns its own Odds API credits.
-          # --force: manual / scheduled reruns on the same day rebuild
-          # cleanly instead of short-circuiting on the idempotency guard.
+          # --force is passed ONLY for manual dispatches. Scheduled runs
+          # leave force off so the slate idempotency short-circuits a
+          # second DST-twin firing on the same day -- prevents duplicate
+          # emails when both crons sneak through a delay window.
+          FORCE_FLAG=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            FORCE_FLAG="--force"
+          fi
           python -m edge_equation premium-daily \
             --publish --no-dry-run \
-            --cached-only --force \
+            --cached-only $FORCE_FLAG \
             $MOCK_FLAG
+
+      - name: Generate operator picks CSV
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          # One-row-per-pick spreadsheet covering today's slate. Sort
+          # order: grade A+ on top, then edge descending. Emitted as
+          # a workflow artifact below so the operator can download it
+          # straight from the Actions UI without needing DB access.
+          mkdir -p picks_csv
+          python -m edge_equation picks-csv \
+            --out "picks_csv/picks_$(date -u +%Y-%m-%d).csv"
+
+      - name: Upload picks CSV artifact
+        if: always() && steps.guard.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: picks-csv-${{ github.run_id }}
+          path: picks_csv/
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Upload failsafe files (SMTP errors only)
         if: always() && steps.guard.outputs.should_run == 'true'
