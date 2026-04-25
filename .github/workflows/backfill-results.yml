@@ -1,17 +1,25 @@
 name: Backfill Historical Results
 
-# One-off seed: pull N days of finished-game scores from TheSportsDB
-# into the game_results table. Fixes the engine's cold-start problem
-# (every team defaulting to Bradley-Terry strength ~1.0 because no
-# settled history exists). The ongoing 2 AM CT results-settler cron
-# will keep it current after this backfill lands.
+# One-off seed: pull N days of finished-game scores into the
+# game_results table. Fixes the engine's cold-start problem (every
+# team defaulting to Bradley-Terry strength ~1.0 because no settled
+# history exists). The ongoing 2 AM CT results-settler cron will
+# keep it current after this backfill lands.
 #
-# Manual-only. Never scheduled. Uses the free TheSportsDB key that
-# the ingestor already has hardcoded -- no new secret required.
+# Manual-only. Never scheduled.
+#
+# Source = thesportsdb (default): all 8 leagues via TheSportsDB.
+#   Uses the paid Patreon key from the THESPORTSDB_API_KEY secret
+#   when available; falls back to the documented free key when not.
+#   Coverage is partial even on the paid tier.
+# Source = mlb_stats: MLB only, via MLB's free official Stats API.
+#   No auth required, comprehensive coverage. Use this when
+#   backfilling MLB specifically -- the Stats API returns hundreds
+#   of games where TheSportsDB returns dozens.
 #
 # Typical usage:
 #   Actions -> Backfill Historical Results -> Run workflow ->
-#     days: 90 -> Run workflow
+#     days: 90, source: mlb_stats -> Run workflow
 
 on:
   workflow_dispatch:
@@ -19,6 +27,13 @@ on:
       days:
         description: "Days of history to pull (default 90; covers roughly a full US-majors season window)."
         default: "90"
+      source:
+        description: "Data source. 'thesportsdb' for all leagues; 'mlb_stats' for comprehensive MLB-only coverage via the official MLB Stats API."
+        default: "thesportsdb"
+        type: choice
+        options:
+          - thesportsdb
+          - mlb_stats
 
 jobs:
   backfill:
@@ -54,7 +69,9 @@ jobs:
 
       - name: Backfill historical game results
         run: |
-          python -m edge_equation backfill-results --days ${{ inputs.days }}
+          python -m edge_equation backfill-results \
+            --days ${{ inputs.days }} \
+            --source ${{ inputs.source }}
 
       - name: Save updated DB to cache
         if: always()

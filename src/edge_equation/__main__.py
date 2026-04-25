@@ -332,10 +332,10 @@ def _cmd_refresh_data(args: argparse.Namespace) -> int:
 def _cmd_auto_settle(args: argparse.Namespace) -> int:
     """Nightly results job. Two things happen in lockstep:
 
-      1. Pull completed-game scores from TheSportsDB into
-         GameResultsStore so FeatureComposer has the history it needs
-         to produce strength ratings -- the engine is blind without
-         this, so every A+/A/A- grade depends on it.
+      1. Pull completed-game scores into GameResultsStore so
+         FeatureComposer has the history it needs to produce strength
+         ratings -- the engine is blind without this, so every A+/A/A-
+         grade depends on it.
 
       2. Walk every still-pending pick and settle it against the
          newly-ingested scores (ML, Total, Spread). Populates the
@@ -343,23 +343,42 @@ def _cmd_auto_settle(args: argparse.Namespace) -> int:
 
     --days controls how many days back to scan (default 1: just
     yesterday). --backfill switches to seed mode (default 30 days).
+    --source picks the upstream data source:
+        thesportsdb (default): all 8 leagues via TheSportsDB
+        mlb_stats: MLB only, via MLB's official Stats API (free,
+            comprehensive -- the better source for MLB once we trust it)
     """
     from edge_equation.engine.realization import RealizationTracker
     from edge_equation.stats.results import GameResultsStore
-    from edge_equation.stats.thesportsdb_ingest import (
-        TheSportsDBResultsIngestor,
-    )
+
+    source = getattr(args, "source", None) or "thesportsdb"
+    if source not in ("thesportsdb", "mlb_stats"):
+        print(
+            f"error: --source must be 'thesportsdb' or 'mlb_stats', "
+            f"got {source!r}",
+            file=sys.stderr,
+        )
+        return 2
+
+    if source == "mlb_stats":
+        from edge_equation.stats.mlb_stats_ingest import (
+            MlbStatsResultsIngestor as Ingestor,
+        )
+    else:
+        from edge_equation.stats.thesportsdb_ingest import (
+            TheSportsDBResultsIngestor as Ingestor,
+        )
 
     conn = _open_db(args.db)
     try:
         days = int(args.days)
         backfill = bool(args.backfill)
         if backfill:
-            summary = TheSportsDBResultsIngestor.backfill(conn, days=days)
+            summary = Ingestor.backfill(conn, days=days)
         else:
             from datetime import date as _date, timedelta
             target = _date.today() - timedelta(days=1)
-            summary = TheSportsDBResultsIngestor.ingest_day(conn, day=target)
+            summary = Ingestor.ingest_day(conn, day=target)
 
         settle = RealizationTracker.settle_picks_from_game_results(conn)
         totals_by_league = {}
@@ -370,6 +389,7 @@ def _cmd_auto_settle(args: argparse.Namespace) -> int:
 
     print(json.dumps({
         "mode": "backfill" if backfill else "nightly",
+        "source": source,
         "ingest": summary.to_dict(),
         "settled_picks": settle,
         "game_results_by_league": totals_by_league,
@@ -1048,6 +1068,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_auto.add_argument("--backfill", action="store_true", default=False,
                         help="Seed mode: scan --days days back (default 30 "
                              "when used with backfill-results).")
+    p_auto.add_argument(
+        "--source", type=str, default="thesportsdb",
+        choices=("thesportsdb", "mlb_stats"),
+        help="Data source for game scores. 'thesportsdb' (default) "
+             "covers all 8 leagues but with thin coverage even on the "
+             "paid tier. 'mlb_stats' uses MLB's free official Stats "
+             "API for comprehensive MLB-only coverage; use it when "
+             "backfilling MLB specifically.",
+    )
     p_auto.set_defaults(func=_cmd_auto_settle)
 
     p_backfill = sub.add_parser(
@@ -1056,6 +1085,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_backfill.add_argument("--db", type=str, default=None)
     p_backfill.add_argument("--days", type=int, default=30)
+    p_backfill.add_argument(
+        "--source", type=str, default="thesportsdb",
+        choices=("thesportsdb", "mlb_stats"),
+        help="Data source for game scores. See `auto-settle --help`.",
+    )
     p_backfill.set_defaults(func=_cmd_backfill_results)
 
     p_settle = sub.add_parser("settle", help="Record outcomes and settle picks")
