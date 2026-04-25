@@ -1095,7 +1095,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_backfill.add_argument("--days", type=int, default=30)
     p_backfill.add_argument(
         "--source", type=str, default="thesportsdb",
-        choices=("thesportsdb", "mlb_stats", "nhle"),
+        choices=("thesportsdb", "mlb_stats", "nhle", "nba_stats"),
         help="Data source for game scores. See `auto-settle --help`.",
     )
     p_backfill.set_defaults(func=_cmd_backfill_results)
