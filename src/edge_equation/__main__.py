@@ -350,17 +350,16 @@ def _cmd_auto_settle(args: argparse.Namespace) -> int:
     """
     from edge_equation.engine.realization import RealizationTracker
     from edge_equation.stats.results import GameResultsStore
+          source = getattr(args, "source", None) or "thesportsdb"
+    if source not in ("thesportsdb", "mlb_stats", "nhle", "nba_stats"):
+        print(
+            f"error: --source must be 'thesportsdb', 'mlb_stats', 'nhle', or "
+            f"'nba_stats', got {source!r}",
+            file=sys.stderr,
+        )
+        return 2
 
- source = getattr(args, "source", None) or "thesportsdb"
- if source not in ("thesportsdb", "mlb_stats", "nhle", "nba_stats"):
-    print(
-        f"error: --source must be 'thesportsdb', 'mlb_stats', 'nhle', or "
-        f"'nba_stats', got {source!r}",
-        file=sys.stderr,
-    )
-    return 2
-
-        if source == "mlb_stats":
+    if source == "mlb_stats":
         from edge_equation.stats.mlb_stats_ingest import (
             MlbStatsResultsIngestor as Ingestor,
         )
