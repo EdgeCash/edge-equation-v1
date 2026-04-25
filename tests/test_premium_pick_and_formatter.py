@@ -19,7 +19,12 @@ def _make_ml_pick():
         universal_features={"home_edge": 0.085},
         game_id="MLB-2026-04-20-DET-BOS",
         selection="BOS",
-        metadata={"home_team": "BOS", "away_team": "DET"},
+        metadata={
+            "home_team": "BOS", "away_team": "DET",
+            # Bypass the confidence penalty -- this test exercises the
+            # premium formatter, not the sample-size guardrail.
+            "read_context": {"games_used_home": 50, "games_used_away": 50},
+        },
     )
     return BettingEngine.evaluate(bundle, Line(odds=-132))
 

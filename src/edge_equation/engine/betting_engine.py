@@ -41,6 +41,18 @@ EXPECTATION_MARKETS = {
 # publish a "+48% on +2200" absurdity.
 _MAX_REASONABLE_EDGE = Decimal("0.30")
 
+# Confidence penalty: Bradley-Terry team strengths are derived from
+# settled-game history. Below a meaningful sample on either team, the
+# strength estimate is noise and any "edge" the engine claims is a
+# cold-start artifact rather than a real signal. We cap the grade at
+# C in that regime so picks earn confidence with data instead of
+# getting it by default. Applies only to PROB_MARKETS where strength
+# drives fair_prob (ML, Spread, Run_Line, Puck_Line) -- not BTTS
+# (Poisson lambdas), NRFI/YRFI (first-inning lambdas), totals, or
+# rate-prop markets, which derive from different inputs.
+_MIN_CONFIDENT_GAMES_USED = 20
+_STRENGTH_DRIVEN_MARKETS = {"ML", "Spread", "Run_Line", "Puck_Line"}
+
 
 def _resolve_selection_side(
     market_type: str,
@@ -346,6 +358,7 @@ class BettingEngine:
         grade = "C"
         realization = 47
         sanity_reason: Optional[str] = None
+        confidence_capped_reason: Optional[str] = None
 
         if market in PROB_MARKETS:
             fair_prob = fv.get("fair_prob")
@@ -445,6 +458,28 @@ class BettingEngine:
                 grade = ConfidenceScorer.grade(edge)
                 realization = ConfidenceScorer.realization_for_grade(grade)
 
+            # Confidence penalty: strength-driven markets need real
+            # settled-game samples to be trustworthy. Cap grade at C
+            # below the threshold and zero out Kelly so a thin-data
+            # pick can never size up. Audit trail flows through
+            # metadata so an operator can tell which picks were
+            # demoted vs which were graded purely on edge.
+            if market in _STRENGTH_DRIVEN_MARKETS:
+                rc = (bundle.metadata or {}).get("read_context") or {}
+                gh = rc.get("games_used_home", 0) or 0
+                ga = rc.get("games_used_away", 0) or 0
+                min_used = min(gh, ga)
+                if min_used < _MIN_CONFIDENT_GAMES_USED:
+                    confidence_capped_reason = (
+                        f"games_used min={min_used} below "
+                        f"threshold={_MIN_CONFIDENT_GAMES_USED} "
+                        f"(home={gh}, away={ga})"
+                    )
+                    if grade not in ("C", "D", "F"):
+                        grade = "C"
+                        realization = ConfidenceScorer.realization_for_grade(grade)
+                        kelly = Decimal("0")
+
         elif market in EXPECTATION_MARKETS:
             if "expected_total" in fv:
                 expected_value = fv["expected_total"]
@@ -539,6 +574,8 @@ class BettingEngine:
             meta["read_notes"] = existing_read
         if sanity_reason:
             meta["sanity_rejected_reason"] = sanity_reason
+        if confidence_capped_reason:
+            meta["confidence_capped_reason"] = confidence_capped_reason
         # Phase 30: stash MC stability into metadata so auditors (and
         # the MVS detector on the far side of this call) can see the
         # exact distribution numbers that gated this pick.
