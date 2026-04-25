@@ -36,6 +36,7 @@ on:
           - thesportsdb
           - mlb_stats
           - nhle
+          - nba_stats
 
 jobs:
   backfill:
