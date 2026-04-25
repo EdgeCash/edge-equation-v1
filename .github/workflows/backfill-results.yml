@@ -13,13 +13,14 @@ name: Backfill Historical Results
 #   when available; falls back to the documented free key when not.
 #   Coverage is partial even on the paid tier.
 # Source = mlb_stats: MLB only, via MLB's free official Stats API.
-#   No auth required, comprehensive coverage. Use this when
-#   backfilling MLB specifically -- the Stats API returns hundreds
-#   of games where TheSportsDB returns dozens.
+#   No auth required, comprehensive coverage.
+# Source = nhle: NHL only, via NHL's free official API. No auth
+#   required, comprehensive coverage.
 #
 # Typical usage:
 #   Actions -> Backfill Historical Results -> Run workflow ->
 #     days: 90, source: mlb_stats -> Run workflow
+#   (repeat with source: nhle for NHL coverage)
 
 on:
   workflow_dispatch:
@@ -28,12 +29,13 @@ on:
         description: "Days of history to pull (default 90; covers roughly a full US-majors season window)."
         default: "90"
       source:
-        description: "Data source. 'thesportsdb' for all leagues; 'mlb_stats' for comprehensive MLB-only coverage via the official MLB Stats API."
+        description: "Data source. 'thesportsdb' for all leagues; 'mlb_stats' for MLB (official MLB Stats API); 'nhle' for NHL (official NHL API)."
         default: "thesportsdb"
         type: choice
         options:
           - thesportsdb
           - mlb_stats
+          - nhle
 
 jobs:
   backfill:
