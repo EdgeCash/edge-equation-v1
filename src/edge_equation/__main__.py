@@ -351,22 +351,26 @@ def _cmd_auto_settle(args: argparse.Namespace) -> int:
     from edge_equation.engine.realization import RealizationTracker
     from edge_equation.stats.results import GameResultsStore
 
-    source = getattr(args, "source", None) or "thesportsdb"
-    if source not in ("thesportsdb", "mlb_stats", "nhle"):
-        print(
-            f"error: --source must be 'thesportsdb', 'mlb_stats', or "
-            f"'nhle', got {source!r}",
-            file=sys.stderr,
-        )
-        return 2
+ source = getattr(args, "source", None) or "thesportsdb"
+ if source not in ("thesportsdb", "mlb_stats", "nhle", "nba_stats"):
+    print(
+        f"error: --source must be 'thesportsdb', 'mlb_stats', 'nhle', or "
+        f"'nba_stats', got {source!r}",
+        file=sys.stderr,
+    )
+    return 2
 
-    if source == "mlb_stats":
+        if source == "mlb_stats":
         from edge_equation.stats.mlb_stats_ingest import (
             MlbStatsResultsIngestor as Ingestor,
         )
     elif source == "nhle":
         from edge_equation.stats.nhle_ingest import (
             NhleResultsIngestor as Ingestor,
+        )
+    elif source == "nba_stats":
+        from edge_equation.stats.nba_stats_ingest import (
+            NbaStatsResultsIngestor as Ingestor,
         )
     else:
         from edge_equation.stats.thesportsdb_ingest import (
@@ -1074,13 +1078,12 @@ def build_parser() -> argparse.ArgumentParser:
                              "when used with backfill-results).")
     p_auto.add_argument(
         "--source", type=str, default="thesportsdb",
-        choices=("thesportsdb", "mlb_stats", "nhle"),
-        help="Data source for game scores. 'thesportsdb' (default) "
-             "covers all 8 leagues but with thin coverage even on the "
-             "paid tier. 'mlb_stats' uses MLB's free official Stats "
-             "API for comprehensive MLB-only coverage. 'nhle' uses "
-             "NHL's free official API for comprehensive NHL-only "
-             "coverage.",
+        choices=("thesportsdb", "mlb_stats", "nhle", "nba_stats"),
+                help="Data source for game scores. 'thesportsdb' (default) "
+             "covers all 8 leagues but with thin coverage. "
+             "'mlb_stats' = MLB free official API. "
+             "'nhle' = NHL free official API. "
+             "'nba_stats' = NBA free official Stats API.",
     )
     p_auto.set_defaults(func=_cmd_auto_settle)
 
