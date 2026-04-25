@@ -68,6 +68,14 @@ def test_run_slate_sport_filter_excludes_others():
 
 
 def test_run_slate_formula_truth_mlb_ml_first_game():
+    """Math layer truth check. The mock MlbLikeSource doesn't populate
+    read_context.games_used_home/away on its market metadata, so the
+    BettingEngine confidence penalty fires and caps grade at C / zeros
+    Kelly. fair_prob and edge still come straight from
+    ProbabilityCalculator; that's what this test verifies. The penalty
+    behavior itself is exercised separately in
+    test_betting_engine.test_engine_confidence_penalty_*.
+    """
     slate = _build_slate(MlbLikeSource("MLB"))
     picks = run_slate(slate, "MLB")
     ml_picks = [p for p in picks if p.market_type == "ML"]
@@ -78,17 +86,14 @@ def test_run_slate_formula_truth_mlb_ml_first_game():
     fv = ProbabilityCalculator.calculate_fair_value("ML", "MLB", inputs, universal)
     expected_fair_prob = fv["fair_prob"]
     expected_edge = EVCalculator.calculate_edge(expected_fair_prob, -132)
-    dec_odds = EVCalculator.american_to_decimal(-132)
-    expected_kelly_full = EVCalculator.kelly_fraction(expected_edge, dec_odds)
-    expected_kelly_half = (expected_kelly_full / Decimal('2')).quantize(Decimal('0.0001'))
-    expected_grade = ConfidenceScorer.grade(expected_edge)
     assert first_ml.fair_prob == expected_fair_prob
     assert first_ml.edge == expected_edge
-    if expected_edge >= Decimal('0.010000'):
-        assert first_ml.kelly == expected_kelly_half
-    else:
-        assert first_ml.kelly == Decimal('0')
-    assert first_ml.grade == expected_grade
+    # Mock fixture has no games_used signal -> confidence penalty
+    # caps grade at C and zeros Kelly regardless of what the math
+    # would otherwise grade. Audit trail flows through metadata.
+    assert first_ml.grade == "C"
+    assert first_ml.kelly == Decimal('0')
+    assert "confidence_capped_reason" in (first_ml.metadata or {})
 
 
 def test_run_slate_no_exceptions_across_all_sports():

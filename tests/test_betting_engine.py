@@ -22,7 +22,13 @@ def _make_ml_bundle_det_at_bos():
         universal_features={"home_edge": 0.085},
         game_id="MLB-2026-04-20-DET-BOS",
         selection="BOS",
-        metadata={"home_team": "BOS", "away_team": "DET"},
+        metadata={
+            "home_team": "BOS", "away_team": "DET",
+            # Enough settled-game evidence so the confidence penalty (cap
+            # at C below threshold) doesn't kick in -- this test exercises
+            # the math layer, not the sample-size guardrail.
+            "read_context": {"games_used_home": 50, "games_used_away": 50},
+        },
     )
 
 
@@ -149,3 +155,114 @@ def test_pick_is_frozen():
     pick = BettingEngine.evaluate(bundle, Line(odds=-132))
     with pytest.raises(Exception):
         pick.edge = Decimal('0.5')
+
+
+# ---------------------------------------------------------------------------
+# Confidence penalty: strength-driven markets need a meaningful sample
+# of settled games on each team, otherwise the engine's edge claim is
+# a cold-start artifact and the grade gets capped at C.
+# ---------------------------------------------------------------------------
+
+
+def _make_ml_bundle_with_games_used(home_used: int, away_used: int):
+    return FeatureBuilder.build(
+        sport="MLB",
+        market_type="ML",
+        inputs={"strength_home": 1.32, "strength_away": 1.15, "home_adv": 0.115},
+        universal_features={"home_edge": 0.085},
+        game_id="MLB-2026-04-20-DET-BOS",
+        selection="BOS",
+        metadata={
+            "home_team": "BOS", "away_team": "DET",
+            "read_context": {
+                "games_used_home": home_used,
+                "games_used_away": away_used,
+            },
+        },
+    )
+
+
+def test_engine_confidence_penalty_caps_grade_when_sample_is_thin():
+    """Below the games_used threshold on either side, the grade is
+    capped at C and Kelly is zeroed. Audit trail flows through
+    metadata['confidence_capped_reason'] so an operator can see which
+    picks were demoted vs which were graded purely on edge."""
+    bundle = _make_ml_bundle_with_games_used(home_used=3, away_used=4)
+    pick = BettingEngine.evaluate(bundle, Line(odds=-132), public_mode=False)
+    assert pick.grade == "C"
+    assert pick.kelly == Decimal("0")
+    # Edge / fair_prob still come from the math layer -- the penalty
+    # only adjusts grade + Kelly, not the underlying numbers, so the
+    # operator can audit how big the engine *thought* the edge was.
+    assert pick.edge is not None
+    assert pick.fair_prob is not None
+    reason = (pick.metadata or {}).get("confidence_capped_reason") or ""
+    assert "games_used" in reason and "threshold" in reason
+
+
+def test_engine_confidence_penalty_no_op_when_sample_meets_threshold():
+    """At >= the threshold on both sides, the penalty doesn't fire and
+    the pick grades on its computed edge as before."""
+    bundle = _make_ml_bundle_with_games_used(home_used=50, away_used=50)
+    pick = BettingEngine.evaluate(bundle, Line(odds=-132), public_mode=False)
+    # No confidence_capped_reason recorded.
+    assert "confidence_capped_reason" not in (pick.metadata or {})
+    # Grade is whatever ConfidenceScorer.grade(edge) returns -- not
+    # forced to C by the penalty.
+    expected_grade = ConfidenceScorer.grade(pick.edge)
+    assert pick.grade == expected_grade
+
+
+def test_engine_confidence_penalty_uses_min_of_two_sides():
+    """Both teams have to clear the threshold. One thin side is enough
+    to trigger the penalty -- the engine has no way to project well
+    when half the matchup is poorly observed."""
+    bundle = _make_ml_bundle_with_games_used(home_used=50, away_used=2)
+    pick = BettingEngine.evaluate(bundle, Line(odds=-132), public_mode=False)
+    assert pick.grade == "C"
+    assert pick.kelly == Decimal("0")
+
+
+def test_engine_confidence_penalty_does_not_promote_F_or_D_to_C():
+    """If the math already grades the pick worse than C (e.g. F for a
+    sharply negative edge), the penalty must NOT silently promote it
+    upward to C. The penalty caps the upper bound, it doesn't set a
+    floor."""
+    # Use odds that produce a strongly negative edge so ConfidenceScorer
+    # returns F. Combine with thin sample so the penalty would otherwise
+    # cap at C.
+    bundle = _make_ml_bundle_with_games_used(home_used=2, away_used=2)
+    # -1000 is a wildly overpriced favorite -> negative edge -> F grade.
+    pick = BettingEngine.evaluate(bundle, Line(odds=-1000), public_mode=False)
+    # F should remain F. The penalty's "if grade not in (C, D, F)" guard
+    # is what prevents accidental promotion.
+    assert pick.grade in ("D", "F"), (
+        f"penalty should not promote a sub-C math grade upward; got {pick.grade}"
+    )
+
+
+def test_engine_confidence_penalty_does_not_apply_to_non_strength_markets():
+    """Total / props / NRFI / YRFI / BTTS don't depend on Bradley-Terry
+    team strengths, so the games_used threshold doesn't apply to them.
+    A Total pick with a thin sample is still graded on its math."""
+    bundle = FeatureBuilder.build(
+        sport="MLB",
+        market_type="Total",
+        inputs={
+            "off_env": 1.18, "def_env": 1.07, "pace": 1.03,
+            "dixon_coles_adj": 0.00,
+        },
+        universal_features={},
+        selection="Over 9.5",
+        metadata={
+            "home_team": "BOS", "away_team": "DET",
+            # Thin games_used would trigger the penalty IF this market
+            # were strength-driven. It isn't.
+            "read_context": {"games_used_home": 1, "games_used_away": 1},
+        },
+    )
+    pick = BettingEngine.evaluate(
+        bundle, Line(odds=-110, number=Decimal("9.5")), public_mode=False,
+    )
+    assert "confidence_capped_reason" not in (pick.metadata or {})
+    assert pick.expected_value is not None
