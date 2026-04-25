@@ -32,7 +32,7 @@ from edge_equation.stats.results import GameResult, GameResultsStore
 _FINISHED_GAME_STATUS = 3
 
 
-dataclass(frozen=True)
+@dataclass(frozen=True)
 class IngestSummary:
     """Per-run audit log -- mirrors MLB/NHL ingestor's shape so
     callers (CLI, workflows) can format output uniformly."""
