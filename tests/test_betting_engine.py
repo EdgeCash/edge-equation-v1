@@ -266,3 +266,43 @@ def test_engine_confidence_penalty_does_not_apply_to_non_strength_markets():
     )
     assert "confidence_capped_reason" not in (pick.metadata or {})
     assert pick.expected_value is not None
+
+
+def test_engine_confidence_penalty_threshold_is_reachable():
+    """Regression guard for the bug that produced empty Premium Daily
+    emails: the threshold had been set to 20 but FeatureComposer's
+    games_used counters are capped at form_window_games (15 for MLB,
+    10 for NHL/NBA, 5 for NFL). A threshold above the form-window cap
+    is unreachable for the relevant sports, so every strength-driven
+    pick gets capped at C indefinitely.
+
+    This test pins the threshold at 10 -- low enough that NHL and NBA
+    teams with a full 10-game form window can clear it, low enough
+    that MLB teams with a 10+ game window do too. Bumping back above
+    10 silently re-introduces the empty-output regression."""
+    from edge_equation.engine.betting_engine import _MIN_CONFIDENT_GAMES_USED
+    assert _MIN_CONFIDENT_GAMES_USED <= 10, (
+        f"_MIN_CONFIDENT_GAMES_USED={_MIN_CONFIDENT_GAMES_USED} exceeds "
+        "form_window_games for NHL/NBA (10) and would silently make "
+        "every strength-driven pick C-capped, even with comprehensive "
+        "season data. See the docstring on the constant for context."
+    )
+    # Also verify the boundary: games_used == threshold should NOT
+    # trigger the cap (the check is `< threshold`, not `<=`).
+    bundle = _make_ml_bundle_with_games_used(
+        home_used=_MIN_CONFIDENT_GAMES_USED,
+        away_used=_MIN_CONFIDENT_GAMES_USED,
+    )
+    pick = BettingEngine.evaluate(bundle, Line(odds=-132), public_mode=False)
+    assert "confidence_capped_reason" not in (pick.metadata or {}), (
+        "games_used == threshold should clear the cap"
+    )
+    # And one below the threshold DOES trigger.
+    bundle = _make_ml_bundle_with_games_used(
+        home_used=_MIN_CONFIDENT_GAMES_USED - 1,
+        away_used=_MIN_CONFIDENT_GAMES_USED - 1,
+    )
+    pick = BettingEngine.evaluate(bundle, Line(odds=-132), public_mode=False)
+    assert "confidence_capped_reason" in (pick.metadata or {}), (
+        "games_used == threshold-1 must trigger the cap"
+    )

@@ -50,7 +50,20 @@ _MAX_REASONABLE_EDGE = Decimal("0.30")
 # drives fair_prob (ML, Spread, Run_Line, Puck_Line) -- not BTTS
 # (Poisson lambdas), NRFI/YRFI (first-inning lambdas), totals, or
 # rate-prop markets, which derive from different inputs.
-_MIN_CONFIDENT_GAMES_USED = 20
+#
+# Threshold = 10 because FeatureComposer's games_used_home/away
+# counters are capped at SportConfig.form_window_games (MLB 15, NHL
+# 10, NBA 10, NFL 5). A threshold higher than the form window is
+# unreachable -- the original threshold of 20 made every pick C even
+# when MLB had 30+ games per team. 10 means "both teams have at
+# least 10 recent games of evidence" which is meaningful and
+# reachable for sports with form_window >= 10. NFL stays capped
+# indefinitely (form_window 5 < 10) but that's correct given how
+# little NFL data flows in the offseason. Future cleanup: have
+# composer expose a separate season-total counter so the threshold
+# can be a true "games this season" check decoupled from the form
+# window.
+_MIN_CONFIDENT_GAMES_USED = 10
 _STRENGTH_DRIVEN_MARKETS = {"ML", "Spread", "Run_Line", "Puck_Line"}
 
 
