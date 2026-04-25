@@ -329,6 +329,22 @@ def _cmd_refresh_data(args: argparse.Namespace) -> int:
     return 0
 
 
+# Per-sport routing table for --source=auto mode. Each entry maps
+# the league code -> the ingestor module that handles it. Leagues
+# without an entry fall through to TheSportsDB.
+#
+#   MLB  -> mlb_stats_ingest.MlbStatsResultsIngestor (free official API)
+#   NHL  -> nhle_ingest.NhleResultsIngestor          (free official API)
+#   rest -> TheSportsDBResultsIngestor (NBA/NFL/KBO/NPB/EPL/UCL)
+#
+# When a per-sport ingestor is added (e.g. NBA Stats in PR M4),
+# update _AUTO_SPORT_INGESTORS and _THESPORTSDB_FALLBACK_LEAGUES so
+# TheSportsDB stops double-ingesting that league.
+_AUTO_SPORT_INGESTORS = ("mlb_stats", "nhle")
+_THESPORTSDB_FALLBACK_LEAGUES = ("NBA", "NFL", "KBO", "NPB", "EPL", "UCL")
+_VALID_SOURCES = ("thesportsdb", "mlb_stats", "nhle", "auto")
+
+
 def _cmd_auto_settle(args: argparse.Namespace) -> int:
     """Nightly results job. Two things happen in lockstep:
 
@@ -345,44 +361,78 @@ def _cmd_auto_settle(args: argparse.Namespace) -> int:
     yesterday). --backfill switches to seed mode (default 30 days).
     --source picks the upstream data source:
         thesportsdb (default): all 8 leagues via TheSportsDB
-        mlb_stats: MLB only, via MLB's official Stats API (free,
-            comprehensive -- the better source for MLB once we trust it)
+        mlb_stats: MLB only, via MLB's official Stats API
+        nhle: NHL only, via NHL's official API
+        auto: per-league routing -- MLB via mlb_stats, NHL via nhle,
+            everything else via thesportsdb. Recommended for the
+            nightly settler so each sport uses its best free source.
     """
+    from datetime import date as _date, timedelta
     from edge_equation.engine.realization import RealizationTracker
     from edge_equation.stats.results import GameResultsStore
 
     source = getattr(args, "source", None) or "thesportsdb"
-    if source not in ("thesportsdb", "mlb_stats", "nhle"):
+    if source not in _VALID_SOURCES:
         print(
-            f"error: --source must be 'thesportsdb', 'mlb_stats', or "
-            f"'nhle', got {source!r}",
+            f"error: --source must be one of {_VALID_SOURCES}, "
+            f"got {source!r}",
             file=sys.stderr,
         )
         return 2
 
-    if source == "mlb_stats":
-        from edge_equation.stats.mlb_stats_ingest import (
-            MlbStatsResultsIngestor as Ingestor,
-        )
-    elif source == "nhle":
-        from edge_equation.stats.nhle_ingest import (
-            NhleResultsIngestor as Ingestor,
-        )
-    else:
-        from edge_equation.stats.thesportsdb_ingest import (
-            TheSportsDBResultsIngestor as Ingestor,
-        )
+    days = int(args.days)
+    backfill = bool(args.backfill)
+    target_day = _date.today() - timedelta(days=1)
+
+    def _run(ingestor_cls, **kwargs):
+        """Run one ingestor in either backfill or single-day mode."""
+        if backfill:
+            return ingestor_cls.backfill(conn, days=days, **kwargs)
+        return ingestor_cls.ingest_day(conn, day=target_day, **kwargs)
 
     conn = _open_db(args.db)
     try:
-        days = int(args.days)
-        backfill = bool(args.backfill)
-        if backfill:
-            summary = Ingestor.backfill(conn, days=days)
-        else:
-            from datetime import date as _date, timedelta
-            target = _date.today() - timedelta(days=1)
-            summary = Ingestor.ingest_day(conn, day=target)
+        per_source_summaries = {}
+
+        if source == "auto":
+            # MLB via MLB Stats API
+            from edge_equation.stats.mlb_stats_ingest import (
+                MlbStatsResultsIngestor,
+            )
+            per_source_summaries["mlb_stats"] = _run(MlbStatsResultsIngestor)
+            # NHL via NHL API
+            from edge_equation.stats.nhle_ingest import (
+                NhleResultsIngestor,
+            )
+            per_source_summaries["nhle"] = _run(NhleResultsIngestor)
+            # Everything else via TheSportsDB. Pass an explicit leagues
+            # filter so TheSportsDB doesn't re-ingest MLB / NHL games
+            # alongside the per-sport sources -- otherwise the same
+            # game shows up under two different game_id prefixes.
+            from edge_equation.stats.thesportsdb_ingest import (
+                TheSportsDBResultsIngestor,
+            )
+            per_source_summaries["thesportsdb"] = _run(
+                TheSportsDBResultsIngestor,
+                leagues=list(_THESPORTSDB_FALLBACK_LEAGUES),
+            )
+        elif source == "mlb_stats":
+            from edge_equation.stats.mlb_stats_ingest import (
+                MlbStatsResultsIngestor,
+            )
+            per_source_summaries["mlb_stats"] = _run(MlbStatsResultsIngestor)
+        elif source == "nhle":
+            from edge_equation.stats.nhle_ingest import (
+                NhleResultsIngestor,
+            )
+            per_source_summaries["nhle"] = _run(NhleResultsIngestor)
+        else:  # thesportsdb
+            from edge_equation.stats.thesportsdb_ingest import (
+                TheSportsDBResultsIngestor,
+            )
+            per_source_summaries["thesportsdb"] = _run(
+                TheSportsDBResultsIngestor,
+            )
 
         settle = RealizationTracker.settle_picks_from_game_results(conn)
         totals_by_league = {}
@@ -391,10 +441,27 @@ def _cmd_auto_settle(args: argparse.Namespace) -> int:
     finally:
         conn.close()
 
+    # Aggregate counts across sources for a flat headline summary,
+    # plus a per-source breakdown so the nightly log shows where each
+    # league's results came from.
+    def _sum(field):
+        return sum(getattr(s, field, 0) for s in per_source_summaries.values())
+
+    aggregate = {
+        "events_seen": _sum("events_seen"),
+        "events_finished": _sum("events_finished"),
+        "results_written": _sum("results_written"),
+        "skipped_no_scores": _sum("skipped_no_scores"),
+        "skipped_non_final": _sum("skipped_non_final"),
+    }
+
     print(json.dumps({
         "mode": "backfill" if backfill else "nightly",
         "source": source,
-        "ingest": summary.to_dict(),
+        "ingest": aggregate,
+        "ingest_by_source": {
+            k: v.to_dict() for k, v in per_source_summaries.items()
+        },
         "settled_picks": settle,
         "game_results_by_league": totals_by_league,
     }, indent=2, default=str))
@@ -1074,13 +1141,15 @@ def build_parser() -> argparse.ArgumentParser:
                              "when used with backfill-results).")
     p_auto.add_argument(
         "--source", type=str, default="thesportsdb",
-        choices=("thesportsdb", "mlb_stats", "nhle"),
+        choices=("thesportsdb", "mlb_stats", "nhle", "auto"),
         help="Data source for game scores. 'thesportsdb' (default) "
              "covers all 8 leagues but with thin coverage even on the "
              "paid tier. 'mlb_stats' uses MLB's free official Stats "
              "API for comprehensive MLB-only coverage. 'nhle' uses "
              "NHL's free official API for comprehensive NHL-only "
-             "coverage.",
+             "coverage. 'auto' routes per-league: MLB via mlb_stats, "
+             "NHL via nhle, everything else via thesportsdb -- "
+             "recommended for the nightly settler.",
     )
     p_auto.set_defaults(func=_cmd_auto_settle)
 
@@ -1092,7 +1161,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_backfill.add_argument("--days", type=int, default=30)
     p_backfill.add_argument(
         "--source", type=str, default="thesportsdb",
-        choices=("thesportsdb", "mlb_stats", "nhle"),
+        choices=("thesportsdb", "mlb_stats", "nhle", "auto"),
         help="Data source for game scores. See `auto-settle --help`.",
     )
     p_backfill.set_defaults(func=_cmd_backfill_results)

@@ -407,3 +407,158 @@ def test_results_settler_uses_phase26c_cache_pattern():
     assert "actions/cache/save@v4" in text
     # Save key must include run_id for uniqueness.
     assert "edge-equation-db-${{ github.ref_name }}-${{ github.run_id }}" in text
+
+
+def test_results_settler_workflow_uses_source_auto():
+    """PR M3: nightly settler must use --source auto so MLB pulls from
+    MLB Stats API, NHL from NHL API, everything else from TheSportsDB.
+    Without this flag the settler falls back to TheSportsDB-only,
+    drifting backwards from the per-sport backfills."""
+    text = (WORKFLOWS / "results-settler.yml").read_text(encoding="utf-8")
+    assert "--source auto" in text, (
+        "results-settler.yml must invoke `auto-settle --source auto` so "
+        "each sport routes to its best free data source. Reverting to "
+        "the default 'thesportsdb' silently drops MLB and NHL coverage."
+    )
+
+
+# ----------------------------------------------------------------------
+# CLI auto-mode dispatch
+# ----------------------------------------------------------------------
+
+
+def test_cli_auto_mode_invokes_all_three_ingestors(monkeypatch):
+    """--source auto must run MlbStats, Nhle, AND TheSportsDB ingestors
+    in one pass, with TheSportsDB explicitly scoped to the leagues NOT
+    covered by per-sport sources (so the same MLB / NHL game doesn't
+    show up twice in game_results under different game_id prefixes)."""
+    import argparse
+    from edge_equation.__main__ import (
+        _cmd_auto_settle, _THESPORTSDB_FALLBACK_LEAGUES,
+    )
+    from edge_equation.stats.thesportsdb_ingest import IngestSummary
+
+    calls = []
+
+    class _StubIngestor:
+        def __init__(self, name):
+            self.name = name
+
+        def ingest_day(self, conn, day, **kwargs):
+            calls.append((self.name, "ingest_day", kwargs))
+            return IngestSummary(1, 1, 0, 0, 0, 0, 0)
+
+        def backfill(self, conn, days, **kwargs):
+            calls.append((self.name, "backfill", kwargs))
+            return IngestSummary(days, 1, 0, 0, 0, 0, 0)
+
+    # Patch all three ingestor classes that auto-mode imports.
+    import edge_equation.stats.mlb_stats_ingest as _mlb
+    import edge_equation.stats.nhle_ingest as _nhle
+    import edge_equation.stats.thesportsdb_ingest as _tsdb
+
+    monkeypatch.setattr(_mlb, "MlbStatsResultsIngestor", _StubIngestor("mlb_stats"))
+    monkeypatch.setattr(_nhle, "NhleResultsIngestor", _StubIngestor("nhle"))
+    monkeypatch.setattr(_tsdb, "TheSportsDBResultsIngestor", _StubIngestor("thesportsdb"))
+
+    # _cmd_auto_settle opens a real DB. Use a temp in-memory one.
+    import tempfile, os
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db").name
+    try:
+        args = argparse.Namespace(
+            db=tmp, days=1, backfill=False, source="auto",
+        )
+        rc = _cmd_auto_settle(args)
+    finally:
+        os.unlink(tmp)
+
+    assert rc == 0
+    # All three ingestors must have been called exactly once.
+    sources_called = [name for (name, _method, _kw) in calls]
+    assert sources_called == ["mlb_stats", "nhle", "thesportsdb"], (
+        f"auto mode must call MLB Stats, then NHL, then TheSportsDB; got {sources_called}"
+    )
+    # TheSportsDB must be passed an explicit leagues list excluding
+    # MLB and NHL -- otherwise it double-ingests the per-sport leagues.
+    tsdb_call = next(c for c in calls if c[0] == "thesportsdb")
+    assert "leagues" in tsdb_call[2], (
+        "TheSportsDB call in auto mode must pass leagues= to scope it"
+    )
+    leagues_passed = list(tsdb_call[2]["leagues"])
+    assert "MLB" not in leagues_passed, (
+        "TheSportsDB must NOT re-ingest MLB in auto mode "
+        "(MLB Stats API is the per-sport source)"
+    )
+    assert "NHL" not in leagues_passed, (
+        "TheSportsDB must NOT re-ingest NHL in auto mode "
+        "(NHL API is the per-sport source)"
+    )
+    assert leagues_passed == list(_THESPORTSDB_FALLBACK_LEAGUES)
+
+
+def test_cli_single_source_modes_unchanged(monkeypatch):
+    """--source mlb_stats / nhle / thesportsdb each invoke ONLY their
+    one ingestor -- existing single-source backfill behavior unchanged
+    by the auto-mode addition."""
+    import argparse
+    from edge_equation.__main__ import _cmd_auto_settle
+    from edge_equation.stats.thesportsdb_ingest import IngestSummary
+
+    for source_name, module_path, attr in (
+        ("mlb_stats", "edge_equation.stats.mlb_stats_ingest", "MlbStatsResultsIngestor"),
+        ("nhle", "edge_equation.stats.nhle_ingest", "NhleResultsIngestor"),
+        ("thesportsdb", "edge_equation.stats.thesportsdb_ingest",
+         "TheSportsDBResultsIngestor"),
+    ):
+        calls = []
+
+        class _Stub:
+            def ingest_day(self, conn, day, **kwargs):
+                calls.append("ingest_day")
+                return IngestSummary(1, 1, 0, 0, 0, 0, 0)
+
+            def backfill(self, conn, days, **kwargs):
+                calls.append("backfill")
+                return IngestSummary(days, 1, 0, 0, 0, 0, 0)
+
+        import importlib
+        mod = importlib.import_module(module_path)
+        monkeypatch.setattr(mod, attr, _Stub())
+
+        # Patch the OTHER two ingestors so they explode if called -- the
+        # single-source path must NOT touch them.
+        import edge_equation.stats.mlb_stats_ingest as _mlb_mod
+        import edge_equation.stats.nhle_ingest as _nhle_mod
+        import edge_equation.stats.thesportsdb_ingest as _tsdb_mod
+
+        class _Bomb:
+            def ingest_day(self, *a, **kw):
+                raise AssertionError(
+                    f"single-source={source_name} must not call other ingestors"
+                )
+
+            def backfill(self, *a, **kw):
+                raise AssertionError(
+                    f"single-source={source_name} must not call other ingestors"
+                )
+
+        if source_name != "mlb_stats":
+            monkeypatch.setattr(_mlb_mod, "MlbStatsResultsIngestor", _Bomb())
+        if source_name != "nhle":
+            monkeypatch.setattr(_nhle_mod, "NhleResultsIngestor", _Bomb())
+        if source_name != "thesportsdb":
+            monkeypatch.setattr(_tsdb_mod, "TheSportsDBResultsIngestor", _Bomb())
+
+        import tempfile, os
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".db").name
+        try:
+            args = argparse.Namespace(
+                db=tmp, days=1, backfill=False, source=source_name,
+            )
+            rc = _cmd_auto_settle(args)
+        finally:
+            os.unlink(tmp)
+        assert rc == 0
+        assert calls == ["ingest_day"], (
+            f"{source_name} mode should call ingest_day exactly once, got {calls}"
+        )

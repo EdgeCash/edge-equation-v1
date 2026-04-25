@@ -100,7 +100,14 @@ jobs:
           if [ "${{ inputs.backfill }}" = "true" ]; then
             BACKFILL_FLAG="--backfill"
           fi
-          python -m edge_equation auto-settle $DAYS_FLAG $BACKFILL_FLAG
+          # --source auto: per-league routing. MLB via MLB Stats API,
+          # NHL via NHL API, everything else via TheSportsDB. Each
+          # sport gets its best free source without manual operator
+          # intervention. Without this flag the settler would fall
+          # back to thin TheSportsDB-only coverage and drift
+          # backwards from the per-sport backfills.
+          python -m edge_equation auto-settle --source auto \
+            $DAYS_FLAG $BACKFILL_FLAG
 
       - name: Save settled SQLite to a unique cache key
         # Alongside the data-refresher, the settler is the SECOND writer
