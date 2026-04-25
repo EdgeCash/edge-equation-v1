@@ -9,8 +9,8 @@ stays identical (fetch -> list of game dicts, cached via OddsCache,
 throttled, retried on transient HTTP errors).
 
 References:
-  https://stats.nba.com/api/v1/scoreboard?GameDate=YYYY-MM-DD
-  -> {"games": [...], ...}
+  https://stats.nba.com/stats/scoreboardv3?LeagueID=00&GameDate=YYYY-MM-DD
+  -> {"scoreboard": {"games": [...], ...}
 
 Each game has:
   gameId, gameCode, gameStatus, homeTeam/awayTeam with nested
@@ -36,7 +36,7 @@ from edge_equation.data_fetcher import (
 from edge_equation.persistence.odds_cache import OddsCache
 
 
-NBA_STATS_BASE = "https://stats.nba.com/api/v1"
+NBA_STATS_BASE = "https://stats.nba.com/stats"
 
 
 class NbaStatsClient:
@@ -49,7 +49,7 @@ class NbaStatsClient:
     ):  
         self._base = base_url.rstrip("/")
         self._owns_client = http_client is None
-        self._http = http_client or httpx.Client(timeout=15.0)
+        self._http = http_client or httpx.Client(timeout=15.0, headers={"Referer": "https://www.nba.com/", "x-nba-stats-origin": "stats", "x-nba-stats-token": "true"})
         self._throttle = throttle or _Throttle(_min_request_interval())
 
     def close(self) -> None:
@@ -101,14 +101,14 @@ class NbaStatsClient:
         """All NBA games for `day` including scores. Returns a flat
         list of game dicts. Empty list on failure / no games.
 
-        Uses /scoreboard?GameDate=YYYY-MM-DD which returns all games
+        Uses /scoreboardv3?LeagueID=00&GameDate=YYYY-MM-DD which returns all games
         scheduled and their results (if final) for that date.
         """
-        path = f"/scoreboard?GameDate={day.isoformat()}"
+        path = f"/scoreboardv3?LeagueID=00&GameDate={day.isoformat()}"
         payload = self._get(
             conn, path, ttl_seconds=CACHE_TTL_SCHEDULE,
             now=now, cached_only=cached_only,
         )
         if not payload:
             return []
-        return list(payload.get("games") or [])
+        return list(payload.get("scoreboard", {}).get("games") or [])
