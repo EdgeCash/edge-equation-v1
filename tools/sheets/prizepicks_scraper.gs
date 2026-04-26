@@ -105,11 +105,19 @@ function setup() {
   setupPicks_(ss.getSheetByName(PICKS));
   setupTracking_(ss.getSheetByName(TRACK));
 
-  SpreadsheetApp.getUi().alert(
-    'Setup complete.\n\n' +
-    'Next: Edge Equation menu -> Scrape projections.\n' +
-    'Then copy a projection_id from _raw into picks!A2 to test math.'
-  );
+  // Alert is best-effort: it requires a UI context (sheet open in the
+  // browser). Running `setup` directly from the Apps Script editor's
+  // Run button has no UI, so the alert call throws -- but all the real
+  // setup work above has already completed.
+  try {
+    SpreadsheetApp.getUi().alert(
+      'Setup complete.\n\n' +
+      'Next: Edge Equation menu -> Scrape projections.\n' +
+      'Then copy a projection_id from _raw into picks!A2 to test math.'
+    );
+  } catch (e) {
+    Logger.log('Setup complete. Reload the spreadsheet to see the menu.');
+  }
 }
 
 function ensureSheet_(ss, name) {
