@@ -15,9 +15,18 @@ export default function StatTile({
   className = "",
 }: StatTileProps) {
   return (
-    <div className={"border border-edge-line rounded-sm p-4 " + className}>
-      <div className="text-[10px] uppercase tracking-[0.2em] text-edge-textDim">
-        {label}
+    <div
+      className={
+        "relative border border-edge-line rounded-sm p-4 bg-ink-900/40 " +
+        "hover:border-edge-accent/40 transition-colors " +
+        className
+      }
+    >
+      {/* Top hairline — implied data-block top */}
+      <div className="absolute inset-x-3 top-0 h-px bg-edge-accent/30" />
+      <div className="annotation flex items-center gap-2">
+        <span className="text-edge-accent">·</span>
+        <span>{label}</span>
       </div>
       <div className="mt-2 font-mono tabular-nums text-edge-text text-2xl">
         {value}

@@ -1,5 +1,6 @@
 // Grade letter with a color keyed to confidence tier.
 // Keeps the "no emoji unless requested" rule; uses Tailwind accent classes.
+// A+ gets a soft cyan glow so it reads from across the slate.
 
 type GradeBadgeProps = {
   grade: string;
@@ -7,7 +8,7 @@ type GradeBadgeProps = {
 };
 
 const GRADE_COLORS: Record<string, string> = {
-  "A+": "bg-edge-accent text-ink-950",
+  "A+": "bg-edge-accent text-ink-950 shadow-[0_0_14px_rgba(91,192,232,0.55)]",
   "A": "bg-edge-accent/80 text-ink-950",
   "B": "bg-edge-text/80 text-ink-950",
   "C": "bg-ink-700 text-edge-textDim",
@@ -21,7 +22,7 @@ export default function GradeBadge({ grade, className = "" }: GradeBadgeProps) {
     <span
       className={
         "inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 " +
-        "font-mono text-xs uppercase tracking-[0.15em] " +
+        "font-mono text-xs uppercase tracking-[0.15em] tabular-nums " +
         colorClass + " " + className
       }
     >
