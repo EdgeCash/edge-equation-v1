@@ -41,11 +41,15 @@ export default function Login() {
 
   return (
     <Layout title="Sign in" description="Sign in to Edge Equation via email magic link.">
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-4">
-        Sign In
+      <div className="annotation mb-4 flex items-center gap-3">
+        <span className="text-edge-accent">⊕</span>
+        <span>Sign in</span>
       </div>
       <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-none">
-        Magic link
+        Magic{" "}
+        <span className="italic text-edge-accent chalk-underline accent-glow">
+          link
+        </span>
       </h1>
       <p className="mt-4 text-edge-textDim max-w-prose">
         No passwords. Enter the email you want to use; we&apos;ll send you a
@@ -73,7 +77,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={state === "sending"}
-                className="inline-flex items-center gap-2 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.2em] hover:bg-edge-text transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-2 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.2em] hover:bg-edge-accentMuted transition-colors disabled:opacity-50"
               >
                 {state === "sending" ? "Sending…" : "Send magic link"}
                 <span>→</span>

@@ -57,11 +57,15 @@ export default function DailyEdge({ slate, error }: Props) {
       title="Daily Edge"
       description="Today's Daily Edge slate from the Edge Equation engine."
     >
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-4">
-        Public · Free
+      <div className="annotation mb-4 flex items-center gap-3">
+        <span className="text-edge-accent">∴</span>
+        <span>Public · Free · One card per day</span>
       </div>
       <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-none">
-        Daily Edge
+        Daily{" "}
+        <span className="italic text-edge-accent chalk-underline accent-glow">
+          Edge
+        </span>
       </h1>
       <p className="mt-4 text-edge-textDim max-w-prose">
         A single card, once a day. Model-driven projections across today&apos;s
@@ -123,9 +127,7 @@ export default function DailyEdge({ slate, error }: Props) {
           </CardShell>
 
           <section>
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-edge-accent mb-4">
-              Every pick in this slate
-            </div>
+            <div className="annotation mb-4">// every pick in this slate</div>
             <div className="space-y-3">
               {slate.picks.map((p) => (
                 <PickRow key={p.pick_id} pick={p} />

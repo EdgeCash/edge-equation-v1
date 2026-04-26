@@ -34,11 +34,12 @@ export default function Archive({ slates, error }: Props) {
       title="Archive"
       description="Every slate the Edge Equation engine has persisted."
     >
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-4">
-        History
+      <div className="annotation mb-4 flex items-center gap-3">
+        <span className="text-edge-accent">∫</span>
+        <span>History</span>
       </div>
       <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-none">
-        Archive
+        Arch<span className="italic text-edge-accent chalk-underline accent-glow">ive</span>
       </h1>
       <p className="mt-4 text-edge-textDim max-w-prose">
         Every slate the engine has generated — daily and evening, every sport,

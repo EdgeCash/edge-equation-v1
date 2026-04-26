@@ -41,12 +41,12 @@ export default function SlateDetailPage({ slate, error }: Props) {
       title={slate ? `Slate · ${slate.slate_id}` : "Slate"}
       description={slate ? `Every pick in ${slate.slate_id}` : "Slate detail"}
     >
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-4">
+      <div className="annotation mb-4">
         <Link
           href="/archive"
-          className="hover:text-edge-text transition-colors"
+          className="text-edge-accent hover:text-edge-text transition-colors"
         >
-          ← Archive
+          ← back to archive
         </Link>
       </div>
 

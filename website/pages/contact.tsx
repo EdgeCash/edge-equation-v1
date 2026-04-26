@@ -4,11 +4,12 @@ import Layout from "@/components/Layout";
 export default function Contact() {
   return (
     <Layout title="Contact">
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-4">
-        Get In Touch
+      <div className="annotation mb-4 flex items-center gap-3">
+        <span className="text-edge-accent">→</span>
+        <span>Get in touch</span>
       </div>
       <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-none">
-        Contact
+        Cont<span className="italic text-edge-accent chalk-underline accent-glow">act</span>
       </h1>
 
       <p className="mt-6 max-w-prose text-edge-textDim leading-relaxed">

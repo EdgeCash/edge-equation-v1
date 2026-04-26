@@ -105,11 +105,15 @@ export default function GradeHistory({ all, bySport, error }: Props) {
       title="Grade History"
       description="Historical hit rate by grade across every settled Edge Equation pick."
     >
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-4">
-        Calibration
+      <div className="annotation mb-4 flex items-center gap-3">
+        <span className="text-edge-accent">σ</span>
+        <span>Calibration</span>
       </div>
       <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-none">
-        Grade History
+        Grade{" "}
+        <span className="italic text-edge-accent chalk-underline accent-glow">
+          History
+        </span>
       </h1>
       <p className="mt-4 text-edge-textDim max-w-prose">
         Every settled pick, bucketed by the grade the engine assigned it.

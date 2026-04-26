@@ -3,18 +3,20 @@ import Layout from "@/components/Layout";
 export default function About() {
   return (
     <Layout title="About">
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-4">
-        Manifesto
+      <div className="annotation mb-4 flex items-center gap-3">
+        <span className="text-edge-accent">§ 1</span>
+        <span>Manifesto</span>
       </div>
       <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-none">
-        About Edge <span className="italic text-edge-accent">Equation</span>
+        About Edge{" "}
+        <span className="italic text-edge-accent chalk-underline accent-glow">
+          Equation
+        </span>
       </h1>
 
       <div className="mt-12 grid grid-cols-1 md:grid-cols-[1fr_auto_2fr] gap-10 items-start">
         <aside className="md:sticky md:top-12">
-          <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-textDim">
-            Core Principle
-          </div>
+          <div className="annotation">// core principle</div>
           <blockquote className="mt-3 font-display text-3xl tracking-tightest italic text-edge-accent leading-tight">
             &ldquo;Facts.
             <br />

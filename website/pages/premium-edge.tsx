@@ -158,14 +158,14 @@ function Paywall({ me }: { me: MeResponse | null }) {
             {me == null ? (
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.2em] hover:bg-edge-text transition-colors"
+                className="inline-flex items-center gap-2 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.2em] hover:bg-edge-accentMuted transition-colors"
               >
                 Sign in to subscribe →
               </Link>
             ) : (
               <Link
                 href="/account"
-                className="inline-flex items-center gap-2 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.2em] hover:bg-edge-text transition-colors"
+                className="inline-flex items-center gap-2 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.2em] hover:bg-edge-accentMuted transition-colors"
               >
                 Start premium subscription →
               </Link>
@@ -186,11 +186,15 @@ export default function PremiumEdge({ me, picks, picksError, meError }: Props) {
       title="Premium Edge"
       description="Full Monte Carlo distributions, grades, sizing, and model notes."
     >
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-4">
-        {subscribed ? "Subscriber · Unlocked" : "Premium"}
+      <div className="annotation mb-4 flex items-center gap-3">
+        <span className="text-edge-accent">∑</span>
+        <span>{subscribed ? "Subscriber · Unlocked" : "Premium · Locked"}</span>
       </div>
       <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-none">
-        Premium <span className="italic text-edge-accent">Edge</span>
+        Premium{" "}
+        <span className="italic text-edge-accent chalk-underline accent-glow">
+          Edge
+        </span>
       </h1>
       <p className="mt-4 text-edge-textDim max-w-prose">
         Distributions, grades, sizing, and model notes. The same engine that
@@ -237,9 +241,7 @@ export default function PremiumEdge({ me, picks, picksError, meError }: Props) {
           )}
 
           <section>
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-edge-accent mb-4">
-              Every premium pick
-            </div>
+            <div className="annotation mb-4">// every premium pick</div>
             <div className="space-y-3">
               {picks.map((p, i) => (
                 <PremiumPickCard key={`${p.game_id}-${p.market_type}-${i}`} pick={p} />

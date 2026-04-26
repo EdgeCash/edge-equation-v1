@@ -91,11 +91,15 @@ export default function Account({ me, error }: Props) {
 
   return (
     <Layout title="Account" description="Your Edge Equation account.">
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-4">
-        Account
+      <div className="annotation mb-4 flex items-center gap-3">
+        <span className="text-edge-accent">⌘</span>
+        <span>Account</span>
       </div>
       <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-none">
-        Your account
+        Your{" "}
+        <span className="italic text-edge-accent chalk-underline accent-glow">
+          account
+        </span>
       </h1>
 
       {error && (
@@ -145,7 +149,7 @@ export default function Account({ me, error }: Props) {
                 <button
                   onClick={startCheckout}
                   disabled={busy}
-                  className="inline-flex items-center gap-2 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.2em] hover:bg-edge-text transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.2em] hover:bg-edge-accentMuted transition-colors disabled:opacity-50"
                 >
                   Start premium subscription →
                 </button>
