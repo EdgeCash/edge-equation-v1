@@ -10,13 +10,50 @@
     color-scheme: dark;
   }
 
+  /* Body = chalkboard. Layered cyan glows on a near-black ink wash,
+     math-paper grid behind everything, low-frequency noise on top. */
   body {
     @apply bg-ink-950 text-edge-text font-body antialiased;
     font-feature-settings: "ss01", "cv11";
     background-image:
-      radial-gradient(1200px 600px at 10% -10%, rgba(215, 181, 114, 0.06), transparent 60%),
-      radial-gradient(800px 500px at 110% 10%, rgba(215, 181, 114, 0.03), transparent 60%);
+      radial-gradient(1100px 550px at 8% -10%, rgba(91, 192, 232, 0.10), transparent 60%),
+      radial-gradient(900px 500px at 108% 12%, rgba(168, 222, 245, 0.05), transparent 65%),
+      radial-gradient(700px 700px at 50% 110%, rgba(91, 192, 232, 0.04), transparent 70%);
     background-attachment: fixed;
+    position: relative;
+  }
+
+  /* Math-paper grid: faint cyan lattice, sits behind content. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(91, 192, 232, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(91, 192, 232, 0.045) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.85), transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.85), transparent 78%);
+  }
+
+  /* Distress / chalk dust: SVG fractal noise, very low opacity. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.08;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.78  0 0 0 0 0.85  0 0 0 0 0.93  0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* Lift real content above the atmosphere layers. */
+  main, header, footer {
+    position: relative;
+    z-index: 1;
   }
 
   h1, h2, h3 {
@@ -36,5 +73,25 @@
 
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Glow that reads as cyan light on a dark slate. Use sparingly. */
+  .accent-glow {
+    text-shadow:
+      0 0 12px rgba(91, 192, 232, 0.45),
+      0 0 28px rgba(91, 192, 232, 0.18);
+  }
+
+  /* Hand-drawn underline for the wordmark + key emphasis. */
+  .chalk-underline {
+    background-image: linear-gradient(transparent 92%, rgba(91, 192, 232, 0.55) 92%);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    padding-bottom: 0.05em;
+  }
+
+  /* Faint mono "scratch" annotation — for margins, formula tags. */
+  .annotation {
+    @apply font-mono text-[10px] uppercase tracking-[0.28em] text-edge-textDim;
   }
 }

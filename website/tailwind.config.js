@@ -17,11 +17,12 @@ module.exports = {
           500: "#3a4050",
         },
         edge: {
-          accent: "#d7b572",        // warm gold — restrained, editorial
-          accentMuted: "#a68a55",
+          accent: "#5BC0E8",        // logo cyan — controlled chaos
+          accentMuted: "#A8DEF5",   // pale cyan for secondary accents
           line: "#242932",
           text: "#e7e3d8",
           textDim: "#8a8a7a",
+          chalk: "#c9d3df",         // soft chalk-white for handwritten flourishes
         },
       },
       fontFamily: {
