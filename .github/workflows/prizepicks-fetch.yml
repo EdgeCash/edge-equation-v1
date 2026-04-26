@@ -49,6 +49,14 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install curl_cffi (PerimeterX TLS-fingerprint bypass)
+        # PrizePicks' public API sits behind PerimeterX bot detection.
+        # urllib gets a 403 challenge response; curl_cffi wraps
+        # libcurl-impersonate to match a real Safari TLS fingerprint
+        # and pushes through. See tools/sheets/fetch_prizepicks.py for
+        # the IMPERSONATE_PROFILES rotation strategy.
+        run: pip install curl_cffi
+
       - name: CT-hour guard
         id: guard
         shell: bash

@@ -29,8 +29,6 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 
 PP_API = "https://api.prizepicks.com/projections"
@@ -38,14 +36,26 @@ PER_PAGE = 250
 MAX_PAGES_DEFAULT = 30
 PAGE_DELAY_SEC = 0.4
 
-# A current-iPhone-Safari UA. PrizePicks' public endpoint returns 200
-# for browser-style UAs and gives 403 for plain Python urllib. If the
-# UA stops working in the future, swap in any current Safari string.
+# A current-iPhone-Safari UA. Used both as the request User-Agent and
+# as a hint to curl_cffi's TLS-fingerprint impersonation (we use the
+# matching `safari17_0` profile below).
 DEFAULT_UA = (
     "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
     "AppleWebKit/605.1.15 (KHTML, like Gecko) "
     "Version/17.0 Mobile/15E148 Safari/604.1"
 )
+
+# Apr 26, 2026: PrizePicks moved their public API behind PerimeterX
+# (HUMAN Security) bot detection. Plain urllib + custom User-Agent
+# returns HTTP 403 with a PerimeterX challenge response (appId,
+# firstPartyEnabled, blockScript fields). curl_cffi wraps libcurl-
+# impersonate to match real-browser TLS fingerprints (cipher suite
+# order, ALPN, extensions), which gets us past the network-layer
+# detection. We also rotate through multiple impersonation profiles
+# on consecutive 403s in case one specific fingerprint gets stale.
+#
+# Reference: https://github.com/lexiforest/curl_cffi
+IMPERSONATE_PROFILES = ("safari17_0", "chrome120", "safari15_5")
 
 CSV_COLUMNS = [
     "scraped_at", "projection_id", "league", "sport", "player",
@@ -54,32 +64,71 @@ CSV_COLUMNS = [
 ]
 
 
-def _fetch_page(page: int, *, user_agent: str = DEFAULT_UA) -> Dict[str, Any]:
+def _fetch_page(
+    page: int,
+    *,
+    user_agent: str = DEFAULT_UA,
+    impersonate_profiles: Tuple[str, ...] = IMPERSONATE_PROFILES,
+) -> Dict[str, Any]:
     """Single API call. Returns the parsed JSON dict.
 
-    Raises RuntimeError on HTTP errors with enough detail that the
-    workflow log shows the failure clearly (status code + first 200
+    Tries each impersonation profile in order until one returns 200 or
+    we exhaust the list. PerimeterX may accept some Safari fingerprints
+    while rejecting others; rotating gives the workflow more shots.
+
+    Raises RuntimeError on persistent failures with enough detail that
+    the workflow log shows the cause clearly (status code + first 200
     bytes of the response body).
     """
-    import json
+    try:
+        from curl_cffi import requests as cffi_requests
+    except ImportError:
+        raise RuntimeError(
+            "curl_cffi is required to bypass PrizePicks' PerimeterX "
+            "challenge. Install it with: pip install curl_cffi"
+        ) from None
+
     url = f"{PP_API}?per_page={PER_PAGE}&page={page}"
-    req = Request(url, headers={
+    headers = {
         "User-Agent": user_agent,
         "Accept": "application/json",
-    })
-    try:
-        with urlopen(req, timeout=20) as resp:
-            body = resp.read()
-    except HTTPError as e:
-        snippet = (e.read() or b"")[:200].decode("utf-8", errors="replace")
-        raise RuntimeError(
-            f"PrizePicks API HTTP {e.code} on page {page}: {snippet}"
-        ) from None
-    except URLError as e:
-        raise RuntimeError(
-            f"PrizePicks API connection failed on page {page}: {e.reason}"
-        ) from None
-    return json.loads(body.decode("utf-8"))
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        # PrizePicks' web client sends these; matching reduces the
+        # chance their server-side filter flags us as a non-browser.
+        "Origin": "https://app.prizepicks.com",
+        "Referer": "https://app.prizepicks.com/",
+        "Sec-Fetch-Site": "same-site",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Dest": "empty",
+    }
+
+    last_status: Optional[int] = None
+    last_snippet: str = ""
+    for profile in impersonate_profiles:
+        try:
+            resp = cffi_requests.get(
+                url,
+                headers=headers,
+                impersonate=profile,
+                timeout=20,
+            )
+        except Exception as e:
+            last_status = -1
+            last_snippet = f"network error with profile={profile}: {e}"
+            continue
+        if resp.status_code == 200:
+            return resp.json()
+        last_status = resp.status_code
+        last_snippet = (resp.text or "")[:200]
+        # 429 or 5xx: short backoff before next profile try.
+        if resp.status_code in (429, 502, 503, 504):
+            time.sleep(2.0)
+
+    raise RuntimeError(
+        f"PrizePicks API HTTP {last_status} on page {page} after trying "
+        f"profiles {list(impersonate_profiles)}: {last_snippet}"
+    )
 
 
 def _build_lookup_tables(
