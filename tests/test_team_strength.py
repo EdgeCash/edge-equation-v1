@@ -277,7 +277,12 @@ def test_build_strong_team_returns_strength_above_one():
     ts = TeamStrengthBuilder.build(
         team="A", league="MLB", results=games, elo=elo,
     )
-    assert ts.strength > Decimal('1.5')
+    # Tango shrinkage at form_window=15 caps a dominant team well below
+    # the old clamp ceiling. Pre-shrinkage this assertion was > 1.5;
+    # with shrinkage a 15-game window of comically lopsided wins lands
+    # around 1.30-1.40 -- still clearly above neutral, but not pinned.
+    assert ts.strength > NEUTRAL_STRENGTH
+    assert ts.strength < STRENGTH_CEIL
     assert ts.games_used > 0
 
 
@@ -427,3 +432,128 @@ def test_pitching_inputs_frozen():
     )
     with pytest.raises(Exception):
         p.starter_fip = Decimal('99')
+
+
+# -------------------------------------------------- Tango shrinkage
+#
+# Apr 25, 2026: the engine produced 12 A+ picks of 18 on Premium Daily,
+# with median |fair_prob - market_implied| ~14pp -- absurd against sharp
+# closing lines. Replay diagnostic in tools/diagnostics/shrinkage_replay.py
+# shows Tango Bayesian shrinkage at n=15 collapses A+ to 2 and median
+# disagreement to ~2pp. These tests pin that behavior in place.
+
+
+def test_tango_shrink_passes_through_at_zero_observations():
+    # n=0 -> no form-window data, but blended strength may still encode
+    # Elo / pitching signal. Helper returns input unchanged in that case;
+    # the cold-start branch in build() handles the "truly no data" path
+    # before the shrinkage helper is called.
+    s = TeamStrengthBuilder._tango_shrink(Decimal('1.50'), n_games=0)
+    assert s == Decimal('1.50')
+
+
+def test_tango_shrink_compresses_clamp_extremes_at_window_size():
+    # The Apr 25 numerics that motivated this fix. With form_window=15
+    # and k=70, raw 0.60 / 1.60 (the clamp boundaries) compress to
+    # roughly 0.916 / 1.083 -- a 1.18x ratio instead of 2.67x.
+    low = TeamStrengthBuilder._tango_shrink(Decimal('0.60'), n_games=15)
+    high = TeamStrengthBuilder._tango_shrink(Decimal('1.60'), n_games=15)
+    assert Decimal('0.85') < low < Decimal('0.95'), low
+    assert Decimal('1.05') < high < Decimal('1.15'), high
+    ratio = high / low
+    assert ratio < Decimal('1.30'), f"expected ratio < 1.30, got {ratio}"
+
+
+def test_tango_shrink_softens_with_more_data():
+    # As n grows, shrinkage softens and the strength approaches the
+    # observed value. By n=200 the data dominates the prior.
+    raw = Decimal('1.60')
+    s_15 = TeamStrengthBuilder._tango_shrink(raw, n_games=15)
+    s_50 = TeamStrengthBuilder._tango_shrink(raw, n_games=50)
+    s_200 = TeamStrengthBuilder._tango_shrink(raw, n_games=200)
+    assert s_15 < s_50 < s_200 < raw
+
+
+def test_tango_shrink_neutral_strength_unchanged():
+    # A team already at neutral (strength 1.0) stays at neutral.
+    s = TeamStrengthBuilder._tango_shrink(NEUTRAL_STRENGTH, n_games=15)
+    assert abs(s - NEUTRAL_STRENGTH) < Decimal('0.001')
+
+
+def test_tango_shrink_handles_pathological_input():
+    # Zero / negative strength shouldn't crash; falls back to neutral.
+    s = TeamStrengthBuilder._tango_shrink(Decimal('0'), n_games=15)
+    assert s == NEUTRAL_STRENGTH
+
+
+def test_build_applies_shrinkage_so_dominant_team_no_longer_pins_clamp():
+    # 30 games of comically lopsided 20-0 wins -- the same scenario that,
+    # pre-shrinkage, would pin a team at exactly STRENGTH_CEIL. With
+    # shrinkage on a 15-game form window the strength now lands inside
+    # the clamp range; the clamp becomes a safety net, not the answer.
+    games = [_g(f"G{i}", "A", "B", 20, 0) for i in range(30)]
+    elo = EloCalculator.replay("MLB", games)
+    ts = TeamStrengthBuilder.build(
+        team="A", league="MLB", results=games, elo=elo,
+    )
+    # The exact ceiling under shrinkage depends on the blend weights;
+    # for MLB with form_window=15 it sits around 1.40, decisively below
+    # the 1.60 clamp.
+    assert ts.strength < STRENGTH_CEIL, (
+        f"expected strength below the {STRENGTH_CEIL} ceiling after "
+        f"Tango shrinkage, got {ts.strength} (pinning the clamp again)"
+    )
+    assert ts.strength < Decimal('1.50'), (
+        f"expected strength under 1.50 after shrinkage; got {ts.strength}. "
+        f"If this regresses the clamp is doing the engine's work again."
+    )
+    assert ts.strength > NEUTRAL_STRENGTH, (
+        "should still be above neutral -- the team did dominate"
+    )
+
+
+def test_build_applies_shrinkage_so_weak_team_no_longer_pins_floor():
+    games = [_g(f"G{i}", "A", "B", 0, 20) for i in range(30)]
+    elo = EloCalculator.replay("MLB", games)
+    ts = TeamStrengthBuilder.build(
+        team="A", league="MLB", results=games, elo=elo,
+    )
+    assert ts.strength > STRENGTH_FLOOR, (
+        f"expected strength above the {STRENGTH_FLOOR} floor after "
+        f"Tango shrinkage, got {ts.strength} (pinning the clamp again)"
+    )
+    assert ts.strength > Decimal('0.65'), (
+        f"expected strength above 0.65 after shrinkage; got {ts.strength}"
+    )
+    assert ts.strength < NEUTRAL_STRENGTH
+
+
+def test_apr_25_replay_clamped_inputs_produce_realistic_bt_prob():
+    """The Apr 25 Premium Daily had Phillies @ Braves with str(H)=1.60
+    and str(A)=0.60 -- both clamps fully pinned. Pre-shrinkage Bradley-
+    Terry produced a 75% home win probability, which the engine then
+    priced as an 18% edge against a -130 closing line. With Tango
+    shrinkage at n=15, the same inputs should compress to roughly
+    (1.08, 0.92) and BT should land near 57% -- a realistic favorite
+    rate that disagrees with the market by only 1-2pp.
+
+    This is the regression test for the over-confidence pathology.
+    If shrinkage gets weakened or removed, this test fires loud.
+    """
+    raw_h = Decimal('1.60')
+    raw_a = Decimal('0.60')
+    # The form window is 15 for MLB; that's `n` in the Tango formula.
+    sh = TeamStrengthBuilder._tango_shrink(raw_h, n_games=15)
+    sa = TeamStrengthBuilder._tango_shrink(raw_a, n_games=15)
+    # Shrunk strengths land in a tight band.
+    assert Decimal('1.05') < sh < Decimal('1.15'), sh
+    assert Decimal('0.85') < sa < Decimal('0.95'), sa
+    # BT win prob with MLB home_adv=0.115 should now be in the 55-60%
+    # range, not the 75% the engine was producing without shrinkage.
+    home_adv = math.exp(0.115)
+    bt_home = (float(sh) * home_adv) / (float(sh) * home_adv + float(sa))
+    assert 0.54 < bt_home < 0.62, (
+        f"BT home prob after shrinkage should land in 54-62% for clamped "
+        f"raw inputs (1.60, 0.60); got {bt_home:.4f}. Pre-shrinkage this "
+        f"was 0.7495 -- the exact overconfidence the Apr 25 slate exposed."
+    )
