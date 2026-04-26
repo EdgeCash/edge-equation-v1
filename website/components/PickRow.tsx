@@ -19,7 +19,19 @@ export default function PickRow({ pick }: PickRowProps) {
     : formatAmericanOdds(pick.line.odds);
 
   return (
-    <div className="border border-edge-line rounded-sm p-5 grid grid-cols-12 gap-4 items-center">
+    <div
+      className={
+        "relative border border-edge-line rounded-sm p-5 pl-6 " +
+        "grid grid-cols-12 gap-4 items-center bg-ink-900/40 " +
+        "hover:border-edge-accent/50 hover:bg-ink-900/70 transition-colors group"
+      }
+    >
+      {/* Left cyan accent bar — slim, brightens on hover */}
+      <span
+        aria-hidden
+        className="absolute left-0 top-0 bottom-0 w-px bg-edge-accent/40 group-hover:bg-edge-accent transition-colors"
+      />
+
       <div className="col-span-12 sm:col-span-2 flex items-center gap-3">
         <GradeBadge grade={pick.grade} />
         <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-edge-textDim">
@@ -27,7 +39,8 @@ export default function PickRow({ pick }: PickRowProps) {
         </span>
       </div>
       <div className="col-span-12 sm:col-span-5">
-        <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-edge-textDim">
+        <div className="annotation">
+          <span className="text-edge-accent">{"// "}</span>
           {pick.market_type}
         </div>
         <div className="mt-1 font-display text-lg tracking-tightest text-edge-text">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { GetServerSideProps } from "next";
 
 import CardShell from "@/components/CardShell";
+import EngineStatusBar from "@/components/EngineStatusBar";
 import Layout from "@/components/Layout";
 import PickRow from "@/components/PickRow";
 import StatTile from "@/components/StatTile";
@@ -57,6 +58,22 @@ export default function DailyEdge({ slate, error }: Props) {
       title="Daily Edge"
       description="Today's Daily Edge slate from the Edge Equation engine."
     >
+      <EngineStatusBar
+        state={slate ? "live" : error ? "stale" : "standby"}
+        facts={
+          slate
+            ? [
+                { label: "Slate", value: formatDate(slate.generated_at) },
+                { label: "Picks", value: String(slate.n_picks) },
+                { label: "Card", value: slate.card_type },
+              ]
+            : error
+              ? [{ label: "API", value: "unreachable" }]
+              : [{ label: "State", value: "awaiting first slate" }]
+        }
+        className="-mt-12 mb-10"
+      />
+
       <div className="annotation mb-4 flex items-center gap-3">
         <span className="text-edge-accent">∴</span>
         <span>Public · Free · One card per day</span>

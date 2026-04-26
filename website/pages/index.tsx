@@ -1,10 +1,20 @@
 import Link from "next/link";
+import EngineStatusBar from "@/components/EngineStatusBar";
 import Layout from "@/components/Layout";
 
 export default function Home() {
   return (
     <Layout>
-      <section className="pt-10 sm:pt-16 relative">
+      <EngineStatusBar
+        state="live"
+        facts={[
+          { label: "Sources", value: "MLB · NHL · TheSportsDB" },
+          { label: "Refresh", value: "07:00 CT" },
+        ]}
+        className="-mt-12 mb-12"
+      />
+
+      <section className="pt-2 sm:pt-6 relative">
         {/* Margin formula tag — chalk annotation in the gutter */}
         <div className="annotation mb-6 flex items-center gap-3">
           <span className="text-edge-accent">f(x) =</span>
