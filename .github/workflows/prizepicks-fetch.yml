@@ -1,0 +1,108 @@
+name: PrizePicks Fetcher (hourly)
+
+# Pulls the PrizePicks projections board hourly and commits a fresh
+# CSV to data/prizepicks/latest.csv plus a timestamped snapshot to
+# data/prizepicks/snapshots/. The user opens the latest.csv URL in
+# Safari on iPhone, downloads the file, opens it in Numbers, and
+# pastes into the workbook's `_raw` sheet.
+#
+# Server-side replacement for the iOS Shortcut (which kept fighting
+# us on magic-variable wiring). Reuses the same User-Agent that the
+# Shortcut would have used; PrizePicks' public endpoint is fine with
+# it from a GitHub-hosted runner.
+#
+# History accumulates in snapshots/ — after a week or two of hourly
+# runs you can grep across the snapshot CSVs to compute per-player
+# accuracy rates without any extra tooling.
+
+on:
+  schedule:
+    # Top of every hour. The CT-hour guard below scopes actual fetches
+    # to MLB-relevant windows (10am-11pm CT) so off-hours runs are no-ops.
+    - cron: "0 * * * *"
+  workflow_dispatch:
+    inputs:
+      max_pages:
+        description: "Pages of 250 projections to fetch (default 30 = ~7500)."
+        default: "30"
+      league:
+        description: "Optional league filter (e.g., MLB). Empty = all."
+        default: ""
+      ignore_window:
+        description: "Set to 'true' to bypass the CT-hour guard."
+        default: "false"
+
+# Need write permission to commit the CSV back to the repo.
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Persist credentials so the commit step can push.
+          persist-credentials: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: CT-hour guard
+        id: guard
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
+             [ "${{ inputs.ignore_window }}" = "true" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual dispatch without ignore_window: still respect the
+            # window so a casual click doesn't fetch at 3am.
+            :
+          fi
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          # Active CT window: 10:00 to 23:00 inclusive. Outside that
+          # range PrizePicks projections are stable / overnight.
+          from datetime import datetime, timezone
+          from zoneinfo import ZoneInfo
+          now_ct = datetime.now(ZoneInfo("America/Chicago"))
+          h = now_ct.hour
+          run = 10 <= h <= 23
+          print(f"should_run={'true' if run else 'false'}")
+          print(f"ct_hour={h}")
+          PY
+
+      - name: Fetch projections
+        if: steps.guard.outputs.should_run == 'true'
+        run: |
+          MAX_PAGES="${{ inputs.max_pages || 30 }}"
+          LEAGUE_FLAG=""
+          if [ -n "${{ inputs.league }}" ]; then
+            LEAGUE_FLAG="--league ${{ inputs.league }}"
+          fi
+          python3 tools/sheets/fetch_prizepicks.py \
+            --max-pages "$MAX_PAGES" \
+            --out data/prizepicks/latest.csv \
+            --snapshot-dir data/prizepicks/snapshots \
+            $LEAGUE_FLAG
+
+      - name: Commit + push if changed
+        if: steps.guard.outputs.should_run == 'true'
+        shell: bash
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/prizepicks/
+          # `git diff --cached --quiet` exits 0 when nothing is staged
+          # (no changes to commit). Skip commit in that case so the
+          # repo doesn't accumulate empty commits when PrizePicks
+          # returns identical data hour-over-hour.
+          if git diff --cached --quiet; then
+            echo "no changes to commit"
+            exit 0
+          fi
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          git commit -m "data: PrizePicks fetch ${ts}"
+          git push
