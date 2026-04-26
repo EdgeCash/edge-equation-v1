@@ -72,6 +72,24 @@ STRENGTH_FLOOR = Decimal('0.60')
 STRENGTH_CEIL = Decimal('1.60')
 NEUTRAL_STRENGTH = Decimal('1.000000')
 
+# Tangotiger's empirically-fit MLB regression-to-the-mean prior weight.
+# A team's blended strength gets pulled toward 1.0 (league-average) using:
+#     shrunk_WR = (n*observed_WR + TANGO_K*0.5) / (n + TANGO_K)
+# where n is the team's effective observation count (form_window_games).
+# At n=15 (early MLB season form window) the data carries 15/85 = 17.6%
+# weight; at n=70 it's 50/50; at n=200 the data dominates.
+#
+# Reference: Tom Tango, "True Talent" series + The Book (Tango/Lichtman/
+# Dolphin 2007). Validated against decades of MLB seasons.
+#
+# Apr 25, 2026: the engine without shrinkage produced 12 A+ picks of 18 on
+# the Premium Daily slate, with median |fair - market| ~14pp -- absurd
+# for a model going up against sharp closing lines. Replay diagnostic in
+# tools/diagnostics/shrinkage_replay.py shows Tango shrinkage at n=15
+# collapses A+ count from 12 -> 2 and median disagreement to ~2pp,
+# matching the standard "well-calibrated handicapping model" envelope.
+TANGO_K = 70
+
 # Phase 31: cap on the cold-start seed perturbation. ~+/-3% multiplicative
 # spread is large enough that two teams render as different projections,
 # small enough that the engine's sanity guard never flags it as a real
@@ -171,6 +189,40 @@ class TeamStrengthBuilder:
         if value > ceil:
             return ceil
         return value
+
+    @staticmethod
+    def _tango_shrink(strength: Decimal, n_games: int, k: int = TANGO_K) -> Decimal:
+        """Bayesian regression-to-the-mean on a BT-form strength value.
+
+        Converts strength -> implied WR via WR = s/(1+s), applies Tango's
+        Bayesian update with prior_WR=0.5 weighted by k phantom games,
+        then converts back. Lighter shrinkage as n grows.
+
+        Apr 25 numerics (MLB form_window=15, k=70):
+            raw 0.60 -> 0.916        raw 1.60 -> 1.083
+            raw 1.18 -> 1.029        raw 0.81 -> 0.967
+        With these compressed ranges the engine's BT projections sit
+        within 1-3pp of sharp closing lines on the median pick (was
+        ~14pp without shrinkage). See tools/diagnostics/
+        shrinkage_replay.py for the full slate replay this fix is
+        calibrated against.
+        """
+        s_float = float(strength)
+        if s_float <= 0:
+            return NEUTRAL_STRENGTH
+        n = max(int(n_games), 0)
+        if n == 0:
+            # No form-window observations. The blended strength may still
+            # carry information from Elo / pitching components, so we
+            # return it unchanged rather than zeroing it out. (Genuinely
+            # no-data teams hit the cold-start seed branch in build()
+            # before this helper is called.)
+            return strength
+        wr_observed = s_float / (1.0 + s_float)
+        wr_shrunk = (n * wr_observed + k * 0.5) / (n + k)
+        # Guard against pathological values; never let WR escape (0, 1).
+        wr_shrunk = max(0.001, min(0.999, wr_shrunk))
+        return Decimal(str(wr_shrunk / (1.0 - wr_shrunk))).quantize(Decimal('0.000001'))
 
     @staticmethod
     def _seed_strength(team: str, league: str) -> Decimal:
@@ -369,6 +421,14 @@ class TeamStrengthBuilder:
             effective[name] = w_eff
             log_strength += float(w_eff) * math.log(max(float(s), 1e-9))
         blended = Decimal(str(math.exp(log_strength))).quantize(Decimal('0.000001'))
+        # Tango Bayesian shrinkage toward 1.0 BEFORE the clamp. With this
+        # in place the clamp is a true safety net (rarely activates),
+        # not the daily output. games_used is the form-window count
+        # (capped at form_window_games per sport); using it as `n` is a
+        # conservative under-estimate of total observations -- erring
+        # toward more shrinkage on early-season slates is the right
+        # bias when the engine is going up against sharp closing lines.
+        blended = TeamStrengthBuilder._tango_shrink(blended, n_games=games_used)
         blended = TeamStrengthBuilder._clamp(blended)
 
         return TeamStrength(

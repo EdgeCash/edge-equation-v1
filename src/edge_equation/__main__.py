@@ -958,6 +958,167 @@ def _cmd_picks_csv(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_reliability(args: argparse.Namespace) -> int:
+    """Reliability diagram for settled picks.
+
+    Joins picks against game_results to find every pick whose game has
+    settled (status=final and realization in {0, 50, 100}), then bins
+    the engine's predicted fair_prob in N equal bands and reports the
+    actual hit rate per band. Pushes are excluded from the hit-rate
+    denominator.
+
+    The output is the calibration loop's measurement signal: if the
+    engine says "62% fair" and the band's actual hit rate is 40%, the
+    engine is over-confident in that range. Track this for a week
+    after the shrinkage fix lands -- the bands should pull toward the
+    diagonal (mean_pred ~= hit_rate per bin).
+
+    Pre-shrinkage data is contaminated by the over-confidence bug, so
+    the most useful default is --since the date the shrinkage shipped.
+    """
+    from edge_equation.backtest.calibration import Calibration
+
+    conn = _open_db(args.db)
+    try:
+        # Build the WHERE clause incrementally so unset filters become no-ops.
+        clauses = [
+            "g.status = 'final'",
+            "p.realization IN (0, 50, 100)",
+            "p.fair_prob IS NOT NULL",
+        ]
+        params: list = []
+        if args.sport:
+            clauses.append("p.sport = ?")
+            params.append(args.sport)
+        if args.market:
+            clauses.append("p.market_type = ?")
+            params.append(args.market)
+        if args.since:
+            clauses.append("p.recorded_at >= ?")
+            params.append(args.since)
+        if args.until:
+            clauses.append("p.recorded_at < ?")
+            params.append(args.until)
+        sql = (
+            "SELECT p.fair_prob, p.realization "
+            "FROM picks p "
+            "JOIN game_results g ON g.game_id = p.game_id "
+            "WHERE " + " AND ".join(clauses)
+        )
+        rows = conn.execute(sql, params).fetchall()
+    finally:
+        conn.close()
+
+    preds: List[float] = []
+    outcomes: List[int] = []
+    pushes = 0
+    for r in rows:
+        fp = r["fair_prob"]
+        if fp is None:
+            continue
+        try:
+            p = float(fp)
+        except (TypeError, ValueError):
+            continue
+        if not (0.0 <= p <= 1.0):
+            continue
+        rl = int(r["realization"])
+        if rl == 100:
+            outcomes.append(1)
+            preds.append(p)
+        elif rl == 0:
+            outcomes.append(0)
+            preds.append(p)
+        elif rl == 50:
+            pushes += 1  # excluded from win-rate denominator
+        # else: pending forecast value -- shouldn't happen given the WHERE
+        # clause above, but defensive against schema drift.
+
+    n = len(preds)
+    if n == 0:
+        print(json.dumps({
+            "status": "no_settled_picks",
+            "filters": {
+                "sport": args.sport, "market": args.market,
+                "since": args.since, "until": args.until,
+            },
+            "hint": (
+                "No settled picks match these filters. Either the engine "
+                "hasn't run yet, the auto-settler hasn't filled in scores, "
+                "or your --since cuts off all data. Try `python -m "
+                "edge_equation diag` for a DB inventory."
+            ),
+        }, indent=2))
+        return 0
+
+    n_bins = max(2, int(args.bins))
+    result = Calibration.compute(preds, outcomes, n_bins=n_bins)
+
+    if args.json:
+        print(json.dumps({
+            "n_settled": n,
+            "n_pushes_excluded": pushes,
+            "hit_rate_overall": float(sum(outcomes) / n),
+            "filters": {
+                "sport": args.sport, "market": args.market,
+                "since": args.since, "until": args.until,
+            },
+            "calibration": result.to_dict(),
+        }, indent=2))
+        return 0
+
+    # ---- human-readable ASCII reliability diagram ----
+    title_parts = []
+    if args.sport: title_parts.append(args.sport)
+    if args.market: title_parts.append(args.market)
+    title_parts.append(f"since {args.since}" if args.since else "all dates")
+    title = " · ".join(title_parts) if title_parts else "all picks"
+
+    bar_W = 24  # width of the hit-rate bar in chars
+    print()
+    print("Reliability diagram — " + title)
+    print("=" * 78)
+    print(f"n_settled: {n}    pushes_excluded: {pushes}    "
+          f"overall_hit_rate: {sum(outcomes) / n:.1%}")
+    print(f"brier: {float(result.brier):.4f}    "
+          f"log_loss: {float(result.log_loss):.4f}    "
+          f"reliability: {float(result.reliability):.4f}    "
+          f"resolution: {float(result.resolution):.4f}")
+    print()
+    print(f"{'band':<14}{'count':>6}  {'mean_pred':>10}  "
+          f"{'hit_rate':>10}  {'delta':>9}   actual rate")
+    print("-" * 78)
+    deltas: List[float] = []
+    for b in result.bins:
+        if b.count == 0:
+            continue
+        mp = float(b.mean_pred)
+        ho = float(b.mean_outcome)
+        delta = mp - ho  # positive = under-confident; negative = over-confident
+        deltas.append(abs(delta))
+        bar_len = int(round(ho * bar_W))
+        bar = "#" * bar_len + "-" * (bar_W - bar_len)
+        flag = ""
+        if delta < -0.05:
+            flag = "  <-- over-confident"
+        elif delta > 0.05:
+            flag = "  <-- under-confident"
+        band = f"[{int(float(b.bin_start) * 100):>2}-{int(float(b.bin_end) * 100):>2}%)"
+        print(f"{band:<14}{b.count:>6}  {mp:>9.1%}   {ho:>9.1%}  "
+              f"{delta * 100:>+7.1f}pp   |{bar}|{flag}")
+    if deltas:
+        mean_d = sum(deltas) / len(deltas)
+        med_d = sorted(deltas)[len(deltas) // 2]
+        print()
+        print(f"Mean |delta|:   {mean_d * 100:.1f}pp")
+        print(f"Median |delta|: {med_d * 100:.1f}pp")
+    print()
+    print("Legend: delta = mean_pred - hit_rate. Negative = over-confident; "
+          "positive = under-confident.")
+    print("        Brier 0.25 = no skill on a coin-flip set; lower is better.")
+    return 0
+
+
 def _cmd_pipeline(args: argparse.Namespace) -> int:
     # Phase-1 demo pipeline retained for backwards compatibility.
     from edge_equation.engine.modes import PipelineMode
@@ -1138,6 +1299,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output path. Default: picks_<date>.csv in the working dir.",
     )
     p_csv.set_defaults(func=_cmd_picks_csv)
+
+    p_rel = sub.add_parser(
+        "reliability",
+        help="Print a reliability diagram (predicted prob vs actual hit "
+             "rate per band) for settled picks.",
+    )
+    p_rel.add_argument("--db", type=str, default=None)
+    p_rel.add_argument(
+        "--sport", type=str, default=None,
+        help="Filter to one sport (MLB, NHL, NBA, NFL, KBO, NPB).",
+    )
+    p_rel.add_argument(
+        "--market", type=str, default=None,
+        help="Filter to one market type (ML, Run_Line, Total, etc.).",
+    )
+    p_rel.add_argument(
+        "--since", type=str, default=None,
+        help="Only include picks with recorded_at >= ISO8601 datetime "
+             "(e.g. 2026-04-26 to evaluate post-shrinkage picks).",
+    )
+    p_rel.add_argument(
+        "--until", type=str, default=None,
+        help="Only include picks with recorded_at < ISO8601 datetime.",
+    )
+    p_rel.add_argument(
+        "--bins", type=int, default=10,
+        help="Equal-width bins on [0, 1]. Default 10 (10pp bands). "
+             "20 gives 5pp bands but needs more data per bin.",
+    )
+    p_rel.add_argument(
+        "--json", action="store_true",
+        help="Emit machine-readable JSON instead of the ASCII diagram.",
+    )
+    p_rel.set_defaults(func=_cmd_reliability)
 
     p_pipe = sub.add_parser("pipeline", help="Legacy Phase-1 pipeline demo")
     p_pipe.add_argument("--mode", type=str, default="daily")

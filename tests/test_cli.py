@@ -210,6 +210,179 @@ def test_settle_records_with_actual_value(tmp_path, capsys):
     conn.close()
 
 
+# ----------------------------------------------------- reliability
+
+
+def _seed_settled_picks(conn, picks_data):
+    """Helper for reliability tests. picks_data is a list of dicts with
+    keys: game_id, fair_prob, realization (0/50/100), market_type, sport,
+    home_score, away_score (the latter two for game_results)."""
+    from edge_equation.engine.pick_schema import Line, Pick
+    from edge_equation.persistence.slate_store import SlateRecord
+    from edge_equation.stats.results import GameResult, GameResultsStore
+
+    SlateStore.insert(conn, SlateRecord(
+        slate_id="s_rel", generated_at="2026-04-26T09:00",
+        sport=None, card_type="daily_edge",
+    ))
+    for i, p in enumerate(picks_data):
+        # Insert pick row with the predicted probability.
+        pick_id = PickStore.insert(conn, Pick(
+            sport=p.get("sport", "MLB"),
+            market_type=p.get("market_type", "ML"),
+            selection=f"TeamA",
+            line=Line(odds=-110),
+            fair_prob=Decimal(str(p["fair_prob"])),
+            edge=Decimal('0.05'),
+            kelly=Decimal('0.02'),
+            grade="A",
+            realization=p["realization"],
+            game_id=p["game_id"],
+        ), slate_id="s_rel")
+        # Insert matching final game_result so the JOIN returns this pick.
+        GameResultsStore.record(conn, GameResult(
+            result_id=None,
+            game_id=p["game_id"],
+            league=p.get("sport", "MLB"),
+            home_team="TeamA",
+            away_team="TeamB",
+            start_time="2026-04-26T18:00:00",
+            home_score=p.get("home_score", 5),
+            away_score=p.get("away_score", 4),
+            status="final",
+        ))
+
+
+def test_reliability_reports_perfect_calibration(tmp_path, capsys):
+    """If predicted probabilities match actual hit rates exactly, mean
+    |delta| should be 0 (within floating-point noise)."""
+    db_path = str(tmp_path / "test.db")
+    conn = Database.open(db_path)
+    Database.migrate(conn)
+    # 10 picks at 60% predicted, 6 wins / 4 losses (60% actual)
+    picks = (
+        [{"game_id": f"W{i}", "fair_prob": 0.60, "realization": 100} for i in range(6)] +
+        [{"game_id": f"L{i}", "fair_prob": 0.60, "realization": 0} for i in range(4)]
+    )
+    _seed_settled_picks(conn, picks)
+    conn.close()
+
+    code, cap = _run(["reliability", "--db", db_path, "--json"], capsys)
+    assert code == 0
+    payload = json.loads(cap.out)
+    assert payload["n_settled"] == 10
+    assert payload["hit_rate_overall"] == 0.6
+    # The single populated bin should have mean_pred == mean_outcome.
+    populated = [b for b in payload["calibration"]["bins"] if b["count"] > 0]
+    assert len(populated) == 1
+    assert abs(float(populated[0]["mean_pred"]) - 0.60) < 1e-6
+    assert abs(float(populated[0]["mean_outcome"]) - 0.60) < 1e-6
+
+
+def test_reliability_detects_overconfidence(tmp_path, capsys):
+    """Engine predicts 70%, actual hit rate is 40% -> -30pp delta in
+    that bin. The reporter should surface that gap."""
+    db_path = str(tmp_path / "test.db")
+    conn = Database.open(db_path)
+    Database.migrate(conn)
+    picks = (
+        [{"game_id": f"W{i}", "fair_prob": 0.70, "realization": 100} for i in range(4)] +
+        [{"game_id": f"L{i}", "fair_prob": 0.70, "realization": 0} for i in range(6)]
+    )
+    _seed_settled_picks(conn, picks)
+    conn.close()
+
+    code, cap = _run(["reliability", "--db", db_path, "--json"], capsys)
+    assert code == 0
+    payload = json.loads(cap.out)
+    populated = [b for b in payload["calibration"]["bins"] if b["count"] > 0]
+    assert len(populated) == 1
+    delta = float(populated[0]["mean_pred"]) - float(populated[0]["mean_outcome"])
+    assert delta > 0.25, f"expected ~+30pp over-confidence, got {delta}"
+
+
+def test_reliability_excludes_pushes_from_hit_rate(tmp_path, capsys):
+    """Pushes (realization=50) shouldn't count in the hit-rate denominator."""
+    db_path = str(tmp_path / "test.db")
+    conn = Database.open(db_path)
+    Database.migrate(conn)
+    picks = (
+        [{"game_id": "W1", "fair_prob": 0.55, "realization": 100}] +
+        [{"game_id": "L1", "fair_prob": 0.55, "realization": 0}] +
+        [{"game_id": f"P{i}", "fair_prob": 0.55, "realization": 50}
+         for i in range(3)]  # 3 pushes
+    )
+    _seed_settled_picks(conn, picks)
+    conn.close()
+
+    code, cap = _run(["reliability", "--db", db_path, "--json"], capsys)
+    assert code == 0
+    payload = json.loads(cap.out)
+    assert payload["n_settled"] == 2  # 1 win + 1 loss; pushes excluded
+    assert payload["n_pushes_excluded"] == 3
+
+
+def test_reliability_filters_by_sport_and_market(tmp_path, capsys):
+    db_path = str(tmp_path / "test.db")
+    conn = Database.open(db_path)
+    Database.migrate(conn)
+    picks = [
+        {"game_id": "M1", "fair_prob": 0.60, "realization": 100,
+         "sport": "MLB", "market_type": "ML"},
+        {"game_id": "M2", "fair_prob": 0.60, "realization": 0,
+         "sport": "MLB", "market_type": "Run_Line"},
+        {"game_id": "N1", "fair_prob": 0.60, "realization": 100,
+         "sport": "NHL", "market_type": "ML"},
+    ]
+    _seed_settled_picks(conn, picks)
+    conn.close()
+
+    # Filter to MLB ML only -> just M1.
+    code, cap = _run(
+        ["reliability", "--db", db_path, "--sport", "MLB",
+         "--market", "ML", "--json"],
+        capsys,
+    )
+    assert code == 0
+    payload = json.loads(cap.out)
+    assert payload["n_settled"] == 1
+    assert payload["filters"]["sport"] == "MLB"
+    assert payload["filters"]["market"] == "ML"
+
+
+def test_reliability_handles_no_settled_picks(tmp_path, capsys):
+    db_path = str(tmp_path / "test.db")
+    conn = Database.open(db_path)
+    Database.migrate(conn)
+    conn.close()
+
+    code, cap = _run(["reliability", "--db", db_path, "--json"], capsys)
+    assert code == 0
+    payload = json.loads(cap.out)
+    assert payload["status"] == "no_settled_picks"
+    assert "hint" in payload
+
+
+def test_reliability_ascii_output_contains_diagram(tmp_path, capsys):
+    db_path = str(tmp_path / "test.db")
+    conn = Database.open(db_path)
+    Database.migrate(conn)
+    picks = (
+        [{"game_id": f"W{i}", "fair_prob": 0.55, "realization": 100} for i in range(5)] +
+        [{"game_id": f"L{i}", "fair_prob": 0.55, "realization": 0} for i in range(5)]
+    )
+    _seed_settled_picks(conn, picks)
+    conn.close()
+
+    code, cap = _run(["reliability", "--db", db_path], capsys)
+    assert code == 0
+    out = cap.out
+    assert "Reliability diagram" in out
+    assert "n_settled: 10" in out
+    assert "brier:" in out
+    assert "Mean |delta|:" in out
+
+
 # ----------------------------------------------------- no-subcommand compat
 
 

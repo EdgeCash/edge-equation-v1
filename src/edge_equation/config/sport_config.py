@@ -37,7 +37,16 @@ SPORT_CONFIG = {
     "MLB": {
         "markets": ["ML", "Run_Line", "Total", "HR", "K", "NRFI", "YRFI"],
         "league_baseline_total": Decimal('8.86'),
-        "spread_line_weight": Decimal('0.113'),
+        # Apr 26, 2026: lowered from 0.113 to 0.075 after the Apr 25
+        # Premium Daily showed +1.5 run-line picks grading A+ purely
+        # from line value even under heavy strength shrinkage. Public
+        # MLB closing-line behavior (Pinnacle, Circa) prices the +1.5
+        # run-line worth ~10-12pp of probability vs the moneyline,
+        # which on a per-run basis is closer to 0.07-0.08. Going with
+        # 0.075 as a conservative midpoint; will tune against settled
+        # data once the calibration loop has > 50 settled run-line
+        # picks across the post-shrinkage epoch.
+        "spread_line_weight": Decimal('0.075'),
         "ml_universal_weight": Decimal('0.65'),
         "prop_universal_weight": Decimal('0.55'),
         "pythagorean_exponent": Decimal('1.83'),

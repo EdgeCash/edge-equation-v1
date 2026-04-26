@@ -50,7 +50,17 @@ def test_compose_produces_higher_home_prob_for_strong_home():
         features.ml_inputs["strength_away"],
         features.ml_inputs["home_adv"],
     )
-    assert prob > Decimal('0.70')
+    # Tango shrinkage at form_window=15 caps a dominant home team in
+    # the high-50s to mid-60s range against a weak opponent -- which is
+    # what real MLB closing lines say. Pre-shrinkage this assertion was
+    # > 0.70, but that was the over-confidence we're now correcting.
+    assert prob > Decimal('0.60'), (
+        f"strong home should still beat the 60% threshold; got {prob}"
+    )
+    assert prob < Decimal('0.75'), (
+        f"strong home should NOT exceed 75% (that was the pre-shrinkage "
+        f"over-confidence pathology); got {prob}"
+    )
 
 
 def test_compose_reverses_when_weak_team_is_home():
@@ -62,7 +72,13 @@ def test_compose_reverses_when_weak_team_is_home():
         features.ml_inputs["strength_away"],
         features.ml_inputs["home_adv"],
     )
-    assert prob < Decimal('0.30')
+    # Mirror image of the strong-home test: weak home should land in
+    # the mid-30s to low-40s, not below 30% (that was pre-shrinkage).
+    assert prob > Decimal('0.25'), prob
+    assert prob < Decimal('0.45'), (
+        f"weak home should NOT drop below 45% under shrinkage; got {prob}. "
+        f"The pre-shrinkage <30% was the same over-confidence in reverse."
+    )
 
 
 def test_compose_uses_sport_home_adv():
