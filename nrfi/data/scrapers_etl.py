@@ -90,18 +90,25 @@ _TEAM_ABBR_FIX = {
 }
 
 # Map MLB Stats venue ID or name → our park tricode (best-effort).
+# Includes alternate names from corporate renames (Rate Field 2026,
+# Daikin Park 2025, Sutter Health Park 2025, Steinbrenner Field 2025).
+# Update annually.
 _VENUE_NAME_TO_CODE = {
     "Chase Field": "ARI", "Truist Park": "ATL", "Oriole Park at Camden Yards": "BAL",
-    "Fenway Park": "BOS", "Wrigley Field": "CHC", "Guaranteed Rate Field": "CWS",
+    "Fenway Park": "BOS", "Wrigley Field": "CHC",
+    "Guaranteed Rate Field": "CWS", "Rate Field": "CWS",  # 2026 rename
     "Great American Ball Park": "CIN", "Progressive Field": "CLE", "Coors Field": "COL",
-    "Comerica Park": "DET", "Minute Maid Park": "HOU", "Daikin Park": "HOU",
+    "Comerica Park": "DET",
+    "Minute Maid Park": "HOU", "Daikin Park": "HOU",      # 2025 rename
     "Kauffman Stadium": "KC", "Angel Stadium": "LAA", "Dodger Stadium": "LAD",
-    "loanDepot park": "MIA", "American Family Field": "MIL", "Target Field": "MIN",
-    "Citi Field": "NYM", "Yankee Stadium": "NYY", "Oakland Coliseum": "OAK",
-    "Sutter Health Park": "OAK",   # 2025+ A's temporary home
+    "loanDepot park": "MIA", "LoanDepot Park": "MIA",
+    "American Family Field": "MIL", "Target Field": "MIN",
+    "Citi Field": "NYM", "Yankee Stadium": "NYY",
+    "Oakland Coliseum": "OAK", "Sutter Health Park": "OAK",   # 2025+ A's temporary home
     "Citizens Bank Park": "PHI", "PNC Park": "PIT", "Petco Park": "SD",
     "Oracle Park": "SF", "T-Mobile Park": "SEA", "Busch Stadium": "STL",
-    "Tropicana Field": "TB", "George M. Steinbrenner Field": "TB",  # 2025+ Rays temp
+    "Tropicana Field": "TB",
+    "George M. Steinbrenner Field": "TB", "Steinbrenner Field": "TB",  # 2025+ Rays temp
     "Globe Life Field": "TEX", "Rogers Centre": "TOR", "Nationals Park": "WSH",
 }
 

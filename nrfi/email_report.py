@@ -96,7 +96,12 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
             log.warning("daily_etl failed (%s) — proceeding with cached games", e)
 
     # Build features for every game on the slate, then run the engine.
-    feats_per_game = reconstruct_features_for_date(target_date, store=store, config=cfg)
+    # Live daily run → forecast weather (the archive endpoint lags ~5
+    # days and rejects future-dated requests with a 400).
+    feats_per_game = reconstruct_features_for_date(
+        target_date, store=store, config=cfg,
+        forecast_weather_only=True,
+    )
     bridge = NRFIEngineBridge.try_load(cfg)
     engine_label = "ml" if bridge.available() else "poisson_baseline"
 

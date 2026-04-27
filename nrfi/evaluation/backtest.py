@@ -138,78 +138,118 @@ def reconstruct_features_for_date(
         start.isoformat(), end.isoformat(), config=cfg,
     )
 
+    # Helpers — DuckDB rows arrive via pandas, so any nullable column
+    # may be `pd.NA`. Truthy checks (`x or 0`, `if x:`) raise on NA, so
+    # we route every nullable through these guards.
+    def _safe_int(v, default=None):
+        if v is None or pd.isna(v):
+            return default
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return default
+
+    def _safe_str(v, default=""):
+        if v is None or pd.isna(v):
+            return default
+        return str(v)
+
     out: list[tuple[int, dict]] = []
     try:
         for _, g in games.iterrows():
             try:
-                park = park_for(str(g.venue_code))
-            except KeyError:
-                log.warning("Unknown park %s — skipping game %s", g.venue_code, g.game_pk)
+                # Resolve park: try the stored venue code first, then fall
+                # back to the home-team tricode (always reliable). This keeps
+                # us robust to mid-season venue renames (e.g. 2026: Guaranteed
+                # Rate Field → Rate Field).
+                park = None
+                for candidate in (_safe_str(g.venue_code), _safe_str(g.home_team)):
+                    if not candidate:
+                        continue
+                    try:
+                        park = park_for(candidate)
+                        break
+                    except KeyError:
+                        continue
+                if park is None:
+                    log.warning("Unknown park %s (home=%s) — skipping game %s",
+                                 g.venue_code, g.home_team, g.game_pk)
+                    continue
+
+                # Weather — archive (real observations) by default, forecast
+                # snapped to T-3hr when forecast_weather_only=True or when the
+                # requested date is in the future relative to the archive's
+                # coverage (live daily runs hit this for late West Coast games
+                # whose UTC first_pitch_ts rolls over to the next calendar day).
+                wx = None
+                fp_ts = _safe_str(g.first_pitch_ts)
+                if fp_ts:
+                    fp = datetime.fromisoformat(fp_ts.replace("Z", "+00:00"))
+                    today_utc = datetime.now(fp.tzinfo).date()
+                    pitch_date = fp.date()
+                    use_forecast = forecast_weather_only or pitch_date >= today_utc
+                    if use_forecast:
+                        target_iso = (fp - timedelta(hours=3)).isoformat()
+                        wx = weather.forecast(park.lat, park.lon, target_iso, park.altitude_ft)
+                    else:
+                        wx = weather.archive(park.lat, park.lon, fp_ts, park.altitude_ft)
+
+                # Pitcher inputs (first-inning splits from Statcast).
+                home_pid = _safe_int(g.home_pitcher_id, default=0)
+                away_pid = _safe_int(g.away_pitcher_id, default=0)
+                home_p = PitcherInputs(
+                    pitcher_id=home_pid,
+                    hand=_safe_str(g.home_pitcher_hand) or "R",
+                    first_inn_stats=first_inning_pitcher_stats(
+                        statcast_df, home_pid,
+                    ) if statcast_df is not None and not statcast_df.empty else {},
+                )
+                away_p = PitcherInputs(
+                    pitcher_id=away_pid,
+                    hand=_safe_str(g.away_pitcher_hand) or "R",
+                    first_inn_stats=first_inning_pitcher_stats(
+                        statcast_df, away_pid,
+                    ) if statcast_df is not None and not statcast_df.empty else {},
+                )
+
+                # Lineup inputs — defaults are league averages; richer lookups
+                # would join with batter season stats from pybaseball.
+                home_lu = LineupInputs(confirmed=bool(_safe_str(g.home_lineup)))
+                away_lu = LineupInputs(confirmed=bool(_safe_str(g.away_lineup)))
+
+                ump = UmpireInputs(
+                    ump_id=_safe_int(g.ump_id),
+                    full_name="",  # pulled from `umpires` table when present
+                )
+
+                gpk = _safe_int(g.game_pk, default=0)
+                ctx = GameContext(
+                    game_pk=gpk,
+                    game_date=_safe_str(g.game_date),
+                    season=_safe_int(g.season, default=int(target_date[:4])),
+                    home_team=_safe_str(g.home_team),
+                    away_team=_safe_str(g.away_team),
+                    park=park,
+                    weather=wx,
+                    roof_open=None,
+                )
+                feats = builder.build(
+                    ctx=ctx,
+                    home_pitcher=home_p, away_pitcher=away_p,
+                    home_lineup=home_lu, away_lineup=away_lu,
+                    umpire=ump,
+                )
+                out.append((gpk, feats))
+                store.upsert("features", [{
+                    "game_pk": gpk,
+                    "model_version": "elite_nrfi_v1",
+                    "feature_blob": features_to_blob(feats),
+                }])
+            except Exception as game_err:
+                # One bad game shouldn't tank the whole slate — log and move on.
+                log.warning("Feature build failed for game %s: %s",
+                             getattr(g, "game_pk", "?"), game_err)
                 continue
-
-            # Weather — archive (real observations) by default, forecast
-            # snapped to T-3hr when `forecast_weather_only=True` to match
-            # exactly what the daily run would have seen pre-game.
-            wx = None
-            if g.first_pitch_ts:
-                if forecast_weather_only:
-                    # Snap to the forecast issued ~3 hours before first
-                    # pitch — the standard slate-build window.
-                    from datetime import timedelta as _td
-                    fp = datetime.fromisoformat(str(g.first_pitch_ts).replace("Z", "+00:00"))
-                    target_iso = (fp - _td(hours=3)).isoformat()
-                    wx = weather.forecast(park.lat, park.lon, target_iso, park.altitude_ft)
-                else:
-                    wx = weather.archive(park.lat, park.lon, str(g.first_pitch_ts), park.altitude_ft)
-
-            # Pitcher inputs (first-inning splits from Statcast).
-            home_p = PitcherInputs(
-                pitcher_id=int(g.home_pitcher_id or 0),
-                hand=str(g.home_pitcher_hand or "R"),
-                first_inn_stats=first_inning_pitcher_stats(
-                    statcast_df, int(g.home_pitcher_id or 0)
-                ) if statcast_df is not None and not statcast_df.empty else {},
-            )
-            away_p = PitcherInputs(
-                pitcher_id=int(g.away_pitcher_id or 0),
-                hand=str(g.away_pitcher_hand or "R"),
-                first_inn_stats=first_inning_pitcher_stats(
-                    statcast_df, int(g.away_pitcher_id or 0)
-                ) if statcast_df is not None and not statcast_df.empty else {},
-            )
-
-            # Lineup inputs — defaults are league averages; richer lookups
-            # would join with batter season stats from pybaseball.
-            home_lu = LineupInputs(confirmed=bool(g.home_lineup))
-            away_lu = LineupInputs(confirmed=bool(g.away_lineup))
-
-            ump = UmpireInputs(
-                ump_id=int(g.ump_id) if g.ump_id else None,
-                full_name="",  # pulled from `umpires` table when present
-            )
-
-            ctx = GameContext(
-                game_pk=int(g.game_pk),
-                game_date=str(g.game_date),
-                season=int(g.season),
-                home_team=str(g.home_team),
-                away_team=str(g.away_team),
-                park=park,
-                weather=wx,
-                roof_open=None,
-            )
-            feats = builder.build(
-                ctx=ctx,
-                home_pitcher=home_p, away_pitcher=away_p,
-                home_lineup=home_lu, away_lineup=away_lu,
-                umpire=ump,
-            )
-            out.append((int(g.game_pk), feats))
-            store.upsert("features", [{
-                "game_pk": int(g.game_pk),
-                "model_version": "elite_nrfi_v1",
-                "feature_blob": features_to_blob(feats),
-            }])
     finally:
         weather.close()
         mlb.close()
