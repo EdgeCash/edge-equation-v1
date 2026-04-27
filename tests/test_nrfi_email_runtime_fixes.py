@@ -68,7 +68,7 @@ def test_safe_str_handles_pandas_NA():
 # ---------------------------------------------------------------------------
 
 def test_venue_dict_includes_new_2026_names():
-    from nrfi.data.scrapers_etl import _VENUE_NAME_TO_CODE
+    from edge_equation.engines.nrfi.data.scrapers_etl import _VENUE_NAME_TO_CODE
     # White Sox 2026 rename — direct cause of the "Unknown park RAT" warning.
     assert _VENUE_NAME_TO_CODE.get("Rate Field") == "CWS"
     assert _VENUE_NAME_TO_CODE.get("Guaranteed Rate Field") == "CWS"
@@ -82,7 +82,7 @@ def test_venue_dict_includes_new_2026_names():
 
 
 def test_park_for_resolves_known_codes():
-    from nrfi.data.park_factors import park_for
+    from edge_equation.engines.nrfi.data.park_factors import park_for
     assert park_for("CWS").team == "White Sox"
     assert park_for("HOU").team == "Astros"
     # The fallback in reconstruct_features_for_date tries home_team next;
@@ -132,7 +132,7 @@ def test_forecast_fallback_logic_for_future_dates(monkeypatch):
 def test_email_report_uses_forecast_weather(monkeypatch):
     """Confirm `nrfi.email_report.build_card` calls
     `reconstruct_features_for_date` with `forecast_weather_only=True`."""
-    import nrfi.email_report as mod
+    import edge_equation.engines.nrfi.email_report as mod
 
     captured = {}
 

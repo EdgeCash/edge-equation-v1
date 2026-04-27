@@ -17,7 +17,7 @@ evaluation isn't poisoned by post-game information. Concretely:
 
 Usage from the CLI:
 
-    from nrfi.evaluation.backtest import backtest_range
+    from edge_equation.engines.nrfi.evaluation.backtest import backtest_range
     report = backtest_range("2024-04-01", "2024-04-30")
 """
 

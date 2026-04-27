@@ -73,7 +73,7 @@ class MLBNRFISource:
         if self._bridge is not None:
             return self._bridge
         try:
-            from nrfi.integration.engine_bridge import NRFIEngineBridge
+            from edge_equation.engines.nrfi.integration.engine_bridge import NRFIEngineBridge
         except ImportError:
             return None
         self._bridge = NRFIEngineBridge.try_load(self._nrfi_config)

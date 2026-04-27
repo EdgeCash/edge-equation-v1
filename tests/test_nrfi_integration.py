@@ -18,28 +18,28 @@ from decimal import Decimal
 # ---------------------------------------------------------------------------
 
 def test_tango_shrink_zero_sample_returns_prior():
-    from nrfi.integration.shrinkage import tango_shrink
+    from edge_equation.engines.nrfi.integration.shrinkage import tango_shrink
     out = tango_shrink(observed=0.500, n_observed=0,
                         prior_mean=0.318, n_prior=200)
     assert abs(out - 0.318) < 1e-9
 
 
 def test_tango_shrink_large_sample_returns_observed():
-    from nrfi.integration.shrinkage import tango_shrink
+    from edge_equation.engines.nrfi.integration.shrinkage import tango_shrink
     out = tango_shrink(observed=0.500, n_observed=10000,
                         prior_mean=0.318, n_prior=200)
     assert abs(out - 0.500) < 0.01  # within 1pp of observed
 
 
 def test_top_of_order_shrink_uses_obp_prior():
-    from nrfi.integration.shrinkage import top_of_order_shrink
+    from edge_equation.engines.nrfi.integration.shrinkage import top_of_order_shrink
     # 200 PA observed, 200 prior PA → 50/50 blend.
     out = top_of_order_shrink(top3_obp=0.400, top3_pa=200.0)
     assert 0.355 < out < 0.365
 
 
 def test_pitcher_era_shrink_regresses_extreme():
-    from nrfi.integration.shrinkage import shrink_pitcher_era
+    from edge_equation.engines.nrfi.integration.shrinkage import shrink_pitcher_era
     # Tiny sample: 10 BF of 1.50 ERA → should snap nearly all the way back.
     out = shrink_pitcher_era(era=1.50, batters_faced=10)
     assert out > 4.0  # league-mean dominates
@@ -50,7 +50,7 @@ def test_pitcher_era_shrink_regresses_extreme():
 # ---------------------------------------------------------------------------
 
 def test_abs_active_regime_switch():
-    from nrfi.evaluation.backtest import _abs_active_for_season
+    from edge_equation.engines.nrfi.evaluation.backtest import _abs_active_for_season
     assert _abs_active_for_season(2024) is False
     assert _abs_active_for_season(2025) is False
     assert _abs_active_for_season(2026) is True
@@ -58,7 +58,7 @@ def test_abs_active_regime_switch():
 
 
 def test_season_from_date():
-    from nrfi.evaluation.backtest import _season_from_date
+    from edge_equation.engines.nrfi.evaluation.backtest import _season_from_date
     assert _season_from_date("2024-04-15") == 2024
     assert _season_from_date("2026-09-30") == 2026
 
@@ -110,7 +110,7 @@ def test_dashboard_payload_shape():
 # ---------------------------------------------------------------------------
 
 def test_color_bands():
-    from nrfi.utils.colors import nrfi_band, gradient_hex
+    from edge_equation.engines.nrfi.utils.colors import nrfi_band, gradient_hex
     assert nrfi_band(15.0).signal == "STRONG_YRFI"
     assert nrfi_band(38.0).signal == "LEAN_YRFI"
     assert nrfi_band(50.0).signal == "COIN_FLIP"
@@ -202,7 +202,7 @@ def test_mlb_nrfi_source_emits_two_markets_per_game(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_grade_caps_at_C_on_low_sample():
-    from nrfi.integration.grading import grade_for_blended
+    from edge_equation.engines.nrfi.integration.grading import grade_for_blended
     # Strong nominal edge but only 30 BF of pitcher data — must cap at C.
     out = grade_for_blended(blended_p=0.78, market_implied_p=0.524,
                               pitcher_batters_faced=30.0)
@@ -210,7 +210,7 @@ def test_grade_caps_at_C_on_low_sample():
 
 
 def test_grade_uses_full_grade_with_ample_sample():
-    from nrfi.integration.grading import grade_for_blended
+    from edge_equation.engines.nrfi.integration.grading import grade_for_blended
     out = grade_for_blended(blended_p=0.78, market_implied_p=0.524,
                               pitcher_batters_faced=400.0)
     # With +25pp edge and 400 BF sample we expect at least a B (cap rule passes).

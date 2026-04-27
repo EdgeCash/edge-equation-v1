@@ -20,7 +20,7 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 
 def test_abs_priors_match_audit_targets():
-    from nrfi.abs_2026 import ABS_2026_PRIORS, PRE_ABS_WALK_RATE_LEAGUE
+    from edge_equation.engines.nrfi.abs_2026 import ABS_2026_PRIORS, PRE_ABS_WALK_RATE_LEAGUE
     assert 0.50 <= ABS_2026_PRIORS["overturn_rate"] <= 0.58
     assert 0.60 <= ABS_2026_PRIORS["catcher_success"] <= 0.68
     assert 0.097 <= ABS_2026_PRIORS["walk_rate_league"] <= 0.102
@@ -28,14 +28,14 @@ def test_abs_priors_match_audit_targets():
 
 
 def test_bb_pct_uplift_zero_when_abs_off():
-    from nrfi.abs_2026 import ABSContext, bb_pct_uplift
+    from edge_equation.engines.nrfi.abs_2026 import ABSContext, bb_pct_uplift
     ctx = ABSContext(active=False)
     assert bb_pct_uplift(0.085, ctx) == 0.0
 
 
 def test_bb_pct_uplift_positive_for_paint_corners_pitcher():
     """High-CSW%, low-zone% pitcher should see a larger uplift than league avg."""
-    from nrfi.abs_2026 import ABSContext, bb_pct_uplift
+    from edge_equation.engines.nrfi.abs_2026 import ABSContext, bb_pct_uplift
     league = ABSContext(active=True, pitcher_csw_pct=0.295, pitcher_zone_pct=0.495)
     paint  = ABSContext(active=True, pitcher_csw_pct=0.330, pitcher_zone_pct=0.470)
     base = bb_pct_uplift(0.085, league)
@@ -47,14 +47,14 @@ def test_bb_pct_uplift_positive_for_paint_corners_pitcher():
 
 def test_bb_pct_uplift_smaller_for_pure_stuff_pitcher():
     """Low-CSW%, high-zone% pitcher (overpowering stuff) should see less."""
-    from nrfi.abs_2026 import ABSContext, bb_pct_uplift
+    from edge_equation.engines.nrfi.abs_2026 import ABSContext, bb_pct_uplift
     stuff = ABSContext(active=True, pitcher_csw_pct=0.260, pitcher_zone_pct=0.520)
     out = bb_pct_uplift(0.085, stuff)
     assert 0.0 < out < 0.014
 
 
 def test_umpire_adaptation_curve_decays():
-    from nrfi.abs_2026 import umpire_adaptation_curve
+    from edge_equation.engines.nrfi.abs_2026 import umpire_adaptation_curve
     early = umpire_adaptation_curve(0)
     mid   = umpire_adaptation_curve(30)
     late  = umpire_adaptation_curve(120)
@@ -69,7 +69,7 @@ def test_umpire_adaptation_curve_decays():
 # ---------------------------------------------------------------------------
 
 def test_build_output_basic_fields():
-    from nrfi.output import build_output
+    from edge_equation.engines.nrfi.output import build_output
     out = build_output(
         game_id="MLB-2026-04-27-NYY-BOS",
         blended_p=0.78,
@@ -84,7 +84,7 @@ def test_build_output_basic_fields():
 
 
 def test_build_output_yrfi_inverts_probability():
-    from nrfi.output import build_output
+    from edge_equation.engines.nrfi.output import build_output
     out = build_output(
         game_id="g1", blended_p=0.30, lambda_total=2.40, market_type="YRFI",
     )
@@ -94,7 +94,7 @@ def test_build_output_yrfi_inverts_probability():
 
 
 def test_build_output_kelly_only_when_market_present():
-    from nrfi.output import build_output
+    from edge_equation.engines.nrfi.output import build_output
     no_market = build_output(game_id="g1", blended_p=0.78, lambda_total=0.50)
     with_market = build_output(game_id="g1", blended_p=0.78, lambda_total=0.50,
                                 market_american_odds=-110)
@@ -105,7 +105,7 @@ def test_build_output_kelly_only_when_market_present():
 
 
 def test_build_output_mc_band_pp_computed():
-    from nrfi.output import build_output
+    from edge_equation.engines.nrfi.output import build_output
     out = build_output(game_id="g1", blended_p=0.65, lambda_total=0.86,
                        mc_low=0.60, mc_high=0.71)
     # +/- ~5.5pp around the 65% point estimate
@@ -114,7 +114,7 @@ def test_build_output_mc_band_pp_computed():
 
 
 def test_to_email_card_renders_one_liner_plus_drivers():
-    from nrfi.output import build_output, to_email_card
+    from edge_equation.engines.nrfi.output import build_output, to_email_card
     out = build_output(
         game_id="g1", blended_p=0.74, lambda_total=0.62,
         shap_drivers=[("home_p_xera", -0.08), ("park_factor_runs", -0.03),
@@ -128,7 +128,7 @@ def test_to_email_card_renders_one_liner_plus_drivers():
 
 
 def test_to_api_dict_serialises_drivers_as_pairs():
-    from nrfi.output import build_output, to_api_dict
+    from edge_equation.engines.nrfi.output import build_output, to_api_dict
     out = build_output(game_id="g1", blended_p=0.62, lambda_total=1.0,
                        shap_drivers=[("k_pct", 0.03)])
     d = to_api_dict(out)
@@ -138,7 +138,7 @@ def test_to_api_dict_serialises_drivers_as_pairs():
 
 
 def test_to_dashboard_row_has_preformatted_strings():
-    from nrfi.output import build_output, to_dashboard_row
+    from edge_equation.engines.nrfi.output import build_output, to_dashboard_row
     out = build_output(game_id="g1", blended_p=0.62, lambda_total=1.0,
                        market_american_odds=-115, mc_low=0.58, mc_high=0.66)
     row = to_dashboard_row(out)
@@ -152,7 +152,7 @@ def test_to_dashboard_row_has_preformatted_strings():
 # ---------------------------------------------------------------------------
 
 def test_reliability_summary_returns_n_bins_with_hits():
-    from nrfi.calibration import reliability_summary
+    from edge_equation.engines.nrfi.calibration import reliability_summary
     # Stay strictly inside the 70-80 bin; 0.80 sits on the next bin's
     # lower edge under the [lo, hi) convention so we avoid that exact value.
     probs   = [0.72, 0.74, 0.76, 0.78, 0.79] * 10
@@ -165,7 +165,7 @@ def test_reliability_summary_returns_n_bins_with_hits():
 
 
 def test_reliability_summary_line_format():
-    from nrfi.calibration import BinSummary
+    from edge_equation.engines.nrfi.calibration import BinSummary
     b = BinSummary(lo=0.7, hi=0.8, pred_mean=0.74, actual=0.72, n=50)
     s = b.line()
     assert "70.0%" in s and "80.0%" in s
@@ -176,7 +176,7 @@ def test_reliability_summary_line_format():
 
 
 def test_rolling_holdout_calibrator_passthrough_until_seeded():
-    from nrfi.calibration import RollingHoldoutCalibrator
+    from edge_equation.engines.nrfi.calibration import RollingHoldoutCalibrator
     cal = RollingHoldoutCalibrator(window_size=200)
     assert cal.fitted is False
     # Before any data, transform is identity.
@@ -186,7 +186,7 @@ def test_rolling_holdout_calibrator_passthrough_until_seeded():
 def test_rolling_holdout_calibrator_refit_with_data():
     pytest = __import__("pytest")
     pytest.importorskip("sklearn")  # Calibrator uses sklearn isotonic.
-    from nrfi.calibration import RollingHoldoutCalibrator
+    from edge_equation.engines.nrfi.calibration import RollingHoldoutCalibrator
     cal = RollingHoldoutCalibrator(window_size=300, method="isotonic")
     # Generate a clean monotone signal: y deterministically related to p.
     probs = [i / 200.0 for i in range(200)]
@@ -205,7 +205,7 @@ def test_rolling_holdout_calibrator_refit_with_data():
 
 def _fake_report(n=100, base_rate=0.55, accuracy=0.62,
                   brier=0.21, log_loss=0.62):
-    from nrfi.evaluation.backtest import BacktestReport, RegimeMetrics
+    from edge_equation.engines.nrfi.evaluation.backtest import BacktestReport, RegimeMetrics
     df = pd.DataFrame({
         "game_pk": list(range(n)),
         "game_date": ["2026-04-27"] * n,
@@ -230,7 +230,7 @@ def _fake_report(n=100, base_rate=0.55, accuracy=0.62,
 
 
 def test_summary_table_str_renders_all_sections():
-    from nrfi.evaluation.backtest import summary_table_str
+    from edge_equation.engines.nrfi.evaluation.backtest import summary_table_str
     s = summary_table_str(_fake_report(n=200))
     assert "Backtest summary" in s
     assert "N games" in s
@@ -241,7 +241,7 @@ def test_summary_table_str_renders_all_sections():
 
 
 def test_summary_table_str_handles_no_market_data():
-    from nrfi.evaluation.backtest import summary_table_str
+    from edge_equation.engines.nrfi.evaluation.backtest import summary_table_str
     rep = _fake_report()
     rep.roi_flat = None
     s = summary_table_str(rep)
