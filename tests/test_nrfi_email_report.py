@@ -227,3 +227,146 @@ def test_build_card_handles_no_games(monkeypatch):
     assert card["picks"] == []
     body = mod.render_body(card)
     assert "No games on the slate" in body
+
+
+# ---------------------------------------------------------------------------
+# Regression: YRFI rows must show the COMPLEMENT of NRFI, not the same %
+# (bug from first live dry-run on 2026-04-27 where every YRFI row
+# duplicated the matching NRFI percentage due to a double-flip in
+# build_output).
+# ---------------------------------------------------------------------------
+
+class _FakeBridgeOutputForRegress:
+    """Mimics the real NRFIBridgeOutput contract: NRFI side stores the
+    NRFI prob in fair_prob, YRFI side stores 1 - p (already pre-flipped)."""
+    def __init__(self, gid, market_type, nrfi_prob):
+        self.game_id = gid
+        self.market_type = market_type
+        side = nrfi_prob if market_type == "NRFI" else 1.0 - nrfi_prob
+        self.fair_prob = Decimal(str(round(side, 6)))
+        self.lambda_total = 0.86
+        self.color_band = "Light Green"
+        self.color_hex = "#7cb342"
+        self.signal = "LEAN_NRFI"
+        self.grade = "B"
+        self.realization = 60
+        self.shap_drivers = []
+        self.mc_low = None
+        self.mc_high = None
+        self.market_prob = None
+        self.edge = None
+        self.kelly = None
+        self.metadata = {"engine": "fake"}
+
+
+def test_card_pick_yrfi_is_complement_not_duplicate():
+    """The bridge stores 1-p in fair_prob for YRFI rows; build_output
+    further flips when market_type=='YRFI'. _to_card_pick must compensate
+    so the rendered NRFI% and YRFI% sum to ~100, not equal each other."""
+    from nrfi.email_report import _to_card_pick
+
+    # Engine says NRFI = 65% for this game.
+    nrfi_row = _FakeBridgeOutputForRegress("g1", "NRFI", nrfi_prob=0.65)
+    yrfi_row = _FakeBridgeOutputForRegress("g1", "YRFI", nrfi_prob=0.65)
+
+    nrfi_pick = _to_card_pick(nrfi_row, "ml")
+    yrfi_pick = _to_card_pick(yrfi_row, "ml")
+
+    assert abs(nrfi_pick["pct"] - 65.0) < 0.5
+    assert abs(yrfi_pick["pct"] - 35.0) < 0.5
+    # Complement, not duplicate
+    assert abs(nrfi_pick["pct"] + yrfi_pick["pct"] - 100.0) < 1.0
+    assert nrfi_pick["pct"] != yrfi_pick["pct"]
+
+
+def test_card_pick_uses_label_map_for_friendly_game_id():
+    """Game IDs in the email body should be 'AWY @ HOM' tricodes when
+    a label map is supplied — never bare gamePks."""
+    from nrfi.email_report import _to_card_pick
+
+    bridge = _FakeBridgeOutputForRegress("823395", "NRFI", nrfi_prob=0.58)
+    label_map = {"823395": "DET @ BOS"}
+    pick = _to_card_pick(bridge, "ml", label_map)
+    assert pick["game_id"] == "DET @ BOS"
+    assert "DET" in pick["rendered"] and "BOS" in pick["rendered"]
+
+
+def test_card_pick_falls_back_to_gamepk_when_label_missing():
+    from nrfi.email_report import _to_card_pick
+
+    bridge = _FakeBridgeOutputForRegress("999999", "NRFI", nrfi_prob=0.55)
+    pick = _to_card_pick(bridge, "ml", label_map={"123": "X @ Y"})
+    assert pick["game_id"] == "999999"
+
+
+def test_build_game_label_map_skips_invalid_rows():
+    """Helper must tolerate missing or malformed columns in games table."""
+    from nrfi.email_report import _build_game_label_map
+    import pandas as pd
+
+    class _Store:
+        def games_for_date(self, _):
+            return pd.DataFrame([
+                {"game_pk": 1, "home_team": "BOS", "away_team": "DET"},
+                {"game_pk": 2, "home_team": "NYY", "away_team": "TOR"},
+                {"game_pk": None, "home_team": "X", "away_team": "Y"},  # bad
+            ])
+
+    out = _build_game_label_map(_Store(), "2026-04-27")
+    assert out["1"] == "DET @ BOS"
+    assert out["2"] == "TOR @ NYY"
+    # Bad row dropped silently; helper doesn't raise.
+    assert "0" not in out or len(out) == 2
+
+
+def test_build_game_label_map_returns_empty_on_query_failure():
+    from nrfi.email_report import _build_game_label_map
+
+    class _BrokenStore:
+        def games_for_date(self, _):
+            raise RuntimeError("simulated DB error")
+
+    assert _build_game_label_map(_BrokenStore(), "2026-04-27") == {}
+
+
+def test_build_card_threads_label_map_into_picks(monkeypatch):
+    """End-to-end: build_card should produce picks whose game_id is
+    'AWY @ HOM' and where NRFI/YRFI rows are complements."""
+    import pandas as pd
+    import nrfi.email_report as mod
+
+    monkeypatch.setattr(mod, "daily_etl", lambda *a, **kw: None)
+    monkeypatch.setattr(
+        mod, "reconstruct_features_for_date",
+        lambda *a, **kw: [(823395, {"poisson_p_nrfi": 0.58, "lambda_total": 1.10})],
+    )
+
+    class _FakeStore:
+        def __init__(self, *a, **kw): pass
+        def games_for_date(self, _):
+            return pd.DataFrame([{"game_pk": 823395,
+                                   "home_team": "BOS", "away_team": "DET"}])
+
+    class _FakeBridge:
+        @staticmethod
+        def available(): return False
+        def predict_for_features(self, feats, *, game_ids, **_):
+            outs = []
+            for gid in game_ids:
+                outs.append(_FakeBridgeOutputForRegress(gid, "NRFI", 0.58))
+                outs.append(_FakeBridgeOutputForRegress(gid, "YRFI", 0.58))
+            return outs
+
+    monkeypatch.setattr(mod, "NRFIStore", _FakeStore)
+    monkeypatch.setattr(mod.NRFIEngineBridge, "try_load",
+                          classmethod(lambda cls, cfg=None: _FakeBridge()))
+
+    card = mod.build_card("2026-04-27", run_etl=False)
+    assert len(card["picks"]) == 2
+    nrfi = next(p for p in card["picks"] if p["market_type"] == "NRFI")
+    yrfi = next(p for p in card["picks"] if p["market_type"] == "YRFI")
+    assert nrfi["game_id"] == "DET @ BOS"
+    assert yrfi["game_id"] == "DET @ BOS"
+    # NRFI and YRFI are complements (sum to 100), not duplicates.
+    assert abs(nrfi["pct"] + yrfi["pct"] - 100.0) < 1.0
+    assert nrfi["pct"] != yrfi["pct"]
