@@ -9,8 +9,6 @@ slicing, color band mapping) get real coverage.
 
 from __future__ import annotations
 
-import importlib
-import sys
 from datetime import datetime
 from decimal import Decimal
 
@@ -194,36 +192,9 @@ def test_mlb_nrfi_source_emits_two_markets_per_game(monkeypatch):
         assert m["meta"]["nrfi_engine"]["color_band"] in ("Light Green", "Orange")
 
 
-# ---------------------------------------------------------------------------
-# api/routers/nrfi  (route mounted, returns shape even when DB empty)
-# ---------------------------------------------------------------------------
-
-def test_nrfi_router_today_returns_list_or_empty():
-    """The route must return a list (empty when extras absent) — never raise."""
-    from api.routers.nrfi import get_nrfi_today
-    out = get_nrfi_today()
-    assert isinstance(out, list)
-
-
-def test_nrfi_router_board_handles_missing_data():
-    from api.routers.nrfi import get_nrfi_board
-    out = get_nrfi_board(date="1999-01-01")
-    assert isinstance(out, list)
-    assert out == []
-
-
-# ---------------------------------------------------------------------------
-# api/main mounts the nrfi router
-# ---------------------------------------------------------------------------
-
-def test_api_main_mounts_nrfi_router():
-    # Reload main to ensure import-time wiring is exercised.
-    if "api.main" in sys.modules:
-        del sys.modules["api.main"]
-    main = importlib.import_module("api.main")
-    paths = {r.path for r in main.app.routes}
-    assert "/nrfi/today" in paths
-    assert "/nrfi/board" in paths
+# NOTE: API-route tests live in tests_api/test_nrfi_router.py because they
+# require fastapi, which is not in the [dev] extras the `Tests` workflow
+# installs. Keeping this file fastapi-free preserves the CI fast path.
 
 
 # ---------------------------------------------------------------------------
