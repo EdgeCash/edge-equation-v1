@@ -105,6 +105,10 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
     bridge = NRFIEngineBridge.try_load(cfg)
     engine_label = "ml" if bridge.available() else "poisson_baseline"
 
+    # Build a {game_pk: "AWY @ HOM"} label map so we surface human-
+    # readable matchups instead of bare gamePk integers in the email.
+    label_map = _build_game_label_map(store, target_date)
+
     picks: list[dict] = []
     if feats_per_game:
         # Engine-bridge produces NRFI + YRFI rows per game
@@ -115,7 +119,7 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         # Rebuild canonical NRFIOutput so we get all the email-friendly
         # fields (mc_band_pp, driver_text, etc.).
         for o in outputs:
-            picks.append(_to_card_pick(o, engine_label))
+            picks.append(_to_card_pick(o, engine_label, label_map))
 
     # Sort: NRFI side first (descending NRFI%), then YRFI side.
     picks.sort(key=lambda p: (
@@ -136,12 +140,31 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
     }
 
 
-def _to_card_pick(bridge_output, engine_label: str) -> dict:
+def _to_card_pick(bridge_output, engine_label: str,
+                   label_map: dict[str, str] | None = None) -> dict:
     """Map an `NRFIBridgeOutput` to the dict shape expected by
-    `EmailPublisher.build_body` + our richer custom renderer."""
+    `EmailPublisher.build_body` + our richer custom renderer.
+
+    Important: the bridge already pre-flips fair_prob for the YRFI
+    side (stores 1 - p there), but `build_output()` ALSO flips when
+    `market_type=="YRFI"`. So we always pass the canonical NRFI
+    probability and let `build_output` produce the correct side. Bug
+    fixed in this PR — previously YRFI rows showed the same % as NRFI.
+    """
+    side_p = float(bridge_output.fair_prob)
+    if bridge_output.market_type == "YRFI":
+        nrfi_p = 1.0 - side_p
+    else:
+        nrfi_p = side_p
+
+    # Friendly game label (e.g. "DET @ BOS") falls back to the gamePk
+    # string if we don't have a mapping for this game.
+    label = (label_map or {}).get(str(bridge_output.game_id),
+                                    str(bridge_output.game_id))
+
     out = build_output(
-        game_id=bridge_output.game_id,
-        blended_p=float(bridge_output.fair_prob),
+        game_id=label,
+        blended_p=nrfi_p,
         lambda_total=bridge_output.lambda_total,
         market_type=bridge_output.market_type,
         shap_drivers=bridge_output.shap_drivers,
@@ -170,6 +193,31 @@ def _to_card_pick(bridge_output, engine_label: str) -> dict:
         "drivers": out.driver_text,
         "rendered": pretty,
     }
+
+
+def _build_game_label_map(store, target_date: str) -> dict[str, str]:
+    """Return {gamePk_str → "AWY @ HOM"} for every game on the slate.
+
+    Best-effort: if the games table query fails (e.g. fresh DB), we
+    return an empty dict and the renderer falls back to bare gamePks.
+    """
+    try:
+        df = store.games_for_date(target_date)
+    except Exception as e:
+        log.warning("games_for_date(%s) failed: %s", target_date, e)
+        return {}
+    if df is None or df.empty:
+        return {}
+    out: dict[str, str] = {}
+    for _, g in df.iterrows():
+        try:
+            home = str(getattr(g, "home_team", "") or "?")
+            away = str(getattr(g, "away_team", "") or "?")
+            pk = str(int(getattr(g, "game_pk", 0)))
+            out[pk] = f"{away} @ {home}"
+        except Exception:
+            continue
+    return out
 
 
 def _footer_text(engine: str) -> str:
