@@ -1,0 +1,98 @@
+name: NRFI/YRFI Daily Email (9am CT)
+
+# Standalone NRFI/YRFI daily email — separate from the premium Daily
+# Edge so Professor Edge gets the first-inning board in its own
+# inbox thread for internal testing.
+#
+# Scheduled for 09:00 CT, ~3-4 hours before the earliest MLB first
+# pitch (most slates start at 12:35 CT). DST-aware via dual cron pair
+# + a stdlib zoneinfo CT-hour guard, matching the premium-daily
+# workflow's pattern.
+#
+# Recipient defaults to ProfessorEdgeCash@gmail.com. Override by
+# setting the NRFI_EMAIL_TO repository secret (or the EMAIL_TO secret
+# already used by the premium-daily workflow).
+
+on:
+  schedule:
+    - cron: "0 14 * * *"   # 09:00 CT during CDT (Mar-Nov)
+    - cron: "0 15 * * *"   # 09:00 CT during CST (Nov-Mar)
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: "Slate date (YYYY-MM-DD). Leave blank for today."
+        required: false
+        default: ""
+      dry_run:
+        description: "Build the card and log it without sending email. DEFAULT FALSE."
+        required: false
+        default: "false"
+
+jobs:
+  nrfi-email:
+    runs-on: ubuntu-latest
+    env:
+      SMTP_HOST:        ${{ secrets.SMTP_HOST }}
+      SMTP_PORT:        ${{ secrets.SMTP_PORT }}
+      SMTP_USER:        ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD:    ${{ secrets.SMTP_PASSWORD }}
+      SMTP_FROM:        ${{ secrets.SMTP_FROM }}
+      # Recipient precedence: NRFI_EMAIL_TO -> EMAIL_TO -> hard default.
+      EMAIL_TO:         ${{ secrets.NRFI_EMAIL_TO || secrets.EMAIL_TO || 'ProfessorEdgeCash@gmail.com' }}
+      SMTP_TO:          ${{ secrets.NRFI_EMAIL_TO || secrets.SMTP_TO || 'ProfessorEdgeCash@gmail.com' }}
+      EDGE_EQUATION_FAILSAFE_DIR: ${{ github.workspace }}/data/failsafes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: CT-hour guard
+        # Cron lines fire on both UTC slots (one for CDT, one for CST).
+        # Skip the wrong one each season so we send exactly once per day.
+        if: github.event_name == 'schedule'
+        run: |
+          python - <<'PY'
+          import os, sys
+          from datetime import datetime
+          try:
+              from zoneinfo import ZoneInfo
+          except ImportError:
+              sys.exit(0)
+          hour = datetime.now(ZoneInfo("America/Chicago")).hour
+          if hour != 9:
+              print(f"::warning::CT hour is {hour}, not 9 — skipping run.")
+              # Touch a sentinel that the next step keys off of.
+              with open(os.environ["GITHUB_ENV"], "a") as f:
+                  f.write("SKIP_RUN=1\n")
+          PY
+
+      - name: Install deps
+        if: env.SKIP_RUN != '1'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Build & send NRFI email
+        if: env.SKIP_RUN != '1'
+        run: |
+          DRY_RUN_ARG=""
+          DATE_ARG=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            DRY_RUN_ARG="--dry-run"
+          fi
+          if [ -n "${{ github.event.inputs.target_date }}" ]; then
+            DATE_ARG="--date ${{ github.event.inputs.target_date }}"
+          fi
+          python -m nrfi.email_report $DATE_ARG $DRY_RUN_ARG
+
+      - name: Upload failsafe artifacts (if any)
+        if: always() && env.SKIP_RUN != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-email-failsafes
+          path: data/failsafes
+          if-no-files-found: ignore
+          retention-days: 14
