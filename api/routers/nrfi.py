@@ -50,8 +50,8 @@ def _board_for(target_date: str) -> List[dict]:
     """Pull stored predictions from DuckDB. Quietly returns [] when the
     NRFI subsystem is not installed (so the API shape stays stable)."""
     try:
-        from nrfi.config import get_default_config
-        from nrfi.data.storage import NRFIStore
+        from edge_equation.engines.nrfi.config import get_default_config
+        from edge_equation.engines.nrfi.data.storage import NRFIStore
     except ImportError:
         return []
     try:

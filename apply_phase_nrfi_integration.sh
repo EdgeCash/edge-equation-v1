@@ -2,7 +2,7 @@
 # apply_phase_nrfi_integration.sh
 #
 # Phase NRFI-Integration:
-#   Wire the elite NRFI/YRFI engine (`nrfi/`) into the deterministic
+#   Wire the elite NRFI/YRFI engine (`src/edge_equation/engines/nrfi/`) into the deterministic
 #   Edge Equation pipeline.
 #
 # This script is *idempotent* — running it twice does nothing harmful.
@@ -16,13 +16,13 @@
 set -euo pipefail
 
 REQUIRED_FILES=(
-  "nrfi/integration/__init__.py"
-  "nrfi/integration/engine_bridge.py"
-  "nrfi/integration/shrinkage.py"
-  "nrfi/integration/calibration.py"
-  "nrfi/integration/grading.py"
-  "nrfi/data/team_splits.py"
-  "nrfi/data/lineups.py"
+  "src/edge_equation/engines/nrfi/integration/__init__.py"
+  "src/edge_equation/engines/nrfi/integration/engine_bridge.py"
+  "src/edge_equation/engines/nrfi/integration/shrinkage.py"
+  "src/edge_equation/engines/nrfi/integration/calibration.py"
+  "src/edge_equation/engines/nrfi/integration/grading.py"
+  "src/edge_equation/engines/nrfi/data/team_splits.py"
+  "src/edge_equation/engines/nrfi/data/lineups.py"
   "src/edge_equation/ingestion/mlb_nrfi_source.py"
   "src/edge_equation/posting/nrfi_card.py"
   "api/routers/nrfi.py"
@@ -55,7 +55,7 @@ if ! grep -q "nrfi.router" api/main.py; then
 fi
 
 echo "[phase-nrfi] Compiling all new modules..."
-python -m compileall -q nrfi/integration nrfi/data/team_splits.py nrfi/data/lineups.py \
+python -m compileall -q src/edge_equation/engines/nrfi/integration src/edge_equation/engines/nrfi/data/team_splits.py src/edge_equation/engines/nrfi/data/lineups.py \
   src/edge_equation/ingestion/mlb_nrfi_source.py \
   src/edge_equation/posting/nrfi_card.py \
   api/routers/nrfi.py

@@ -67,7 +67,7 @@ def _make_card_with_picks(n_nrfi=2, n_yrfi=1):
 
 
 def test_render_body_groups_nrfi_then_yrfi():
-    from nrfi.email_report import render_body
+    from edge_equation.engines.nrfi.email_report import render_body
     card = _make_card_with_picks(n_nrfi=3, n_yrfi=2)
     body = render_body(card)
     assert "NRFI BOARD (3 games)" in body
@@ -79,7 +79,7 @@ def test_render_body_groups_nrfi_then_yrfi():
 
 
 def test_render_body_handles_empty_slate():
-    from nrfi.email_report import render_body
+    from edge_equation.engines.nrfi.email_report import render_body
     card = _make_card_with_picks(n_nrfi=0, n_yrfi=0)
     body = render_body(card)
     assert "No games on the slate" in body
@@ -88,7 +88,7 @@ def test_render_body_handles_empty_slate():
 
 
 def test_build_subject_uses_target_date():
-    from nrfi.email_report import build_subject
+    from edge_equation.engines.nrfi.email_report import build_subject
     card = _make_card_with_picks()
     subject = build_subject(card)
     assert "NRFI/YRFI Daily" in subject
@@ -100,7 +100,7 @@ def test_build_subject_uses_target_date():
 # ---------------------------------------------------------------------------
 
 def test_send_email_dry_run_does_not_call_smtp(capsys):
-    from nrfi.email_report import send_email
+    from edge_equation.engines.nrfi.email_report import send_email
     card = _make_card_with_picks()
     result = send_email(card, recipient="test@example.com", dry_run=True)
     captured = capsys.readouterr()
@@ -112,7 +112,7 @@ def test_send_email_dry_run_does_not_call_smtp(capsys):
 
 
 def test_send_email_dry_run_prefers_explicit_recipient_over_env(monkeypatch, capsys):
-    from nrfi.email_report import send_email
+    from edge_equation.engines.nrfi.email_report import send_email
     monkeypatch.setenv("EMAIL_TO", "fallback@example.com")
     card = _make_card_with_picks()
     result = send_email(card, recipient="explicit@example.com", dry_run=True)
@@ -120,7 +120,7 @@ def test_send_email_dry_run_prefers_explicit_recipient_over_env(monkeypatch, cap
 
 
 def test_send_email_dry_run_falls_back_to_env(monkeypatch, capsys):
-    from nrfi.email_report import send_email
+    from edge_equation.engines.nrfi.email_report import send_email
     monkeypatch.setenv("EMAIL_TO", "env-recipient@example.com")
     monkeypatch.delenv("SMTP_TO", raising=False)
     card = _make_card_with_picks()
@@ -129,7 +129,7 @@ def test_send_email_dry_run_falls_back_to_env(monkeypatch, capsys):
 
 
 def test_send_email_dry_run_default_to_professor(monkeypatch, capsys):
-    from nrfi.email_report import send_email
+    from edge_equation.engines.nrfi.email_report import send_email
     monkeypatch.delenv("EMAIL_TO", raising=False)
     monkeypatch.delenv("SMTP_TO", raising=False)
     card = _make_card_with_picks()
@@ -179,7 +179,7 @@ class _FakeBridge:
 def test_build_card_uses_bridge_and_builds_picks(monkeypatch):
     """Inject a fake bridge + stub feature-reconstruction so we can
     test the card build path without DuckDB / pybaseball / network."""
-    import nrfi.email_report as mod
+    import edge_equation.engines.nrfi.email_report as mod
 
     monkeypatch.setattr(mod, "daily_etl", lambda *a, **kw: None)
     monkeypatch.setattr(
@@ -210,7 +210,7 @@ def test_build_card_uses_bridge_and_builds_picks(monkeypatch):
 
 
 def test_build_card_handles_no_games(monkeypatch):
-    import nrfi.email_report as mod
+    import edge_equation.engines.nrfi.email_report as mod
 
     monkeypatch.setattr(mod, "daily_etl", lambda *a, **kw: None)
     monkeypatch.setattr(mod, "reconstruct_features_for_date",
@@ -263,7 +263,7 @@ def test_card_pick_yrfi_is_complement_not_duplicate():
     """The bridge stores 1-p in fair_prob for YRFI rows; build_output
     further flips when market_type=='YRFI'. _to_card_pick must compensate
     so the rendered NRFI% and YRFI% sum to ~100, not equal each other."""
-    from nrfi.email_report import _to_card_pick
+    from edge_equation.engines.nrfi.email_report import _to_card_pick
 
     # Engine says NRFI = 65% for this game.
     nrfi_row = _FakeBridgeOutputForRegress("g1", "NRFI", nrfi_prob=0.65)
@@ -282,7 +282,7 @@ def test_card_pick_yrfi_is_complement_not_duplicate():
 def test_card_pick_uses_label_map_for_friendly_game_id():
     """Game IDs in the email body should be 'AWY @ HOM' tricodes when
     a label map is supplied — never bare gamePks."""
-    from nrfi.email_report import _to_card_pick
+    from edge_equation.engines.nrfi.email_report import _to_card_pick
 
     bridge = _FakeBridgeOutputForRegress("823395", "NRFI", nrfi_prob=0.58)
     label_map = {"823395": "DET @ BOS"}
@@ -292,7 +292,7 @@ def test_card_pick_uses_label_map_for_friendly_game_id():
 
 
 def test_card_pick_falls_back_to_gamepk_when_label_missing():
-    from nrfi.email_report import _to_card_pick
+    from edge_equation.engines.nrfi.email_report import _to_card_pick
 
     bridge = _FakeBridgeOutputForRegress("999999", "NRFI", nrfi_prob=0.55)
     pick = _to_card_pick(bridge, "ml", label_map={"123": "X @ Y"})
@@ -301,7 +301,7 @@ def test_card_pick_falls_back_to_gamepk_when_label_missing():
 
 def test_build_game_label_map_skips_invalid_rows():
     """Helper must tolerate missing or malformed columns in games table."""
-    from nrfi.email_report import _build_game_label_map
+    from edge_equation.engines.nrfi.email_report import _build_game_label_map
     import pandas as pd
 
     class _Store:
@@ -320,7 +320,7 @@ def test_build_game_label_map_skips_invalid_rows():
 
 
 def test_build_game_label_map_returns_empty_on_query_failure():
-    from nrfi.email_report import _build_game_label_map
+    from edge_equation.engines.nrfi.email_report import _build_game_label_map
 
     class _BrokenStore:
         def games_for_date(self, _):
@@ -333,7 +333,7 @@ def test_build_card_threads_label_map_into_picks(monkeypatch):
     """End-to-end: build_card should produce picks whose game_id is
     'AWY @ HOM' and where NRFI/YRFI rows are complements."""
     import pandas as pd
-    import nrfi.email_report as mod
+    import edge_equation.engines.nrfi.email_report as mod
 
     monkeypatch.setattr(mod, "daily_etl", lambda *a, **kw: None)
     monkeypatch.setattr(

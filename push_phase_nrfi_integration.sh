@@ -42,9 +42,9 @@ else
 fi
 
 echo "[phase-nrfi-push] Staging changes..."
-git add nrfi/integration nrfi/data/team_splits.py nrfi/data/lineups.py \
-        nrfi/features/feature_engineering.py \
-        nrfi/evaluation/backtest.py nrfi/backtest_historical.py \
+git add src/edge_equation/engines/nrfi/integration src/edge_equation/engines/nrfi/data/team_splits.py src/edge_equation/engines/nrfi/data/lineups.py \
+        src/edge_equation/engines/nrfi/features/feature_engineering.py \
+        src/edge_equation/engines/nrfi/evaluation/backtest.py src/edge_equation/engines/nrfi/backtest_historical.py \
         src/edge_equation/ingestion/mlb_nrfi_source.py \
         src/edge_equation/ingestion/source_factory.py \
         src/edge_equation/posting/nrfi_card.py \
@@ -60,7 +60,7 @@ fi
 
 git commit -m "Phase NRFI Integration: wire elite NRFI engine into pipeline
 
-- Add nrfi/integration/ bridge (shrinkage, calibration, grading,
+- Add src/edge_equation/engines/nrfi/integration/ bridge (shrinkage, calibration, grading,
   engine_bridge) — the only surface src/edge_equation/ imports from
   the NRFI subsystem.
 - Add Tango-style empirical-Bayes shrinkage to feature inputs
@@ -81,7 +81,7 @@ git commit -m "Phase NRFI Integration: wire elite NRFI engine into pipeline
   emits engine-backed NRFI/YRFI rows alongside the standard MLB feed.
 - Add src/edge_equation/posting/nrfi_card.py — text/dict renderer
   for the premium daily email and dashboard payload.
-- Add api/routers/nrfi.py mounted at /nrfi/{today,board}.
+- Add api/routers/nrfi.py mounted at /src/edge_equation/engines/nrfi/{today,board}.
 - Update pyproject.toml with [project.optional-dependencies].nrfi
   extras so the elite stack installs via 'pip install -e .[nrfi]'.
 

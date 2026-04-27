@@ -56,6 +56,8 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
-# `src` for the deterministic core; `.` so `nrfi` (the optional elite
-# subsystem at repo root) is importable in tests.
-pythonpath = ["src", "."]
+# Single package root: `src` only. The NRFI engine moved into
+# `src/edge_equation/engines/nrfi/` in PR #68 so the previous "."
+# entry (which existed to make the top-level `nrfi/` importable) is
+# no longer needed.
+pythonpath = ["src"]

@@ -73,11 +73,13 @@ jobs:
         if: env.SKIP_RUN != '1'
         run: |
           python -m pip install --upgrade pip
-          # The email report imports nrfi.data.storage (duckdb),
-          # nrfi.data.scrapers_etl (pybaseball), and nrfi.evaluation.backtest
-          # — i.e., the full optional [nrfi] extras stack. The ML head
-          # (xgboost / shap) gracefully falls back to the Poisson baseline
-          # if it isn't loaded, so we still need the data-layer pieces here.
+          # The email report imports edge_equation.engines.nrfi.data.storage
+          # (duckdb), edge_equation.engines.nrfi.data.scrapers_etl (pybaseball),
+          # and edge_equation.engines.nrfi.evaluation.backtest — i.e., the full
+          # optional [nrfi] extras stack. The ML head (xgboost / lightgbm /
+          # shap) is part of those extras but stays optional at runtime;
+          # the engine bridge gracefully falls back to the deterministic
+          # Poisson baseline when no trained bundle is on disk.
           pip install -e ".[nrfi]"
 
       - name: Build & send NRFI email
@@ -91,7 +93,7 @@ jobs:
           if [ -n "${{ github.event.inputs.target_date }}" ]; then
             DATE_ARG="--date ${{ github.event.inputs.target_date }}"
           fi
-          python -m nrfi.email_report $DATE_ARG $DRY_RUN_ARG
+          python -m edge_equation.engines.nrfi.email_report $DATE_ARG $DRY_RUN_ARG
 
       - name: Upload failsafe artifacts (if any)
         if: always() && env.SKIP_RUN != '1'
