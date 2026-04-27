@@ -32,7 +32,7 @@ import numpy as np
 import pandas as pd
 
 from ..config import NRFIConfig, get_default_config
-from ..utils.logging import get_logger
+from edge_equation.utils.logging import get_logger
 from .calibration import Calibrator
 from .poisson_baseline import PoissonGLM
 

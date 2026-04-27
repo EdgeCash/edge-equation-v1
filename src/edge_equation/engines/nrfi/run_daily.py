@@ -22,7 +22,7 @@ from .data.storage import NRFIStore
 from .evaluation.backtest import reconstruct_features_for_date
 from .models.inference import NRFIInferenceEngine
 from .models.model_training import MODEL_VERSION, TrainedBundle
-from .utils.logging import get_logger
+from edge_equation.utils.logging import get_logger
 
 log = get_logger(__name__, "INFO")
 

@@ -65,7 +65,7 @@ from .data.storage import NRFIStore
 from .evaluation.backtest import reconstruct_features_for_date
 from .integration.engine_bridge import NRFIEngineBridge
 from .output import build_output, to_email_card
-from .utils.logging import get_logger
+from edge_equation.utils.logging import get_logger
 
 log = get_logger(__name__, "INFO")
 

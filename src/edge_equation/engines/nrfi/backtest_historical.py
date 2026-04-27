@@ -21,7 +21,7 @@ from pathlib import Path
 from .config import get_default_config
 from .evaluation.backtest import backtest_range
 from .models.model_training import MODEL_VERSION, TrainedBundle
-from .utils.logging import get_logger
+from edge_equation.utils.logging import get_logger
 
 log = get_logger(__name__, "INFO")
 

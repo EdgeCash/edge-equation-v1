@@ -27,9 +27,9 @@ from __future__ import annotations
 from typing import Optional
 
 from ..config import APIConfig, NRFIConfig, get_default_config
-from ..utils.caching import disk_cache
-from ..utils.logging import get_logger
-from ..utils.rate_limit import global_limiter
+from edge_equation.utils.caching import disk_cache
+from edge_equation.utils.logging import get_logger
+from edge_equation.utils.rate_limit import global_limiter
 
 log = get_logger(__name__)
 

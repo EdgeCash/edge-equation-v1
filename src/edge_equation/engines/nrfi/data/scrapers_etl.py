@@ -26,9 +26,9 @@ from typing import Any, Iterable, Optional
 import httpx
 
 from ..config import APIConfig, NRFIConfig, get_default_config
-from ..utils.caching import disk_cache, read_parquet, write_parquet
-from ..utils.logging import get_logger
-from ..utils.rate_limit import global_limiter
+from edge_equation.utils.caching import disk_cache, read_parquet, write_parquet
+from edge_equation.utils.logging import get_logger
+from edge_equation.utils.rate_limit import global_limiter
 
 log = get_logger(__name__)
 

@@ -24,8 +24,8 @@ from typing import Optional
 import httpx
 
 from ..config import APIConfig
-from ..utils.logging import get_logger
-from ..utils.rate_limit import global_limiter
+from edge_equation.utils.logging import get_logger
+from edge_equation.utils.rate_limit import global_limiter
 
 log = get_logger(__name__)
 

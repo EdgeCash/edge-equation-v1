@@ -46,7 +46,7 @@ from ..features.feature_engineering import (
 from ..features.splits import first_inning_pitcher_stats
 from ..models.inference import NRFIInferenceEngine
 from ..models.model_training import TrainedBundle
-from ..utils.logging import get_logger
+from edge_equation.utils.logging import get_logger
 from .metrics import RoiReport, brier_score, log_loss_score, reliability_buckets, simulated_roi
 
 log = get_logger(__name__)
