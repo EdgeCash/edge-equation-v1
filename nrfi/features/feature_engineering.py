@@ -60,8 +60,48 @@ LEAGUE_PRIORS = {
     "ump_csa": 0.0, "ump_abs_overturn": 0.05,
 }
 
+# 2026 ABS Challenge System priors (league-wide trailing observations).
+# These are the values that have actually been logged across 2026 spring
+# training + regular season — used as defaults when an umpire has no
+# personal ABS history yet (rookie crew chiefs, mid-season replacements,
+# etc.). Update annually by re-pulling the Savant ABS leaderboard.
+#
+#   abs_overturn_rate_league    : ~0.54   (umpire calls overturned on challenge)
+#   abs_catcher_success_league  : ~0.64   (catcher-initiated challenge success)
+#   abs_walk_rate_league_2026   : ~0.099  (post-ABS BB% spike, vs ~0.085 pre-ABS)
+#   abs_called_strike_pull      : ~-0.012 (CSA index drop on outside corner)
+ABS_2026_PRIORS = {
+    "overturn_rate": 0.54,
+    "catcher_success": 0.64,
+    "walk_rate_league": 0.099,
+    "called_strike_pull": -0.012,
+}
+
+# 2024-2025 (pre-ABS, pre-Challenge) league walk rate baseline.
+PRE_ABS_WALK_RATE_LEAGUE = 0.085
+
 
 # --- Inputs --------------------------------------------------------------
+
+@dataclass
+class PitchArsenal:
+    """Pitch-mix descriptors aggregated from Statcast.
+
+    All metrics are pitcher-trailing-30-day weighted averages restricted
+    to first-pitch-of-PA where possible (proxies attack-the-zone bias).
+    Fields default to neutral league averages so partial data still
+    produces a sensible feature row.
+    """
+
+    fb_velo_mph: float = 93.5      # avg 4-seam velocity
+    fb_spin_rpm: float = 2280.0    # avg 4-seam spin
+    fb_iv_movement_in: float = 16.5 # induced vertical movement (in)
+    secondary_whiff_pct: float = 0.30  # whiff% on breaking/offspeed
+    arsenal_count: int = 4         # number of pitch types thrown >5%
+    csw_pct: float = 0.295         # called-strike + whiff %
+    zone_pct: float = 0.495        # in-zone %
+    chase_pct: float = 0.30        # o-swing %
+
 
 @dataclass
 class PitcherInputs:
@@ -79,8 +119,13 @@ class PitcherInputs:
     l5_era: Optional[float] = None
     l10_whip: Optional[float] = None
     l5_whip: Optional[float] = None
+    # Sample size (batters faced this season) — drives Tango shrinkage
+    # toward league means in `_pitcher_layer`. Default 0 = full regression.
+    season_batters_faced: float = 0.0
     # First-inning splits (counting), pulled from Statcast inning=1
     first_inn_stats: Mapping[str, float] = field(default_factory=dict)
+    # Pitch arsenal descriptors (Statcast 30-day window).
+    arsenal: PitchArsenal = field(default_factory=PitchArsenal)
 
 
 @dataclass
@@ -96,7 +141,14 @@ class LineupInputs:
     top4_obp: Optional[float] = None
     rh_count: int = 2
     lh_count: int = 1
+    # Combined PA across the three batters being aggregated. Drives
+    # shrinkage of `top3_obp` toward league mean when data is thin
+    # (e.g. early-season call-ups, projected lineups). 0 = full regression.
+    top3_combined_pa: float = 0.0
     confirmed: bool = False  # confirmed lineup vs projected
+    # Source label so downstream code can prefer confirmed lineups when
+    # available. Recognized: "confirmed", "projected", "default".
+    source: str = "default"
 
 
 @dataclass
@@ -106,9 +158,12 @@ class UmpireInputs:
     zone_size_idx: float = LEAGUE_PRIORS["ump_zone_idx"]
     run_env_idx: float = LEAGUE_PRIORS["ump_run_env_idx"]
     called_strike_above_avg: float = LEAGUE_PRIORS["ump_csa"]
-    abs_overturn_rate: float = LEAGUE_PRIORS["ump_abs_overturn"]
-    abs_team_challenge_success_home: float = 0.50
-    abs_team_challenge_success_away: float = 0.50
+    # 2026 ABS Challenge defaults reflect the league trailing average,
+    # NOT the conservative pre-ABS prior. When `enable_abs_2026=False`
+    # downstream layers will zero these out.
+    abs_overturn_rate: float = ABS_2026_PRIORS["overturn_rate"]
+    abs_team_challenge_success_home: float = ABS_2026_PRIORS["catcher_success"]
+    abs_team_challenge_success_away: float = ABS_2026_PRIORS["catcher_success"]
 
 
 @dataclass
@@ -226,10 +281,31 @@ class FeatureBuilder:
     # Layers
     # ------------------------------------------------------------------
     def _pitcher_layer(self, prefix: str, p: PitcherInputs) -> dict[str, float]:
+        # Apply Tango-style empirical-Bayes shrinkage to the inputs that
+        # drive λ before any blending happens. This is the same pattern
+        # `kelly_adaptive.py` uses for stake sizing — uncertainty makes
+        # estimates regress toward the league mean.
+        from ..integration.shrinkage import (
+            shrink_pitcher_bb_pct, shrink_pitcher_era, shrink_pitcher_fip,
+            shrink_pitcher_k_pct,
+        )
+        bf = float(p.season_batters_faced)
+        season_era = shrink_pitcher_era(p.season_era, bf)
+        season_fip = shrink_pitcher_fip(p.season_fip, bf)
+        season_k = shrink_pitcher_k_pct(p.season_k_pct, bf)
+        season_bb = shrink_pitcher_bb_pct(p.season_bb_pct, bf)
+
+        # 2026 ABS uplifts BB% by ~1.4pp league-wide. We shift the
+        # individual pitcher's bb_pct up by the league delta — the
+        # downstream interaction K%×ABS captures the rest of the swing.
+        if self.cfg.enable_abs_2026:
+            abs_bb_uplift = ABS_2026_PRIORS["walk_rate_league"] - PRE_ABS_WALK_RATE_LEAGUE
+            season_bb = season_bb + abs_bb_uplift
+
         # Recent form blend (mirrors deterministic engine).
-        l10 = p.l10_era if p.l10_era is not None else p.season_era
-        l5 = p.l5_era if p.l5_era is not None else p.season_era
-        era_blend = blend_form(p.season_era, l10, l5,
+        l10 = p.l10_era if p.l10_era is not None else season_era
+        l5 = p.l5_era if p.l5_era is not None else season_era
+        era_blend = blend_form(season_era, l10, l5,
                                w_season=self.knobs.form_w_season,
                                w_l10=self.knobs.form_w_l10,
                                w_l5=self.knobs.form_w_l5)
@@ -242,39 +318,60 @@ class FeatureBuilder:
             w_l5=self.knobs.form_w_l5,
         )
         # FIP-anchored xERA: tilt toward FIP (luck-corrected).
-        xera = self.knobs.fip_blend * p.season_fip + (1 - self.knobs.fip_blend) * era_blend
+        xera = self.knobs.fip_blend * season_fip + (1 - self.knobs.fip_blend) * era_blend
 
         # First-inning specific splits (Statcast).
         first = dict(p.first_inn_stats) if p.first_inn_stats else {}
+        a = p.arsenal
         return {
             f"{prefix}_era": era_blend,
             f"{prefix}_xera": xera,
-            f"{prefix}_fip": p.season_fip,
+            f"{prefix}_fip": season_fip,
             f"{prefix}_whip": whip_blend,
-            f"{prefix}_k_pct": p.season_k_pct,
-            f"{prefix}_bb_pct": p.season_bb_pct,
+            f"{prefix}_k_pct": season_k,
+            f"{prefix}_bb_pct": season_bb,
             f"{prefix}_hr_pct": p.season_hr_pct,
-            f"{prefix}_kbb_diff": p.season_k_pct - p.season_bb_pct,
+            f"{prefix}_kbb_diff": season_k - season_bb,
             f"{prefix}_hand_R": float(p.hand == "R"),
             f"{prefix}_hand_L": float(p.hand == "L"),
-            f"{prefix}_first_inn_k_pct": float(first.get("p1_inn_k_pct", p.season_k_pct)),
-            f"{prefix}_first_inn_bb_pct": float(first.get("p1_inn_bb_pct", p.season_bb_pct)),
+            f"{prefix}_first_inn_k_pct": float(first.get("p1_inn_k_pct", season_k)),
+            f"{prefix}_first_inn_bb_pct": float(first.get("p1_inn_bb_pct", season_bb)),
             f"{prefix}_first_inn_hr_pct": float(first.get("p1_inn_hr_pct", p.season_hr_pct)),
             f"{prefix}_first_inn_runs_per": float(first.get("p1_inn_runs_per", 0.55)),
             f"{prefix}_first_inn_pa": float(first.get("p1_inn_pa", 0)),
+            f"{prefix}_bf_sample": bf,
+            # Pitch arsenal (Statcast 30d window).
+            f"{prefix}_fb_velo": a.fb_velo_mph,
+            f"{prefix}_fb_spin": a.fb_spin_rpm,
+            f"{prefix}_fb_iv_movement": a.fb_iv_movement_in,
+            f"{prefix}_secondary_whiff": a.secondary_whiff_pct,
+            f"{prefix}_arsenal_count": float(a.arsenal_count),
+            f"{prefix}_csw_pct": a.csw_pct,
+            f"{prefix}_zone_pct": a.zone_pct,
+            f"{prefix}_chase_pct": a.chase_pct,
         }
 
     def _lineup_layer(self, prefix: str, l: LineupInputs,
                       *, opposing_hand: str) -> dict[str, float]:
+        from ..integration.shrinkage import top_of_order_shrink
+        # Shrink the noisy aggregate top-3 OBP toward league mean using
+        # combined PA as the sample size. Confirmed lineups with full-
+        # season data round-trip basically unchanged; projected lineups
+        # with sparse data regress hard toward the league mean.
+        obp_shrunk = top_of_order_shrink(l.top3_obp, l.top3_combined_pa)
         return {
-            f"{prefix}_top3_obp": l.top3_obp,
+            f"{prefix}_top3_obp": obp_shrunk,
+            f"{prefix}_top3_obp_raw": l.top3_obp,
+            f"{prefix}_top3_pa_sample": float(l.top3_combined_pa),
             f"{prefix}_top3_wrc": l.top3_wrc,
             f"{prefix}_top3_iso": l.top3_iso,
             f"{prefix}_top3_k_pct": l.top3_k_pct,
             f"{prefix}_top3_bb_pct": l.top3_bb_pct,
             f"{prefix}_top3_woba_vs_hand": l.top3_woba_vs_hand,
-            f"{prefix}_top4_obp": l.top4_obp if l.top4_obp is not None else l.top3_obp,
+            f"{prefix}_top4_obp": l.top4_obp if l.top4_obp is not None else obp_shrunk,
             f"{prefix}_lineup_confirmed": float(l.confirmed),
+            f"{prefix}_lineup_source_confirmed": float(l.source == "confirmed"),
+            f"{prefix}_lineup_source_projected": float(l.source == "projected"),
         }
 
     def _platoon_factor(self, pitcher_hand: str, lineup: LineupInputs) -> float:

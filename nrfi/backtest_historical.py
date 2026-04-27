@@ -59,6 +59,13 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Accuracy@.5  : {report.accuracy:.3f}")
     print(f"Brier        : {report.brier:.4f}")
     print(f"Log loss     : {report.log_loss:.4f}")
+
+    if report.regimes:
+        print("\n--- Regime split (pre-ABS vs ABS-era) ---")
+        for rg in report.regimes:
+            print(f"  {rg.label:>20}  n={rg.n_games:>5}  base={rg.base_rate:.3f}  "
+                  f"acc={rg.accuracy:.3f}  brier={rg.brier:.4f}  ll={rg.log_loss:.4f}")
+
     if report.roi_flat:
         r = report.roi_flat
         print(f"\n--- ROI (flat 1u, edge≥4%, side=auto) ---")

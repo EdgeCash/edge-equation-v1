@@ -53,6 +53,17 @@ log = get_logger(__name__)
 
 
 @dataclass
+class RegimeMetrics:
+    """Headline metrics for a single ABS regime slice."""
+    label: str           # "pre_abs_2024_2025" or "abs_2026_plus"
+    n_games: int
+    brier: float
+    log_loss: float
+    accuracy: float
+    base_rate: float
+
+
+@dataclass
 class BacktestReport:
     n_games: int
     brier: float
@@ -62,6 +73,7 @@ class BacktestReport:
     reliability: dict
     roi_flat: Optional[RoiReport] = None
     per_game: pd.DataFrame = field(default_factory=pd.DataFrame)
+    regimes: list[RegimeMetrics] = field(default_factory=list)
 
 
 def _date_iter(start: str, end: str) -> Iterable[date]:
@@ -69,6 +81,15 @@ def _date_iter(start: str, end: str) -> Iterable[date]:
     while cur <= end_d:
         yield cur
         cur += timedelta(days=1)
+
+
+def _season_from_date(target_date: str) -> int:
+    return int(target_date[:4])
+
+
+def _abs_active_for_season(season: int) -> bool:
+    """ABS Challenge System became league-wide in 2026."""
+    return season >= 2026
 
 
 def reconstruct_features_for_date(
@@ -84,6 +105,13 @@ def reconstruct_features_for_date(
     Returns a list of (game_pk, feature_dict) tuples.
     """
     cfg = config or get_default_config()
+    # Regime-aware ABS toggle: pre-2026 seasons get ABS off automatically
+    # so backtest replay applies the umpire-attenuation rules to the
+    # right historical data. Override by passing a custom config.
+    season = _season_from_date(target_date)
+    if cfg.enable_abs_2026 != _abs_active_for_season(season):
+        from dataclasses import replace
+        cfg = replace(cfg, enable_abs_2026=_abs_active_for_season(season))
     builder = FeatureBuilder(cfg)
     weather = WeatherClient(cfg.api)
     mlb = MLBStatsClient(cfg.api)
@@ -251,6 +279,27 @@ def backtest_range(
     market_p = df["market_p"].astype(float).values if df["market_p"].notna().any() else None
     roi = simulated_roi(p, y, market_p=market_p, side="auto") if market_p is not None else None
 
+    # Per-regime slices (pre-ABS 2024-2025 vs post-ABS 2026+).
+    df["_season"] = df["game_date"].str[:4].astype(int)
+    regime_metrics: list[RegimeMetrics] = []
+    for label, mask in (
+        ("pre_abs_2024_2025", df["_season"] < 2026),
+        ("abs_2026_plus",      df["_season"] >= 2026),
+    ):
+        sub = df[mask]
+        if sub.empty:
+            continue
+        sp = sub["p_nrfi"].astype(float).values
+        sy = sub["actual_nrfi"].astype(int).values
+        regime_metrics.append(RegimeMetrics(
+            label=label,
+            n_games=len(sub),
+            brier=brier_score(sp, sy),
+            log_loss=log_loss_score(sp, sy),
+            accuracy=float(((sp >= 0.5).astype(int) == sy).mean()),
+            base_rate=float(sy.mean()),
+        ))
+
     if save_dir is not None:
         save_dir = Path(save_dir); save_dir.mkdir(parents=True, exist_ok=True)
         df.to_csv(save_dir / f"backtest_{start_date}_{end_date}.csv", index=False)
@@ -263,6 +312,7 @@ def backtest_range(
 
     return BacktestReport(
         n_games=len(df),
+        regimes=regime_metrics,
         brier=brier_score(p, y),
         log_loss=log_loss_score(p, y),
         accuracy=float(((p >= 0.5).astype(int) == y).mean()),
