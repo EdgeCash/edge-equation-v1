@@ -97,7 +97,7 @@ def test_prompt_contains_three_tier_labels_when_all_grades_present():
     text = build_ai_graphic_prompt(card)
     assert "A+ TIER" in text
     assert "A TIER" in text
-    assert "A- TIER" in text   # brand maps engine-grade B -> A-
+    assert "B TIER" in text   # engine-grade B renders as itself (Apr 26)
     assert "SIGMA PLAY" in text
     assert "PRECISION PLAY" in text
     assert "SHARP PLAY" in text
@@ -148,9 +148,11 @@ def test_prompt_shows_grade_score_in_85_99_range():
     ])
     text = build_ai_graphic_prompt(card)
     # A+ @ 0.09 -> 94, A @ 0.06 -> 91, B @ 0.04 -> 89
+    # (engine grade renders verbatim; the prior B -> A- relabel
+    # was removed in the Apr 26 email cleanup.)
     assert "GRADE: A+ (94)" in text
     assert "GRADE: A (91)" in text
-    assert "GRADE: A- (89)" in text
+    assert "GRADE: B (89)" in text
 
 
 def test_prompt_renders_matchup_and_odds():

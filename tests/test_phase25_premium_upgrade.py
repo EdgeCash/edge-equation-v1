@@ -204,10 +204,10 @@ def test_premium_email_groups_picks_by_grade_tier():
     body = format_premium_daily(card)
     assert "A+ TIER" in body
     assert "A TIER" in body
-    assert "A- TIER" in body
-    # A+ section lands BEFORE A section, A BEFORE A-.
+    assert "B TIER" in body
+    # A+ section lands BEFORE A section, A BEFORE B.
     assert body.index("A+ TIER") < body.index("A TIER")
-    assert body.index("A TIER") < body.index("A- TIER")
+    assert body.index("A TIER") < body.index("B TIER")
 
 
 def test_premium_email_renders_deep_block_per_pick():
@@ -221,6 +221,71 @@ def test_premium_email_renders_deep_block_per_pick():
     assert "Fair" in body and "Edge" in body and "Kelly" in body
     assert "HFA" in body and "Decay" in body
     assert "Read:" in body
+
+
+def test_premium_email_dedupes_same_game_market_selection():
+    """Apr 26 feedback: the same matchup was appearing twice in the
+    email when two sportsbooks priced the same pick differently. The
+    formatter now keeps only the highest-edge instance of each
+    (game_id, market_type, selection) triple."""
+    # Two picks on the same Rockies +194 ML, different sportsbook
+    # prices; the +194 edge is bigger than the +158 edge.
+    p_better = _team(
+        game_id="G_ROC_NYM", grade="A+",
+        edge="0.157", market="ML", selection="COL",
+    )
+    p_worse = _team(
+        game_id="G_ROC_NYM", grade="A+",
+        edge="0.109", market="ML", selection="COL",
+    )
+    card = PostingFormatter.build_card(
+        card_type="premium_daily",
+        picks=[p_better, p_worse],
+        generated_at="2026-04-26T10:00:00",
+    )
+    body = format_premium_daily(card)
+    # The deep block renders the edge value to two decimals; the
+    # better-priced pick (15.7%) survives, the +10.9% one drops.
+    assert "+15.7%" in body or "15.70%" in body
+    assert "+10.9%" not in body and "10.90%" not in body
+    # Slate header reflects the deduped count (1, not 2).
+    assert "DAILY EDGE · A+ / A / B (1)" in body
+
+
+def test_premium_email_keeps_distinct_market_selections_on_same_game():
+    """Dedup should NOT collapse different markets on the same game.
+    Rockies ML and Rockies +1.5 RL are separate picks even though they
+    share a game_id."""
+    p_ml = _team(
+        game_id="G_ROC_NYM", grade="A+",
+        edge="0.157", market="ML", selection="COL",
+    )
+    p_rl = _team(
+        game_id="G_ROC_NYM", grade="A",
+        edge="0.075", market="Run_Line", selection="COL +1.5",
+    )
+    card = PostingFormatter.build_card(
+        card_type="premium_daily",
+        picks=[p_ml, p_rl],
+        generated_at="2026-04-26T10:00:00",
+    )
+    body = format_premium_daily(card)
+    assert "DAILY EDGE · A+ / A / B (2)" in body
+
+
+def test_premium_email_omits_spotlight_section():
+    """Apr 26 feedback: the Spotlight section was removed from the
+    premium email -- early-MLB Spotlight blocks weren't worth the
+    visual noise. The Spotlight CARD itself (its own 4pm-CT publish)
+    is unaffected; this only guards the premium email render."""
+    card = PostingFormatter.build_card(
+        card_type="premium_daily",
+        picks=[_team(grade="A+")],
+        generated_at="2026-04-26T10:00:00",
+    )
+    body = format_premium_daily(card)
+    assert "=== SPOTLIGHT ===" not in body
+    assert "Spotlight bar" not in body  # the empty-state copy too
 
 
 # ------------------------------------------------ workflow schedule

@@ -194,13 +194,15 @@ def test_format_premium_daily_includes_all_sections():
         generated_at="2026-04-22T11:00:00",
     )
     body = format_premium_daily(card)
-    # Phase 24 renamed "FULL SLATE" -> "DAILY EDGE", replaced the
-    # DFS/TOP PROPS block with "PLAYER PROP PROJECTIONS", and added
-    # YESTERDAY'S LEDGER + SPOTLIGHT sections.
+    # Phase 24 renamed "FULL SLATE" -> "DAILY EDGE" and replaced the
+    # DFS/TOP PROPS block with "PLAYER PROP PROJECTIONS". Apr 26
+    # removed the SPOTLIGHT section after subscriber feedback that
+    # the early-MLB Spotlight blocks added noise without information;
+    # the SPOTLIGHT card itself (its own publish workflow) is unaffected.
     assert "PREMIUM DAILY EDGE" in body
     assert "2026-04-22" in body
     assert "DAILY EDGE" in body
-    assert "SPOTLIGHT" in body
+    assert "SPOTLIGHT" not in body
     assert "PARLAY OF THE DAY" in body
     assert "ENGINE HEALTH" in body
     assert "Hit rate:  60.0%" in body
@@ -213,8 +215,9 @@ def test_format_premium_daily_empty_slate_still_renders():
     # included. Player Prop Projections is OPT-IN: if no props
     # qualify, the section is omitted rather than showing a
     # near-empty table. That's part of the "no forcing content" rule.
+    # SPOTLIGHT was removed from the email per Apr 26 feedback.
     assert "DAILY EDGE" in body
-    assert "SPOTLIGHT" in body
+    assert "SPOTLIGHT" not in body
     assert "no qualifying picks" in body
     assert "no parlay legs" in body
 

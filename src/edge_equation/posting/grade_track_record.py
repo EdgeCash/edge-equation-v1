@@ -29,10 +29,13 @@ from typing import Dict, List, Optional, Sequence, Tuple
 import sqlite3
 
 
-# Grades the premium track record shows. Engine "B" renders as the
-# brand's "A-" label throughout premium content.
+# Grades the premium track record shows. Renders each engine letter
+# as itself -- the prior "B" -> "A-" brand relabel made B-tier picks
+# read as a separate "A-" tier in the email and confused readers
+# (Apr 26 feedback). The engine grading scale is A+/A/B/C/D/F per
+# math/scoring.py; the email now matches that.
 _TRACK_GRADES = ("A+", "A", "B")
-_GRADE_DISPLAY = {"A+": "A+", "A": "A", "B": "A-"}
+_GRADE_DISPLAY = {"A+": "A+", "A": "A", "B": "B"}
 
 
 @dataclass(frozen=True)
@@ -132,7 +135,7 @@ def _cell(rec: GradeRecord) -> str:
 
 def format_track_record(records: Sequence[GradeRecord]) -> str:
     """Plain-text receipts block. Groups rows by sport, orders grades
-    A+ -> A -> A- within each sport. Empty input returns "" so the
+    A+ -> A -> B within each sport. Empty input returns "" so the
     caller can skip the section on a cold DB."""
     if not records:
         return ""

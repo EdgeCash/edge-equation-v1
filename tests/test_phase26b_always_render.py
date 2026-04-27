@@ -61,12 +61,17 @@ def test_cold_cache_premium_email_shows_all_section_headers():
     for header in (
         "=== GRADE TRACK RECORD ===",
         "=== DAILY EDGE",
-        "=== SPOTLIGHT ===",
         "=== PLAYER PROP PROJECTIONS ===",
         "=== PARLAY OF THE DAY ===",
         "=== ENGINE HEALTH",
     ):
         assert header in body, f"missing header {header!r}"
+    # Apr 26: Spotlight section was removed from the premium email per
+    # subscriber feedback (early-MLB Spotlight blocks were noisy and
+    # didn't add information). The Spotlight CARD itself (its own
+    # 4pm-CT publish) is unaffected; this assertion just guards the
+    # premium email render.
+    assert "=== SPOTLIGHT ===" not in body
 
 
 def test_populated_prop_section_overrides_empty_state():

@@ -163,19 +163,22 @@ def test_format_track_record_shape():
     assert "=== GRADE TRACK RECORD ===" in text
     assert "MLB" in text
     assert "NFL" in text
-    # A+ label renders as-is, engine "B" would render as "A-". Hit rate
-    # and n present.
+    # Each engine grade renders as itself; no more "B" -> "A-" relabel.
     assert "A+ 47-19-2" in text
     assert "71.2%" in text
     assert "n=68" in text
 
 
-def test_format_track_record_renders_engine_b_as_a_minus():
+def test_format_track_record_renders_engine_b_as_b():
     recs = [
         GradeRecord(sport="MLB", grade="B", wins=4, losses=3, pushes=0, n_settled=7),
     ]
     text = format_track_record(recs)
-    assert "A- 4-3-0" in text   # brand label, not the engine letter
+    # Apr 26: the prior brand "B" -> "A-" relabel made B-tier picks
+    # appear as a separate (and nonexistent) "A-" tier in the email.
+    # Engine grades are now rendered verbatim throughout premium copy.
+    assert "B 4-3-0" in text
+    assert "A-" not in text
 
 
 # ------------------------------------------------ feature_inputs stash

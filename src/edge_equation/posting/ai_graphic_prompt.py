@@ -7,7 +7,7 @@ render the Edge Equation daily/evening/overseas card the user showed:
 
   - Chalkboard-with-math-equations background
   - The Edge Equation logo + date / algorithm version header
-  - Three tier bands: A+ (Sigma Play) / A (Precision Play) / A- (Sharp Play)
+  - Three tier bands: A+ (Sigma Play) / A (Precision Play) / B (Sharp Play)
   - Each pick rendered as one row with a "GRADE: X (NN)" badge
   - Small engine-data footer box (Run Time / Data Points / Correlation
     Models / EV Simulations)
@@ -30,12 +30,12 @@ ALGORITHM_VERSION = "v2.0"
 
 
 # Grade -> tier label rendered on the card (matches the provided
-# reference graphic). Engine grades A+ / A / B map to the user's brand-
-# facing A+ / A / A- tiers.
+# reference graphic). Engine grades render as themselves (A+ / A / B);
+# the prior B -> A- relabel was removed in the Apr 26 email cleanup.
 _TIER_FOR_GRADE = {
     "A+": ("A+ TIER -- Σ SIGMA PLAY", "A+"),
     "A":  ("A TIER -- PRECISION PLAY", "A"),
-    "B":  ("A- TIER -- SHARP PLAY", "A-"),
+    "B":  ("B TIER -- SHARP PLAY", "B"),
 }
 
 # Order tiers A+ first on the graphic.
@@ -218,7 +218,7 @@ def build_ai_graphic_prompt(
         "bar-graph sketches, and scientific-notation scribbles filling the "
         "background. Professional premium feel -- navy / charcoal palette, "
         "clean white typography, gold accents on the A+ tier, muted blue "
-        "accents on the A and A- tiers. No emoji, no hashtags, no "
+        "accents on the A and B tiers. No emoji, no hashtags, no "
         "percentages, NO UNITS anywhere on the graphic."
     )
     out.append("")

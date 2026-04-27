@@ -11,13 +11,15 @@ Sections (in order):
      the strict MVS thresholds)
   3. Yesterday's Ledger recap (cross-slot summary of what we posted
      publicly yesterday)
-  4. Daily Edge full slate: every A+ / A / A- pick with edge + Kelly
-     visible (premium is not public_mode, so the numbers stay on)
-  5. Spotlight deep dive: the day's trending game picks
-  6. Player Prop Projections: brand-exact pipe table, same format as
+  4. Daily Edge full slate: every A+ / A / B pick with edge + Kelly
+     visible (premium is not public_mode, so the numbers stay on).
+     Picks are deduped per (game_id, market_type, selection) before
+     rendering so the same matchup never appears twice with different
+     sportsbook prices -- the highest-edge price wins.
+  5. Player Prop Projections: brand-exact pipe table, same format as
      the free card -- no "DFS" or app mentions
-  7. Parlay of the Day: 3 legs from distinct games + combined odds
-  8. Engine Health: yesterday's hit rate + win/loss/push count
+  6. Parlay of the Day: 3 legs from distinct games + combined odds
+  7. Engine Health: yesterday's hit rate + win/loss/push count
 
 Beta test destination is controlled by the standard SMTP_* env vars;
 EMAIL_TO defaults to ProfessorEdgeCash@gmail.com at the workflow
@@ -94,9 +96,8 @@ def _implied_prob_from_american(odds) -> Optional[Decimal]:
 
 
 def _render_pick_line(p: dict) -> str:
-    """Compact one-line pick summary. Used by the Spotlight section
-    (and as a fallback for any caller that doesn't need the deep
-    block)."""
+    """Compact one-line pick summary. Used by the parlay block (and as
+    a fallback for any caller that doesn't need the deep block)."""
     sport = p.get("sport") or ""
     market = p.get("market_type") or ""
     selection = p.get("selection") or "?"
@@ -419,19 +420,54 @@ def _render_mvs_block(tagged: List[dict]) -> List[str]:
     return lines
 
 
-def _render_spotlight_block(spot: Optional[dict]) -> List[str]:
-    """Surface the trending game's picks. Factual tone, same `[grade]
-    sport · market ...` row format as the full-slate block so the
-    reader parses it without a mode switch."""
-    if not spot or not spot.get("picks"):
-        return ["  (no single game crossed the Spotlight bar today)"]
-    game_id = spot.get("game_id") or ""
-    sport = spot.get("sport") or ""
-    header = f"  {sport}  ·  {game_id}" if game_id else f"  {sport}"
-    lines = [header]
-    for p in spot["picks"]:
-        lines.append(f"  {_render_pick_line(p)}")
-    return lines
+def _dedupe_picks(picks: List[dict]) -> List[dict]:
+    """Keep one pick per (game_id, market_type, selection) -- the one
+    with the highest edge. Different sportsbooks price the same
+    selection differently and the engine emits a separate Pick row
+    for each price; the email render shouldn't show the user the same
+    line twice with different prices.
+
+    Picks with no game_id, market_type, or selection are passed
+    through unchanged (defensive: malformed inputs shouldn't get
+    silently dropped during display).
+
+    Stable order: the input order is preserved -- the first occurrence
+    of each (game, market, selection) wins iff it's also the highest
+    edge. To get that, we sort by edge desc, dedup, then re-sort by
+    the original index.
+    """
+    if not picks:
+        return []
+    indexed = list(enumerate(picks))
+
+    def _edge(p: dict) -> float:
+        e = p.get("edge")
+        if e is None:
+            return 0.0
+        try:
+            return float(e)
+        except (TypeError, ValueError):
+            return 0.0
+
+    # Sort by edge desc; first occurrence of each key wins.
+    indexed.sort(key=lambda pair: -_edge(pair[1]))
+    seen: set = set()
+    kept: List[tuple] = []  # (orig_index, pick)
+    for orig_idx, p in indexed:
+        gid = p.get("game_id") or ""
+        mt = p.get("market_type") or ""
+        sel = p.get("selection") or ""
+        if not (gid and mt and sel):
+            kept.append((orig_idx, p))
+            continue
+        key = (gid, mt, sel)
+        if key in seen:
+            continue
+        seen.add(key)
+        kept.append((orig_idx, p))
+    # Re-sort to original input order.
+    kept.sort(key=lambda pair: pair[0])
+    return [p for _, p in kept]
 
 
 def format_premium_daily(card: dict) -> str:
@@ -442,10 +478,9 @@ def format_premium_daily(card: dict) -> str:
     date_part = generated.split("T", 1)[0] if generated else ""
     tagline = card.get("tagline") or ""
 
-    picks = card.get("picks") or []
+    picks = _dedupe_picks(card.get("picks") or [])
     parlay = card.get("parlay") or []
     health = card.get("engine_health")
-    spotlight = card.get("spotlight")
     prop_section = (card.get("player_prop_projections") or {}).get("text") or ""
     recap_section = (card.get("daily_recap") or {}).get("text") or ""
     # Historical hit rate receipts, rendered at the top of the email so
@@ -490,11 +525,13 @@ def format_premium_daily(card: dict) -> str:
         )
     out.append("")
 
-    # 3. Daily Edge: all A+ / A / A- picks, grouped by grade tier,
+    # 3. Daily Edge: all A+ / A / B picks, grouped by grade tier,
     # rendered as deep blocks with fair/implied/edge/Kelly/HFA/decay
     # + analytical read. Grouping by tier gives the subscriber an
-    # at-a-glance sense of confidence density per day.
-    out.append(f"=== DAILY EDGE · A+ / A / A- ({len(picks)}) ===")
+    # at-a-glance sense of confidence density per day. Picks are
+    # deduped above so the same matchup never appears twice with
+    # different sportsbook prices -- the highest-edge price wins.
+    out.append(f"=== DAILY EDGE · A+ / A / B ({len(picks)}) ===")
     if not picks:
         out.append("  (no qualifying picks today)")
     else:
@@ -503,7 +540,7 @@ def format_premium_daily(card: dict) -> str:
             g = p.get("grade") or ""
             if g in buckets:
                 buckets[g].append(p)
-        tier_label = {"A+": "A+ TIER", "A": "A TIER", "B": "A- TIER"}
+        tier_label = {"A+": "A+ TIER", "A": "A TIER", "B": "B TIER"}
         for g in ("A+", "A", "B"):
             bucket = buckets[g]
             if not bucket:
@@ -514,12 +551,7 @@ def format_premium_daily(card: dict) -> str:
             out.append("")
     out.append("")
 
-    # 4. Spotlight deep dive.
-    out.append("=== SPOTLIGHT ===")
-    out.extend(_render_spotlight_block(spotlight))
-    out.append("")
-
-    # 5. Player Prop Projections section. Brand-exact pipe format; same
+    # 4. Player Prop Projections section. Brand-exact pipe format; same
     # as the free Daily Edge prop block, no DFS mentions, no Top-N
     # language. Edge + Kelly stay on adjacent sections (full slate +
     # parlay) so premium remains richer without renaming the section.
@@ -532,7 +564,7 @@ def format_premium_daily(card: dict) -> str:
     else:
         out.append(
             "  (no qualifying props today -- threshold is Grade A+, A, "
-            "or A- with positive edge)"
+            "or B with positive edge)"
         )
     out.append("")
 
