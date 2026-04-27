@@ -23,7 +23,7 @@ from decimal import Decimal
 from typing import Any, Mapping, Optional, Sequence
 
 from ..config import NRFIConfig, get_default_config
-from ..utils.logging import get_logger
+from edge_equation.utils.logging import get_logger
 
 log = get_logger(__name__)
 

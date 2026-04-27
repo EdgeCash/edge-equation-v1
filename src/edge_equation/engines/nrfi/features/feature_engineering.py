@@ -45,7 +45,7 @@ import pandas as pd
 from ..config import NRFIConfig, get_default_config
 from ..data.park_factors import ParkInfo, is_indoor, park_for
 from ..data.weather import WeatherSnapshot, wind_orientation_factor
-from ..utils.logging import get_logger
+from edge_equation.utils.logging import get_logger
 from .splits import blend_form, ewma, first_inning_pitcher_stats
 
 log = get_logger(__name__)

@@ -7,7 +7,7 @@ from typing import Iterable, Sequence
 
 import numpy as np
 
-from ..utils.kelly import american_to_decimal
+from edge_equation.utils.kelly import american_to_decimal
 
 
 @dataclass

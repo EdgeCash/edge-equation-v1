@@ -22,7 +22,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Mapping, Optional, Sequence
 
 from ..utils.colors import gradient_hex, nrfi_band
-from ..utils.kelly import implied_probability, kelly_stake
+from edge_equation.utils.kelly import implied_probability, kelly_stake
 
 
 @dataclass(frozen=True)
