@@ -122,7 +122,10 @@ class ModelConfig:
 class MonteCarloConfig:
     """Settings for the per-PA Monte Carlo refinement layer."""
 
-    n_simulations: int = 10_000
+    # 15k strikes the audit-recommended balance between speed and CI
+    # tightness. Tuned this with phase-3 polish so live daily runs land
+    # in <2s per game.
+    n_simulations: int = 15_000
     confidence_alpha: float = 0.10  # 90% CI by default
     rng_seed: int = 7
     # Cap PAs per half-inning to avoid pathological infinite loops if a
@@ -139,6 +142,10 @@ class BettingConfig:
     vig_buffer: float = 0.02              # haircut implied prob by 2pts
     max_stake_units: float = 2.0          # safety cap per pick
     default_juice: float = -110.0
+    # Probability threshold above which a pick is "green" (deep-green
+    # band). Used by the green-only ROI mode in the backtest and by
+    # any caller that wants to gate stakes on conviction.
+    green_threshold: float = 0.70
 
 
 @dataclass(frozen=True)
