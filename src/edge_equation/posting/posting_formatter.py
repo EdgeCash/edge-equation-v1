@@ -83,7 +83,7 @@ CARD_TEMPLATES = {
     # --- Premium (subscriber email only; never posted to X)
     "premium_daily": {
         "headline": "Premium Daily Edge",
-        "subhead": "Full analytical read: yesterday's Ledger recap, every A+ / A / A- projection, Spotlight deep dive, Player Prop Projections, parlay of the day, and engine hit rate.",
+        "subhead": "Full analytical read: yesterday's Ledger recap, every A+ / A / B projection, Player Prop Projections, parlay of the day, and engine hit rate.",
     },
 }
 
@@ -200,7 +200,7 @@ class PostingFormatter:
 
     @staticmethod
     def filter_premium_daily(picks: Sequence[Pick]) -> List[Pick]:
-        """Premium email includes every A+ / A / A- pick, no cap. Sorted
+        """Premium email includes every A+ / A / B pick, no cap. Sorted
         grade-first (A+ highest) then by edge descending so the reader
         sees the strongest plays at the top."""
         qualifying = [p for p in picks if p.grade in _PREMIUM_DAILY_ALLOWED_GRADES]

@@ -416,7 +416,7 @@ def _cmd_backfill_results(args: argparse.Namespace) -> int:
 
 def _cmd_premium_daily(args: argparse.Namespace) -> int:
     """
-    Build the Premium Daily email: every A+ / A / A- pick, parlay of
+    Build the Premium Daily email: every A+ / A / B pick, parlay of
     the day, top 6 DFS props, yesterday's engine hit rate. Always sent
     via email (never X). Subscriber-only content; not public_mode, so
     edge + Kelly remain visible and the compliance gate does not apply.
@@ -434,7 +434,7 @@ def _cmd_premium_daily(args: argparse.Namespace) -> int:
         # If today's premium slate already exists, re-use its picks so the
         # email is idempotent within the day -- unless --force was passed,
         # in which case we rebuild.
-        # Premium is cross-slate: subscribers see every A+ / A / A-
+        # Premium is cross-slate: subscribers see every A+ / A / B
         # projection across EVERY sport (domestic + overseas). We drive
         # two separate runner passes and concatenate the picks so the
         # per-card slate-separation guard stays intact for the public

@@ -293,7 +293,9 @@ def test_premium_email_includes_all_seven_sections():
     body = format_premium_daily(card)
     assert "YESTERDAY'S LEDGER" in body
     assert "DAILY EDGE" in body
-    assert "SPOTLIGHT" in body
+    # SPOTLIGHT section removed from the premium email Apr 26 (the
+    # SPOTLIGHT card's own publish workflow is unaffected).
+    assert "SPOTLIGHT" not in body
     assert "PLAYER PROP PROJECTIONS" in body
     assert "PARLAY OF THE DAY" in body
     assert "ENGINE HEALTH" in body
