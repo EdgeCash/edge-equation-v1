@@ -81,7 +81,7 @@ git commit -m "Phase NRFI Integration: wire elite NRFI engine into pipeline
   emits engine-backed NRFI/YRFI rows alongside the standard MLB feed.
 - Add src/edge_equation/posting/nrfi_card.py — text/dict renderer
   for the premium daily email and dashboard payload.
-- Add api/routers/nrfi.py mounted at /src/edge_equation/engines/nrfi/{today,board}.
+- Add api/routers/nrfi.py mounted at /nrfi/{today,board}.
 - Update pyproject.toml with [project.optional-dependencies].nrfi
   extras so the elite stack installs via 'pip install -e .[nrfi]'.
 
