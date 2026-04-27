@@ -68,6 +68,26 @@ def _mock_source_for_league(league: str):
     return None
 
 
+def nrfi_source_for_league(league: str):
+    """Return the elite NRFI/YRFI source for `league`, or None if the
+    `[nrfi]` extras aren't installed. Designed as an *additive layer*
+    on top of the standard source — callers should concatenate
+    `standard_source.get_raw_markets(...)` with `nrfi_source.get_raw_markets(...)`
+    and let the dedup-by-(game_id, market_type, selection) rule pick
+    the higher-edge winner.
+
+    Only MLB is supported in v1 — KBO/NPB don't have the Statcast
+    coverage to feed the elite engine yet.
+    """
+    if league != "MLB":
+        return None
+    try:
+        from edge_equation.ingestion.mlb_nrfi_source import MLBNRFISource
+        return MLBNRFISource()
+    except ImportError:
+        return None
+
+
 class SourceFactory:
     """
     Source resolution for scheduled runs:

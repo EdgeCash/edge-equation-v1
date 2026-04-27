@@ -12,6 +12,7 @@ from api.routers import (
     cards,
     cron,
     health,
+    nrfi,
     picks,
     premium,
     slate,
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
     app.include_router(archive.router)
     app.include_router(auth.router)
     app.include_router(stripe_router.router)
+    app.include_router(nrfi.router)
     return app
 
 
