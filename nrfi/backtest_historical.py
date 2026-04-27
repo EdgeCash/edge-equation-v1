@@ -37,6 +37,18 @@ def main(argv: list[str] | None = None) -> int:
                         help="Load trained bundle (default: Poisson baseline only)")
     parser.add_argument("--save-dir", default=None,
                         help="Directory to drop CSV + PNGs")
+    parser.add_argument("--forecast-weather", action="store_true",
+                        help="Use the Open-Meteo forecast endpoint snapped to T-3hr "
+                              "(matches what the daily run sees pre-game)")
+    parser.add_argument("--green-only-roi", action="store_true",
+                        help="Restrict ROI sim to green/red high-confidence picks only")
+    parser.add_argument("--green-threshold", type=float, default=0.70,
+                        help="Probability threshold for 'green' picks (default 0.70)")
+    parser.add_argument("--no-summary-table", action="store_true",
+                        help="Skip the boxed summary table at the end of the report")
+    parser.add_argument("--reliability-summary", action="store_true",
+                        help="Print the bin-level reliability summary "
+                              "('70-80%% bin: actual hit rate 74%%')")
     args = parser.parse_args(argv)
 
     cfg = get_default_config()
@@ -51,6 +63,9 @@ def main(argv: list[str] | None = None) -> int:
     report = backtest_range(
         args.start, args.end, config=cfg, bundle=bundle,
         save_dir=Path(args.save_dir) if args.save_dir else None,
+        forecast_weather_only=args.forecast_weather,
+        roi_green_only=args.green_only_roi,
+        green_threshold=args.green_threshold,
     )
 
     print(f"\n=== Backtest {args.start} → {args.end} ===")
@@ -82,6 +97,20 @@ def main(argv: list[str] | None = None) -> int:
         p = pm[i] * 100 if pm[i] is not None else float('nan')
         a = am[i] * 100 if am[i] == am[i] else float('nan')
         print(f"  [{lo:5.1f}%-{hi:5.1f}%]  pred {p:5.1f}%  actual {a:5.1f}%  n={cnt[i]}")
+
+    if args.reliability_summary and not report.per_game.empty:
+        from .calibration import reliability_summary
+        df = report.per_game
+        reliability_summary(
+            df["p_nrfi"].astype(float).values,
+            df["actual_nrfi"].astype(int).values,
+            n_bins=10, brier=report.brier, print_to_stdout=True,
+        )
+
+    if not args.no_summary_table:
+        from .evaluation.backtest import summary_table_str
+        print()
+        print(summary_table_str(report, green_threshold=args.green_threshold))
     return 0
 
 

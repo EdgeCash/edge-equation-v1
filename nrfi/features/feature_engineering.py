@@ -60,25 +60,17 @@ LEAGUE_PRIORS = {
     "ump_csa": 0.0, "ump_abs_overturn": 0.05,
 }
 
-# 2026 ABS Challenge System priors (league-wide trailing observations).
-# These are the values that have actually been logged across 2026 spring
-# training + regular season — used as defaults when an umpire has no
-# personal ABS history yet (rookie crew chiefs, mid-season replacements,
-# etc.). Update annually by re-pulling the Savant ABS leaderboard.
-#
-#   abs_overturn_rate_league    : ~0.54   (umpire calls overturned on challenge)
-#   abs_catcher_success_league  : ~0.64   (catcher-initiated challenge success)
-#   abs_walk_rate_league_2026   : ~0.099  (post-ABS BB% spike, vs ~0.085 pre-ABS)
-#   abs_called_strike_pull      : ~-0.012 (CSA index drop on outside corner)
-ABS_2026_PRIORS = {
-    "overturn_rate": 0.54,
-    "catcher_success": 0.64,
-    "walk_rate_league": 0.099,
-    "called_strike_pull": -0.012,
-}
-
-# 2024-2025 (pre-ABS, pre-Challenge) league walk rate baseline.
-PRE_ABS_WALK_RATE_LEAGUE = 0.085
+# 2026 ABS Challenge System priors are defined in their canonical home
+# (`nrfi.abs_2026.effects`). We re-export the constants here so any
+# downstream consumer that imports from this module keeps working.
+from ..abs_2026 import (
+    ABS_2026_PRIORS,
+    ABS_LEAGUE_BB_UPLIFT,
+    ABSContext,
+    PRE_ABS_WALK_RATE_LEAGUE,
+    bb_pct_uplift as _abs_bb_pct_uplift,
+    umpire_adaptation_curve as _abs_umpire_adaptation,
+)
 
 
 # --- Inputs --------------------------------------------------------------
@@ -295,12 +287,22 @@ class FeatureBuilder:
         season_k = shrink_pitcher_k_pct(p.season_k_pct, bf)
         season_bb = shrink_pitcher_bb_pct(p.season_bb_pct, bf)
 
-        # 2026 ABS uplifts BB% by ~1.4pp league-wide. We shift the
-        # individual pitcher's bb_pct up by the league delta — the
-        # downstream interaction K%×ABS captures the rest of the swing.
+        # 2026 ABS BB% uplift — per-matchup, not a league-wide shift.
+        # `bb_pct_uplift()` weighs the pitcher's CSW%/zone% style and
+        # the umpire's overturn rate before allocating the league delta.
+        # See nrfi/abs_2026/effects.py for the full decomposition.
+        abs_uplift_pp = 0.0
         if self.cfg.enable_abs_2026:
-            abs_bb_uplift = ABS_2026_PRIORS["walk_rate_league"] - PRE_ABS_WALK_RATE_LEAGUE
-            season_bb = season_bb + abs_bb_uplift
+            abs_ctx = ABSContext(
+                active=True,
+                pitcher_csw_pct=p.arsenal.csw_pct,
+                pitcher_zone_pct=p.arsenal.zone_pct,
+                # Ump fields default to league means; the umpire layer
+                # sees the per-game value separately and the trees can
+                # learn the ump×K% interaction on top.
+            )
+            abs_uplift_pp = _abs_bb_pct_uplift(season_bb, abs_ctx)
+            season_bb = season_bb + abs_uplift_pp
 
         # Recent form blend (mirrors deterministic engine).
         l10 = p.l10_era if p.l10_era is not None else season_era
@@ -349,6 +351,8 @@ class FeatureBuilder:
             f"{prefix}_csw_pct": a.csw_pct,
             f"{prefix}_zone_pct": a.zone_pct,
             f"{prefix}_chase_pct": a.chase_pct,
+            # 2026 ABS per-matchup BB% uplift (0.0 when ABS off).
+            f"{prefix}_abs_bb_uplift_pp": abs_uplift_pp,
         }
 
     def _lineup_layer(self, prefix: str, l: LineupInputs,
@@ -386,9 +390,20 @@ class FeatureBuilder:
         return 2.0 * (same_hand_share - 0.5)  # -1..+1
 
     def _umpire_layer(self, u: UmpireInputs) -> dict[str, float]:
-        # Pre-2026 vs ABS-era: we attenuate the ump zone influence and
-        # add per-game challenge metrics.
-        attenuation = 0.5 if self.cfg.enable_abs_2026 else 1.0
+        # Pre-ABS: the umpire's personal zone bias propagates fully.
+        # ABS-era: dampen by an adaptation-curve factor that asymptotes
+        # to ~0.5 (rulebook zone) as crews accumulate ABS exposure.
+        # The 0.5 floor in `umpire_adaptation_curve` is the same number
+        # the phase-2 implementation hard-coded; this just lets it
+        # decay smoothly through the season instead of step-functioning
+        # off on opening day 2026.
+        if self.cfg.enable_abs_2026:
+            # We don't currently track per-ump games-in-ABS-era, so use
+            # the league-mean assumption (60 games into ABS exposure).
+            # When per-ump game counts are wired in this becomes per-row.
+            attenuation = _abs_umpire_adaptation(60)
+        else:
+            attenuation = 1.0
         zone_idx = ((u.zone_size_idx - 100.0) * attenuation) + 100.0
         return {
             "ump_zone_idx": zone_idx,

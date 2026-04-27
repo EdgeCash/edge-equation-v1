@@ -24,7 +24,7 @@ Usage from the CLI:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -98,9 +98,20 @@ def reconstruct_features_for_date(
     store: NRFIStore,
     statcast_window_days: int = 30,
     config: NRFIConfig | None = None,
+    forecast_weather_only: bool = False,
 ) -> list[tuple[int, dict]]:
     """Build features for every game on `target_date` using only
     information available before first pitch.
+
+    Parameters
+    ----------
+    forecast_weather_only : When True, weather is pulled from the
+        Open-Meteo *forecast* endpoint snapped to the hour 3 hours
+        before first pitch — i.e., what the daily run would have
+        actually seen at slate-build time. Default False uses the
+        archive endpoint (real observations) which is the right
+        choice for measuring calibration but slightly leaks vs. the
+        live forecast.
 
     Returns a list of (game_pk, feature_dict) tuples.
     """
@@ -136,10 +147,20 @@ def reconstruct_features_for_date(
                 log.warning("Unknown park %s — skipping game %s", g.venue_code, g.game_pk)
                 continue
 
-            # Weather — archive endpoint (matches what we'd see backfilling).
+            # Weather — archive (real observations) by default, forecast
+            # snapped to T-3hr when `forecast_weather_only=True` to match
+            # exactly what the daily run would have seen pre-game.
             wx = None
             if g.first_pitch_ts:
-                wx = weather.archive(park.lat, park.lon, str(g.first_pitch_ts), park.altitude_ft)
+                if forecast_weather_only:
+                    # Snap to the forecast issued ~3 hours before first
+                    # pitch — the standard slate-build window.
+                    from datetime import timedelta as _td
+                    fp = datetime.fromisoformat(str(g.first_pitch_ts).replace("Z", "+00:00"))
+                    target_iso = (fp - _td(hours=3)).isoformat()
+                    wx = weather.forecast(park.lat, park.lon, target_iso, park.altitude_ft)
+                else:
+                    wx = weather.archive(park.lat, park.lon, str(g.first_pitch_ts), park.altitude_ft)
 
             # Pitcher inputs (first-inning splits from Statcast).
             home_p = PitcherInputs(
@@ -202,6 +223,9 @@ def backtest_range(
     bundle: Optional[TrainedBundle] = None,
     market_provider=None,
     save_dir: Optional[str | Path] = None,
+    forecast_weather_only: bool = False,
+    roi_green_only: bool = False,
+    green_threshold: float = 0.70,
 ) -> BacktestReport:
     """Replay every game in [start_date, end_date], score predictions vs actuals.
 
@@ -224,8 +248,11 @@ def backtest_range(
     rows: list[dict] = []
     for d in _date_iter(start_date, end_date):
         try:
-            feats_per_game = reconstruct_features_for_date(d.isoformat(),
-                                                            store=store, config=cfg)
+            feats_per_game = reconstruct_features_for_date(
+                d.isoformat(),
+                store=store, config=cfg,
+                forecast_weather_only=forecast_weather_only,
+            )
         except Exception as e:
             log.exception("Feature reconstruction failed for %s: %s", d, e)
             continue
@@ -277,7 +304,21 @@ def backtest_range(
     rb = reliability_buckets(p, y, n_bins=10)
 
     market_p = df["market_p"].astype(float).values if df["market_p"].notna().any() else None
-    roi = simulated_roi(p, y, market_p=market_p, side="auto") if market_p is not None else None
+    if market_p is not None:
+        if roi_green_only:
+            # Restrict ROI sim to "green" picks only — the high-confidence
+            # spots the user actually bets. Mask both probs and outcomes
+            # so the call is point-in-time consistent.
+            mask = (p >= green_threshold) | (p <= (1.0 - green_threshold))
+            if mask.any():
+                roi = simulated_roi(p[mask], y[mask],
+                                     market_p=market_p[mask], side="auto")
+            else:
+                roi = None
+        else:
+            roi = simulated_roi(p, y, market_p=market_p, side="auto")
+    else:
+        roi = None
 
     # Per-regime slices (pre-ABS 2024-2025 vs post-ABS 2026+).
     df["_season"] = df["game_date"].str[:4].astype(int)
@@ -326,3 +367,96 @@ def backtest_range(
         roi_flat=roi,
         per_game=df,
     )
+
+
+# ---------------------------------------------------------------------------
+# Summary table — concise human-readable summary for the CLI
+# ---------------------------------------------------------------------------
+
+def summary_table_str(report: BacktestReport, *,
+                       green_threshold: float = 0.70) -> str:
+    """Return the audit-style summary table for a backtest report.
+
+    Layout::
+
+        ┌────────────────────────────────────────────────┐
+        │  N games          812                          │
+        │  Base NRFI rate   53.6%                        │
+        │  Accuracy@.5      62.4%                        │
+        │  Brier            0.2168                       │
+        │  Log loss         0.6342                       │
+        │  Pre-ABS  n=523   acc 61.8%   brier 0.2185    │
+        │  ABS-era  n=289   acc 63.7%   brier 0.2138    │
+        │  Green-only ROI   +18.4u (n=47, edge 6.1pp)   │
+        │  Top insights:                                  │
+        │    * Engine outperformed pre-ABS by 1.9pp acc   │
+        │    * High-confidence greens hit 74% (target 70+)│
+        └────────────────────────────────────────────────┘
+    """
+    lines: list[str] = []
+    lines.append("Backtest summary")
+    lines.append("─" * 50)
+    lines.append(f"  N games           {report.n_games}")
+    lines.append(f"  Base NRFI rate    {report.base_rate * 100:.1f}%")
+    lines.append(f"  Accuracy@.5       {report.accuracy * 100:.1f}%")
+    lines.append(f"  Brier             {report.brier:.4f}")
+    lines.append(f"  Log loss          {report.log_loss:.4f}")
+
+    for r in report.regimes:
+        tag = "Pre-ABS" if r.label.startswith("pre_abs") else "ABS-era"
+        lines.append(
+            f"  {tag:<10} n={r.n_games:>4}   acc {r.accuracy * 100:.1f}%"
+            f"   brier {r.brier:.4f}"
+        )
+
+    if report.roi_flat:
+        rf = report.roi_flat
+        lines.append(
+            f"  ROI               {rf.units_won:+.2f}u  "
+            f"(n={rf.bets}, edge {rf.avg_edge_pct:.2f}pp, "
+            f"ROI {rf.roi_pct:+.2f}%)"
+        )
+
+    # Insights — derived from the per-game frame
+    insights = _derive_insights(report, green_threshold=green_threshold)
+    if insights:
+        lines.append("  Insights:")
+        for ins in insights:
+            lines.append(f"    * {ins}")
+
+    return "\n".join(lines)
+
+
+def _derive_insights(report: BacktestReport, *,
+                      green_threshold: float = 0.70) -> list[str]:
+    df = report.per_game
+    if df is None or df.empty:
+        return []
+    out: list[str] = []
+    p = df["p_nrfi"].astype(float).values
+    y = df["actual_nrfi"].astype(int).values
+
+    # Hit rate among green spots.
+    green = p >= green_threshold
+    if green.sum() >= 5:
+        hr = float(y[green].mean())
+        out.append(f"Green-confidence ({int(green_threshold*100)}+) "
+                    f"NRFI hit rate: {hr * 100:.1f}% (n={int(green.sum())})")
+
+    # Hit rate among red spots (low NRFI prob → expect YRFI hits).
+    red = p <= (1.0 - green_threshold)
+    if red.sum() >= 5:
+        hr = float((1 - y[red]).mean())
+        out.append(f"Red-confidence ({int((1 - green_threshold)*100)}-) "
+                    f"YRFI hit rate: {hr * 100:.1f}% (n={int(red.sum())})")
+
+    # Regime delta
+    if len(report.regimes) >= 2:
+        a, b = report.regimes[0], report.regimes[1]
+        delta_acc = (b.accuracy - a.accuracy) * 100
+        sign = "+" if delta_acc >= 0 else ""
+        out.append(
+            f"Engine accuracy ABS-era − pre-ABS: {sign}{delta_acc:.1f}pp"
+        )
+    return out
+
