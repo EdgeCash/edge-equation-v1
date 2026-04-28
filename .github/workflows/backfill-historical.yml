@@ -62,6 +62,44 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[nrfi]"
 
+      # WARM START — pull the prior run's DuckDB + Statcast cache so
+      # the resumability that the orchestrator's checkpointing was
+      # designed for actually works across runs. Without this step,
+      # every fresh GH Actions runner starts with an empty DuckDB,
+      # all (date, op) checkpoints are missing, and the backfill
+      # re-runs everything (or crashes early before uploading).
+      # Phase 2c will replace artifact hydration with R2.
+      - name: Warm-start DuckDB from prior backfill run
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: backfill-historical.yml
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+          # Only download from a prior successful run.
+          workflow_conclusion: success
+
+      - name: Warm-start Statcast parquet cache from prior run
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: backfill-historical.yml
+          name: nrfi-statcast-cache-latest
+          path: data/nrfi_cache/parquet/
+          if_no_artifact_found: warn
+          workflow_conclusion: success
+
+      - name: Show pre-run cache stats (diagnostic)
+        run: |
+          echo "=== data/nrfi_cache/ ==="
+          ls -la data/nrfi_cache/ 2>/dev/null || echo "  (empty — first run or no prior artifact)"
+          if [ -f data/nrfi_cache/nrfi.duckdb ]; then
+            echo "  nrfi.duckdb size: $(stat -c %s data/nrfi_cache/nrfi.duckdb) bytes"
+          fi
+          echo "=== Statcast parquet cache ==="
+          find data/nrfi_cache/parquet/ -type f 2>/dev/null | head -5 || echo "  (empty)"
+
       - name: Run backfill
         run: |
           END_DATE_ARG=""
@@ -83,6 +121,27 @@ jobs:
             $MAX_DAYS_ARG \
             $NO_SKIP_ARG
 
+      - name: Show post-run cache stats (diagnostic)
+        if: always()
+        run: |
+          echo "=== Post-run data/nrfi_cache/ ==="
+          ls -la data/nrfi_cache/ 2>/dev/null || echo "  MISSING"
+          if [ -f data/nrfi_cache/nrfi.duckdb ]; then
+            echo "  nrfi.duckdb size: $(stat -c %s data/nrfi_cache/nrfi.duckdb) bytes"
+            python -c "
+          import duckdb
+          c = duckdb.connect('data/nrfi_cache/nrfi.duckdb')
+          for t in ('games', 'actuals', 'features', 'backfill_checkpoints'):
+              try:
+                  n = c.execute(f'SELECT COUNT(*) FROM {t}').fetchone()[0]
+                  print(f'  {t}: {n} rows')
+              except Exception as e:
+                  print(f'  {t}: ERROR {e}')
+          " || echo "  (duckdb introspection failed; will still attempt upload)"
+          else
+            echo "  ::error::nrfi.duckdb file is MISSING after backfill — upload will be empty"
+          fi
+
       # Fixed artifact names (with overwrite=true) so the walk-forward
       # workflow can request "the latest backfill" by literal name
       # without needing cross-run regex matching. We also keep a
@@ -93,7 +152,7 @@ jobs:
         with:
           name: nrfi-duckdb-latest
           path: data/nrfi_cache/nrfi.duckdb
-          if-no-files-found: warn
+          if-no-files-found: error    # fail loudly if the DB never got built
           retention-days: 30
           overwrite: true
 
