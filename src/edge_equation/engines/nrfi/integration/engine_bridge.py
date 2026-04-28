@@ -73,22 +73,71 @@ class NRFIEngineBridge:
     # -- Loading ----------------------------------------------------------
     @classmethod
     def try_load(cls, config: NRFIConfig | None = None) -> "NRFIEngineBridge":
-        """Best-effort load. Returns a disabled bridge if extras missing."""
+        """Best-effort load. Returns a disabled bridge if extras missing.
+
+        Resolution order:
+        1. Local cache at `cfg.model_dir` (fast path; the trained bundle
+           was previously fetched and unpacked here).
+        2. Cloudflare R2 — fetch `nrfi/bundles/latest.bundle`, unpack
+           into `cfg.model_dir`, then load. Phase 2c handoff for cron
+           retrains and remote-environment daily runs.
+        3. Disabled bridge — Poisson baseline path. Triggered when both
+           local and R2 are empty (e.g. before the first sanity gate
+           passes), or when the optional [nrfi] extras aren't installed.
+        """
         cfg = config or get_default_config()
-        try:
-            from ..models.inference import NRFIInferenceEngine
-            from ..models.model_training import MODEL_VERSION, TrainedBundle
-            bundle = TrainedBundle.load(cfg.model_dir, MODEL_VERSION)
-            engine = NRFIInferenceEngine(bundle, cfg)
-            log.info("NRFIEngineBridge loaded model bundle %s", MODEL_VERSION)
+
+        def _attempt_load_from_local() -> object | None:
+            try:
+                from ..models.inference import NRFIInferenceEngine
+                from ..models.model_training import MODEL_VERSION, TrainedBundle
+                bundle = TrainedBundle.load(cfg.model_dir, MODEL_VERSION)
+                return NRFIInferenceEngine(bundle, cfg)
+            except Exception:
+                return None
+
+        # 1. Local cache
+        engine = _attempt_load_from_local()
+        if engine is not None:
+            log.info("NRFIEngineBridge loaded local bundle from %s",
+                     cfg.model_dir)
             return cls(cfg, engine)
-        except Exception as e:
-            log.info(
-                "NRFIEngineBridge: ML stack not available (%s) — "
-                "deterministic Poisson baseline will be used.",
-                type(e).__name__,
+
+        # 2. R2 fallback
+        try:
+            from edge_equation.utils.object_storage import (
+                R2Client, download_latest_nrfi_bundle,
             )
-            return cls(cfg, None)
+            r2 = R2Client.from_env()
+            if r2 is not None:
+                fetched = download_latest_nrfi_bundle(r2, cfg.model_dir)
+                if fetched is not None:
+                    engine = _attempt_load_from_local()
+                    if engine is not None:
+                        log.info(
+                            "NRFIEngineBridge loaded bundle from R2 "
+                            "(latest.bundle) into %s", cfg.model_dir,
+                        )
+                        return cls(cfg, engine)
+                    log.warning(
+                        "NRFIEngineBridge: downloaded R2 bundle but "
+                        "TrainedBundle.load() failed — falling back to baseline",
+                    )
+                else:
+                    log.info(
+                        "NRFIEngineBridge: R2 latest.bundle not found yet — "
+                        "first sanity gate may not have passed",
+                    )
+        except Exception as e:
+            log.info("NRFIEngineBridge: R2 fetch path skipped (%s)",
+                     type(e).__name__)
+
+        # 3. Baseline
+        log.info(
+            "NRFIEngineBridge: no trained bundle available — "
+            "deterministic Poisson baseline will be used.",
+        )
+        return cls(cfg, None)
 
     def available(self) -> bool:
         """True iff the trained ML bundle is loaded (vs. baseline only)."""
