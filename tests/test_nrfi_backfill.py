@@ -90,6 +90,17 @@ def _stub_fetch_statcast(start_date, end_date, *, config=None):
     return _FakeDataFrame([{"target_date": start_date, "op": "stub"}])
 
 
+def _stub_run_features_op(target_date, store, cfg):
+    """Replace the features op runner directly so we don't have to
+    import the heavy reconstruct_features_for_date pipeline in tests."""
+    if target_date in _FAILING_DATES.get("features", set()):
+        return bf.BackfillResult(target_date, "features", False,
+                                   error="simulated features failure")
+    n = _GAMES_PER_DATE.get(target_date, 8)
+    bf._record_completion(store, target_date, "features", games_count=n)
+    return bf.BackfillResult(target_date, "features", True, games_count=n)
+
+
 # Test-controlled state mutated per-test via monkeypatch.
 _FAILING_DATES: dict[str, set[str]] = {}
 _GAMES_PER_DATE: dict[str, int] = {}
@@ -103,6 +114,7 @@ def _wire_stubs(monkeypatch):
     monkeypatch.setattr(bf, "daily_etl", _stub_daily_etl)
     monkeypatch.setattr(bf, "backfill_actuals", _stub_backfill_actuals)
     monkeypatch.setattr(bf, "fetch_statcast_first_inning", _stub_fetch_statcast)
+    monkeypatch.setattr(bf, "_run_features_op", _stub_run_features_op)
 
 
 # ---------------------------------------------------------------------------
@@ -113,19 +125,66 @@ def test_backfill_three_day_range_all_ops():
     store = _FakeNRFIStore()
     report = bf.backfill_range(
         "2024-09-01", "2024-09-03",
-        store=store, ops=("schedule", "actuals", "statcast"),
+        store=store, ops=("schedule", "actuals", "statcast", "features"),
     )
     assert report.n_failures == 0
-    # 3 days × 2 per-day ops = 6 successes; statcast for the 30-day
-    # window covers all 3 dates and adds 3 more.
-    assert len(report.successes) == 9
+    # 3 days × 3 per-day ops (schedule, actuals, features) = 9 successes;
+    # statcast bulk window covers all 3 dates and adds 3 more.
+    assert len(report.successes) == 12
     # Every (date, op) checkpointed.
     pairs = {(c["target_date"], c["op"]) for c in store.checkpoints}
     expected = set()
     for d in ("2024-09-01", "2024-09-02", "2024-09-03"):
-        for op in ("schedule", "actuals", "statcast"):
+        for op in ("schedule", "actuals", "statcast", "features"):
             expected.add((d, op))
     assert pairs == expected
+
+
+def test_features_op_in_BACKFILL_OPS():
+    assert "features" in bf.BACKFILL_OPS
+    # Schedule, actuals, statcast, features — in that order.
+    assert bf.BACKFILL_OPS == ("schedule", "actuals", "statcast", "features")
+
+
+def test_features_op_runs_per_day_and_checkpoints():
+    """The features op runs as Pass 3, once per day, after schedule
+    and statcast. Each day gets its own checkpoint row."""
+    store = _FakeNRFIStore()
+    bf.backfill_range("2024-09-01", "2024-09-03",
+                       store=store, ops=("features",))
+    pairs = {(c["target_date"], c["op"]) for c in store.checkpoints}
+    assert pairs == {
+        ("2024-09-01", "features"),
+        ("2024-09-02", "features"),
+        ("2024-09-03", "features"),
+    }
+
+
+def test_features_op_failure_does_not_kill_run():
+    _FAILING_DATES["features"] = {"2024-09-02"}
+    store = _FakeNRFIStore()
+    report = bf.backfill_range("2024-09-01", "2024-09-03",
+                                 store=store, ops=("features",))
+    assert report.n_failures == 1
+    assert report.failures[0].target_date == "2024-09-02"
+    pairs = {(c["target_date"], c["op"]) for c in store.checkpoints}
+    assert ("2024-09-01", "features") in pairs
+    assert ("2024-09-03", "features") in pairs
+    assert ("2024-09-02", "features") not in pairs
+
+
+def test_features_op_skips_completed():
+    store = _FakeNRFIStore()
+    # First run.
+    bf.backfill_range("2024-09-01", "2024-09-02",
+                       store=store, ops=("features",))
+    # Second run — should skip both already-checkpointed dates.
+    progress: list = []
+    bf.backfill_range("2024-09-01", "2024-09-02",
+                       store=store, ops=("features",),
+                       progress_callback=progress.append)
+    assert all(p.skipped for p in progress)
+    assert len(progress) == 2
 
 
 def test_backfill_init_creates_checkpoint_table():

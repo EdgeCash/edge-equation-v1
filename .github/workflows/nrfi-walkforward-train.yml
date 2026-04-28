@@ -66,17 +66,15 @@ jobs:
           pip install -e ".[nrfi]"
 
       - name: Hydrate DuckDB store from latest backfill artifact
-        # The walk-forward trainer reads from the populated DuckDB
-        # store — Phase 2a's backfill workflow uploads it as an
-        # artifact. We pull the latest one here so this job can run
-        # against fresh historical data without re-running the backfill.
-        # Phase 2c replaces this with an R2 fetch.
+        # Backfill uploads `nrfi-duckdb-latest` (fixed name, overwrite=true)
+        # alongside a run-id-stamped archive copy. We pull the literal
+        # `latest` here — no regex matching, no cross-run discovery
+        # quirks. Phase 2c replaces this with an R2 fetch.
         uses: dawidd6/action-download-artifact@v6
         continue-on-error: true
         with:
           workflow: backfill-historical.yml
-          name_is_regexp: true
-          name: nrfi-duckdb-.*
+          name: nrfi-duckdb-latest
           path: data/nrfi_cache/
           if_no_artifact_found: warn
 
@@ -85,8 +83,7 @@ jobs:
         continue-on-error: true
         with:
           workflow: backfill-historical.yml
-          name_is_regexp: true
-          name: nrfi-statcast-cache-.*
+          name: nrfi-statcast-cache-latest
           path: data/nrfi_cache/parquet/
           if_no_artifact_found: warn
 
