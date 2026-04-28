@@ -53,7 +53,28 @@ def expand_feature_blobs(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def feature_matrix(df: pd.DataFrame, *, drop_cols: Sequence[str] = ()) -> tuple[pd.DataFrame, list[str]]:
-    drop = set(["game_pk", "model_version", "nrfi", "first_inn_runs"]) | set(drop_cols)
+    """Return the X DataFrame and column list ready for XGBoost / LightGBM.
+
+    Drops:
+      * Identifier / target columns (game_pk, nrfi, first_inn_runs, …)
+      * `game_date` — metadata only; XGBoost rejects datetime64 dtypes.
+      * Any other datetime / timedelta column that sneaks in via a
+        future schema addition (defensive).
+      * Anything in the caller-supplied `drop_cols`.
+    """
+    drop = set([
+        "game_pk", "model_version", "nrfi", "first_inn_runs",
+        "game_date",         # datetime64 — XGBoost rejects it as a feature
+    ]) | set(drop_cols)
+    # Defensively drop any column whose dtype is datetime / timedelta.
+    # Catches future schema additions before they trip the trainer.
+    for c in df.columns:
+        try:
+            if pd.api.types.is_datetime64_any_dtype(df[c]) or \
+               pd.api.types.is_timedelta64_dtype(df[c]):
+                drop.add(c)
+        except Exception:
+            pass
     cols = [c for c in df.columns if c not in drop]
     return df[cols].copy(), cols
 
