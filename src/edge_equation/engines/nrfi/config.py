@@ -15,7 +15,27 @@ from typing import Mapping
 
 # Repository-relative paths. Resolve via NRFIConfig.resolve_paths() so
 # tests can point at temporary directories.
-_REPO_ROOT = Path(__file__).resolve().parents[1]
+#
+# We walk up from this file looking for `pyproject.toml` to find the
+# repo root. Pre-Phase-1 the engine lived at `nrfi/config.py` so a
+# hard-coded `parents[1]` happened to land on the repo root. After the
+# migration to `src/edge_equation/engines/nrfi/config.py` (PR #68) the
+# old hard-coded depth started silently resolving to
+# `src/edge_equation/engines/` and the DuckDB store + model artifacts
+# were written to a directory the workflow upload step never looked at.
+# Anchoring on `pyproject.toml` is depth-agnostic and won't regress on
+# future relocations.
+def _find_repo_root(start: Path) -> Path:
+    cur = start.resolve()
+    for candidate in [cur, *cur.parents]:
+        if (candidate / "pyproject.toml").exists():
+            return candidate
+    # Defensive fallback — shouldn't ever fire because pyproject.toml
+    # is always present in this repo.
+    return cur.parents[-1]
+
+
+_REPO_ROOT = _find_repo_root(Path(__file__))
 _DEFAULT_CACHE_DIR = _REPO_ROOT / "data" / "nrfi_cache"
 _DEFAULT_DB_PATH = _DEFAULT_CACHE_DIR / "nrfi.duckdb"
 _DEFAULT_MODEL_DIR = _REPO_ROOT / "data" / "nrfi_models"
