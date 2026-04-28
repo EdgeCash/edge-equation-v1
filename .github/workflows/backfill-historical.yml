@@ -29,9 +29,9 @@ on:
         required: false
         default: ""
       ops:
-        description: "Comma-separated ops: schedule,actuals,statcast. Default: all."
+        description: "Comma-separated ops: schedule,actuals,statcast,features. Default: all."
         required: false
-        default: "schedule,actuals,statcast"
+        default: "schedule,actuals,statcast,features"
       max_days:
         description: "Soft cap on dates processed per run. Empty = no cap."
         required: false
@@ -83,16 +83,40 @@ jobs:
             $MAX_DAYS_ARG \
             $NO_SKIP_ARG
 
-      - name: Upload populated DuckDB as artifact
+      # Fixed artifact names (with overwrite=true) so the walk-forward
+      # workflow can request "the latest backfill" by literal name
+      # without needing cross-run regex matching. We also keep a
+      # run-id-stamped copy for forensics.
+      - name: Upload populated DuckDB (latest)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/nrfi.duckdb
+          if-no-files-found: warn
+          retention-days: 30
+          overwrite: true
+
+      - name: Upload populated DuckDB (run-id stamped, archive)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: nrfi-duckdb-${{ github.run_id }}
           path: data/nrfi_cache/nrfi.duckdb
-          if-no-files-found: warn
+          if-no-files-found: ignore
           retention-days: 14
 
-      - name: Upload Statcast parquet cache as artifact
+      - name: Upload Statcast parquet cache (latest)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-statcast-cache-latest
+          path: data/nrfi_cache/parquet/
+          if-no-files-found: ignore
+          retention-days: 30
+          overwrite: true
+
+      - name: Upload Statcast parquet cache (run-id stamped, archive)
         if: always()
         uses: actions/upload-artifact@v4
         with:

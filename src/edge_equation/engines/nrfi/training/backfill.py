@@ -71,8 +71,10 @@ log = get_logger(__name__)
 
 
 # Recognised operations. Order matters: schedule must run before
-# actuals (the actuals pull joins against the games table).
-BACKFILL_OPS: tuple[str, ...] = ("schedule", "actuals", "statcast")
+# actuals (the actuals pull joins against the games table); features
+# must run last because it depends on schedule + statcast having
+# completed for the target window.
+BACKFILL_OPS: tuple[str, ...] = ("schedule", "actuals", "statcast", "features")
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +191,31 @@ def _run_actuals_op(target_date: str, store: NRFIStore,
         return BackfillResult(target_date, "actuals", True, games_count=int(n))
     except Exception as e:
         return BackfillResult(target_date, "actuals", False, error=str(e))
+
+
+def _run_features_op(target_date: str, store: NRFIStore,
+                       cfg: NRFIConfig) -> BackfillResult:
+    """Build feature rows for `target_date` and persist into the
+    `features` table that walk-forward training queries.
+
+    `reconstruct_features_for_date` lives in evaluation/backtest.py
+    (it was originally written for backtest replay) — it pulls game
+    rows, joins them with Statcast/weather/lineup state as it would
+    have been pre-game, runs the FeatureBuilder, and upserts each
+    feature row into DuckDB. Imports lazily to avoid the cost of
+    pulling pandas / numpy / duckdb at module load.
+    """
+    try:
+        # Import here so the (lighter) backfill smoke tests that mock
+        # _run_features_op don't need to satisfy reconstruct_features_for_date's
+        # heavy import surface.
+        from ..evaluation.backtest import reconstruct_features_for_date
+        rows = reconstruct_features_for_date(target_date, store=store, config=cfg)
+        n = len(rows) if rows is not None else 0
+        _record_completion(store, target_date, "features", games_count=int(n))
+        return BackfillResult(target_date, "features", True, games_count=int(n))
+    except Exception as e:
+        return BackfillResult(target_date, "features", False, error=str(e))
 
 
 def _run_statcast_window(start_date: str, end_date: str, store: NRFIStore,
@@ -351,6 +378,25 @@ def backfill_range(
                 if progress_callback:
                     progress_callback(r)
             cur_d = window_end + timedelta(days=1)
+
+    # Pass 3: features (depends on schedule + statcast having completed) ----
+    # Walk-forward training reads from the `features` table, which only
+    # `reconstruct_features_for_date` populates. Without this pass the
+    # walkforward loop sees train_rows=0 and skips every chunk.
+    if "features" in ops:
+        cur_d = d0
+        while cur_d <= d1:
+            ds = cur_d.isoformat()
+            if (ds, "features") in done:
+                if progress_callback:
+                    progress_callback(BackfillResult(ds, "features", True, skipped=True))
+                cur_d += timedelta(days=1)
+                continue
+            res = _run_features_op(ds, store, cfg)
+            _record_outcome(report, res)
+            if progress_callback:
+                progress_callback(res)
+            cur_d += timedelta(days=1)
 
     report.elapsed_seconds = time.monotonic() - started
     return report
