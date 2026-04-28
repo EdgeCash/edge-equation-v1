@@ -105,10 +105,29 @@ jobs:
         # Sanity report exits 2 when the bundle didn't clear the
         # min-improvement gate. We don't fail the job on a soft
         # rejection — the operator reads the printed table and
-        # decides what to do.
+        # decides what to do. The `--write-gate-marker` flag drops a
+        # file at the given path IFF the gate passes; later steps
+        # key off that file's existence to gate R2 promotion.
         continue-on-error: true
         run: |
-          python -m edge_equation.engines.nrfi.training.sanity --season 2026
+          python -m edge_equation.engines.nrfi.training.sanity \
+            --season 2026 \
+            --write-gate-marker data/nrfi_models/.sanity_passed
+
+      - name: Promote bundle to R2 (only when sanity gate passed)
+        # Three-condition gate: sanity step ran AND created the marker
+        # AND R2 secrets are available. Any failure here doesn't block
+        # the artifact upload below — operator can still pull the
+        # bundle manually from CI artifacts and inspect.
+        if: ${{ hashFiles('data/nrfi_models/.sanity_passed') != '' }}
+        env:
+          R2_ACCESS_KEY_ID:     ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT_URL:      ${{ secrets.R2_ENDPOINT_URL }}
+          R2_BUCKET_NAME:       ${{ secrets.R2_BUCKET_NAME }}
+        continue-on-error: true
+        run: |
+          python -m edge_equation.engines.nrfi.training.promote_bundle
 
       - name: Upload trained bundle artifact
         if: always()

@@ -1,0 +1,154 @@
+name: NRFI Weekly Retrain (Mon 06:00 UTC)
+
+# Phase 2c — automated weekly retrain.
+#
+# Runs every Monday at 06:00 UTC (off-hours; well outside MLB game times).
+# Pulls a fresh week of incremental ETL (schedule + actuals + features),
+# runs the walk-forward trainer on the rolling 18-month window, scores
+# the new bundle against the sanity gate, and — IF the gate passes —
+# promotes the bundle to R2 (latest.bundle + dated archive).
+#
+# A failed sanity gate is a soft signal, not a workflow failure. The new
+# bundle stays in CI artifacts for inspection but does NOT replace the
+# production R2 bundle. The previous week's passing bundle keeps serving
+# the daily run untouched.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # Monday 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      end_date:
+        description: "End date for ETL incremental + walk-forward (inclusive). Default: today."
+        required: false
+        default: ""
+      promote:
+        description: "Promote to R2 if sanity passes. Default true. Set to false for dry-run training."
+        required: false
+        default: "true"
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      EDGE_EQUATION_FAILSAFE_DIR: ${{ github.workspace }}/data/failsafes
+      R2_ACCESS_KEY_ID:     ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_ENDPOINT_URL:      ${{ secrets.R2_ENDPOINT_URL }}
+      R2_BUCKET_NAME:       ${{ secrets.R2_BUCKET_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install [nrfi] extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[nrfi]"
+
+      # Hydrate from the most recent backfill artifact so we don't have
+      # to re-pull 600+ days of historical data every Monday morning.
+      # The backfill workflow uploads `nrfi-duckdb-latest` with overwrite=true.
+      - name: Hydrate DuckDB from latest backfill artifact
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: backfill-historical.yml
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
+      - name: Hydrate Statcast parquet cache from latest backfill artifact
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: backfill-historical.yml
+          name: nrfi-statcast-cache-latest
+          path: data/nrfi_cache/parquet/
+          if_no_artifact_found: warn
+
+      # Incremental ETL: pull schedule + actuals + features for the
+      # last 14 days. The orchestrator's checkpointing makes this a
+      # no-op for already-completed (date, op) pairs, so this is cheap
+      # and safe to run weekly.
+      - name: Incremental ETL (last 14 days)
+        run: |
+          END_DATE_ARG=""
+          if [ -n "${{ github.event.inputs.end_date }}" ]; then
+            END_DATE_ARG="--to ${{ github.event.inputs.end_date }}"
+          fi
+          # 14 days prior to today (UTC).
+          START_DATE=$(python -c "from datetime import date, timedelta; print((date.today() - timedelta(days=14)).isoformat())")
+          python -m edge_equation.engines.nrfi.training.backfill \
+            --from "$START_DATE" \
+            $END_DATE_ARG \
+            --ops "schedule,actuals,statcast,features"
+
+      - name: Run walk-forward training
+        run: |
+          END_ARG=""
+          if [ -n "${{ github.event.inputs.end_date }}" ]; then
+            END_ARG="--to ${{ github.event.inputs.end_date }}"
+          fi
+          python -m edge_equation.engines.nrfi.training.walkforward \
+            --from "2025-04-01" \
+            $END_ARG \
+            --window-months 18 \
+            --chunk-days 7 \
+            --calibration-method isotonic
+
+      - name: Run sanity report (writes gate marker on pass)
+        continue-on-error: true
+        run: |
+          python -m edge_equation.engines.nrfi.training.sanity \
+            --season 2026 \
+            --write-gate-marker data/nrfi_models/.sanity_passed
+
+      - name: Promote bundle to R2 (sanity gate passed)
+        if: ${{ github.event.inputs.promote != 'false' && hashFiles('data/nrfi_models/.sanity_passed') != '' }}
+        run: |
+          python -m edge_equation.engines.nrfi.training.promote_bundle
+
+      - name: Sanity gate skipped — no promotion this week
+        if: ${{ hashFiles('data/nrfi_models/.sanity_passed') == '' }}
+        run: |
+          echo "::warning::Sanity gate did not pass this run. Production R2 bundle is unchanged."
+          echo "Operator: download the nrfi-bundle artifact below to inspect."
+
+      # Always keep the trained bundle as a CI artifact regardless of
+      # promotion outcome, so we have a forensic copy for diagnosing
+      # gate failures.
+      - name: Upload trained bundle artifact (forensic copy)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-bundle-${{ github.run_id }}
+          path: data/nrfi_models/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload walk-forward calibration JSONL
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-walkforward-calibration-${{ github.run_id }}
+          path: data/nrfi_cache/walkforward_calibration.jsonl
+          if-no-files-found: warn
+          retention-days: 30
+
+      # Refresh the artifact handoff for the next backfill+walkforward
+      # so checkpoints stay current. (The DuckDB now has the past
+      # week's incremental ETL committed.)
+      - name: Re-upload populated DuckDB (latest)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/nrfi.duckdb
+          if-no-files-found: warn
+          retention-days: 30
+          overwrite: true

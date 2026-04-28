@@ -233,6 +233,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--season", type=int, default=2026)
     parser.add_argument("--min-brier-improvement", type=float, default=0.005)
     parser.add_argument("--min-log-loss-improvement", type=float, default=0.01)
+    parser.add_argument(
+        "--write-gate-marker", default=None,
+        help="When the sanity gate passes, touch a marker file at this "
+              "path. CI workflows key off the file's existence to gate "
+              "R2 promotion of the trained bundle.",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     report = compute_sanity(
@@ -241,6 +247,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         min_log_loss_improvement=args.min_log_loss_improvement,
     )
     print(report.summary())
+
+    if args.write_gate_marker and report.passed_min_improvement:
+        from pathlib import Path as _P
+        marker = _P(args.write_gate_marker)
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(
+            f"sanity_gate=passed\n"
+            f"brier_delta={report.brier_delta:.6f}\n"
+            f"log_loss_delta={report.log_loss_delta:.6f}\n"
+            f"accuracy_delta={report.accuracy_delta:.6f}\n"
+            f"n_games={report.ml.n_games}\n"
+        )
+        print(f"  Gate marker written: {marker}")
+
     return 0 if report.passed_min_improvement else 2
 
 
