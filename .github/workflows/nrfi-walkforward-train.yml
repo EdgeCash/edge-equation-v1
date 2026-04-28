@@ -1,0 +1,132 @@
+name: NRFI Walk-Forward Training (manual)
+
+# One-shot manual trigger for the walk-forward training pipeline.
+# Pulls the populated DuckDB store (assumes Phase 2a's backfill has
+# already run), walks forward through the prediction window in 7-day
+# chunks, fits a final TrainedBundle on the most-recent 18mo, and runs
+# the sanity report comparing ML vs Poisson baseline.
+#
+# OUTPUT
+# - Trained bundle pickles uploaded as a CI artifact (Phase 2c will
+#   replace this with R2 upload + the weekly cron).
+# - Sanity report printed to the run logs.
+# - walkforward_calibration.jsonl uploaded for downstream diagnostics.
+#
+# DOES NOT promote the bundle to production. Phase 2c gates promotion
+# on `sanity.passed_min_improvement == True`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "First date to predict on (default 2025-04-01 — gives ~7 months of warm-up)."
+        required: false
+        default: "2025-04-01"
+      end_date:
+        description: "Last date to predict on (inclusive). Default: today."
+        required: false
+        default: ""
+      window_months:
+        description: "Rolling training window size in months."
+        required: false
+        default: "18"
+      chunk_days:
+        description: "Walk-forward chunk size in days. Default 7 (weekly)."
+        required: false
+        default: "7"
+      calibration_method:
+        description: "isotonic or platt"
+        required: false
+        default: "isotonic"
+      run_sanity:
+        description: "Run the ML-vs-baseline sanity report after training. Default true."
+        required: false
+        default: "true"
+
+jobs:
+  walkforward:
+    runs-on: ubuntu-latest
+    # 6-hour cap is GH Actions' default; weekly walk-forward across
+    # ~600 days fits comfortably (~14 minutes for the model fits +
+    # the corpus loads).
+    timeout-minutes: 350
+    env:
+      EDGE_EQUATION_FAILSAFE_DIR: ${{ github.workspace }}/data/failsafes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install [nrfi] extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[nrfi]"
+
+      - name: Hydrate DuckDB store from latest backfill artifact
+        # The walk-forward trainer reads from the populated DuckDB
+        # store — Phase 2a's backfill workflow uploads it as an
+        # artifact. We pull the latest one here so this job can run
+        # against fresh historical data without re-running the backfill.
+        # Phase 2c replaces this with an R2 fetch.
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: backfill-historical.yml
+          name_is_regexp: true
+          name: nrfi-duckdb-.*
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
+      - name: Hydrate Statcast parquet cache from latest backfill artifact
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: backfill-historical.yml
+          name_is_regexp: true
+          name: nrfi-statcast-cache-.*
+          path: data/nrfi_cache/parquet/
+          if_no_artifact_found: warn
+
+      - name: Run walk-forward training
+        run: |
+          END_ARG=""
+          if [ -n "${{ github.event.inputs.end_date }}" ]; then
+            END_ARG="--to ${{ github.event.inputs.end_date }}"
+          fi
+          python -m edge_equation.engines.nrfi.training.walkforward \
+            --from "${{ github.event.inputs.start_date }}" \
+            $END_ARG \
+            --window-months "${{ github.event.inputs.window_months }}" \
+            --chunk-days "${{ github.event.inputs.chunk_days }}" \
+            --calibration-method "${{ github.event.inputs.calibration_method }}"
+
+      - name: Run sanity report
+        if: ${{ github.event.inputs.run_sanity != 'false' }}
+        # Sanity report exits 2 when the bundle didn't clear the
+        # min-improvement gate. We don't fail the job on a soft
+        # rejection — the operator reads the printed table and
+        # decides what to do.
+        continue-on-error: true
+        run: |
+          python -m edge_equation.engines.nrfi.training.sanity --season 2026
+
+      - name: Upload trained bundle artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-bundle-${{ github.run_id }}
+          path: data/nrfi_models/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload walk-forward calibration JSONL
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-walkforward-calibration-${{ github.run_id }}
+          path: data/nrfi_cache/walkforward_calibration.jsonl
+          if-no-files-found: warn
+          retention-days: 30
