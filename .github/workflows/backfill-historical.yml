@@ -1,0 +1,102 @@
+name: NRFI Historical Backfill (manual)
+
+# One-shot (or chunked-resumable) historical-data loader for the NRFI
+# training pipeline. Pulls schedule + first-inning actuals + Statcast
+# into the DuckDB store so Phase 2b's walk-forward trainer has a
+# complete 18-month corpus to work with.
+#
+# DESIGN
+# - workflow_dispatch only — no cron. Operator triggers when needed.
+# - Resumable: every (date, op) pair is checkpointed in DuckDB. Re-runs
+#   skip already-completed work and only do what's missing.
+# - max_days input lets you chip away at the historical window across
+#   multiple shorter runs without ever blowing past the 6-hour GH
+#   Actions job timeout. Practical pattern: trigger this with
+#   max_days=120 a few times back-to-back until the report shows
+#   "dates processed = 0".
+# - Uploads the populated DuckDB file as an artifact so we have a
+#   recoverable snapshot. Phase 2c will swap that for R2 upload.
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "Inclusive start date (YYYY-MM-DD). Default: 2024-09-01."
+        required: false
+        default: "2024-09-01"
+      end_date:
+        description: "Inclusive end date (YYYY-MM-DD). Default: today."
+        required: false
+        default: ""
+      ops:
+        description: "Comma-separated ops: schedule,actuals,statcast. Default: all."
+        required: false
+        default: "schedule,actuals,statcast"
+      max_days:
+        description: "Soft cap on dates processed per run. Empty = no cap."
+        required: false
+        default: ""
+      no_skip_completed:
+        description: "Re-run ops even if checkpointed. DEFAULT FALSE."
+        required: false
+        default: "false"
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    # Bump the default 6-hour timeout slightly so a fully-fresh first
+    # run has headroom; subsequent incremental runs finish in minutes.
+    timeout-minutes: 350
+    env:
+      EDGE_EQUATION_FAILSAFE_DIR: ${{ github.workspace }}/data/failsafes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install [nrfi] extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[nrfi]"
+
+      - name: Run backfill
+        run: |
+          END_DATE_ARG=""
+          if [ -n "${{ github.event.inputs.end_date }}" ]; then
+            END_DATE_ARG="--to ${{ github.event.inputs.end_date }}"
+          fi
+          MAX_DAYS_ARG=""
+          if [ -n "${{ github.event.inputs.max_days }}" ]; then
+            MAX_DAYS_ARG="--max-days ${{ github.event.inputs.max_days }}"
+          fi
+          NO_SKIP_ARG=""
+          if [ "${{ github.event.inputs.no_skip_completed }}" = "true" ]; then
+            NO_SKIP_ARG="--no-skip-completed"
+          fi
+          python -m edge_equation.engines.nrfi.training.backfill \
+            --from "${{ github.event.inputs.start_date }}" \
+            $END_DATE_ARG \
+            --ops "${{ github.event.inputs.ops }}" \
+            $MAX_DAYS_ARG \
+            $NO_SKIP_ARG
+
+      - name: Upload populated DuckDB as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-duckdb-${{ github.run_id }}
+          path: data/nrfi_cache/nrfi.duckdb
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload Statcast parquet cache as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-statcast-cache-${{ github.run_id }}
+          path: data/nrfi_cache/parquet/
+          if-no-files-found: ignore
+          retention-days: 14
