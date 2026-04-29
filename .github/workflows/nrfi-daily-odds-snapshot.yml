@@ -1,0 +1,105 @@
+name: NRFI Daily Odds Snapshot (11:30am CT)
+
+# Phase 4 — once-a-day closing-line proxy capture.
+#
+# Hits The Odds API per-event endpoint with `markets=totals_1st_1_innings`
+# for each game on today's slate, persisting the NRFI/YRFI line to
+# `nrfi_odds_snapshot` (snapshot_kind='closing'). The settlement pass
+# (next morning's email + weekly retrain) reads from that table to
+# settle picks against the actual line, falling back to the engine's
+# flat -120/-105 defaults when no quote was captured.
+#
+# Cost: ~3 credits per game × ~15 games = ~45 credits/day = ~1,350/mo
+# on top of existing usage. Fits within The Odds API's $30/mo Tier-1
+# 20K credit budget. A future PR can add an evening-game second fetch
+# once the operator confirms the budget supports it.
+#
+# Why 11:30 CT? Earliest MLB games on a weekday slate start at noon
+# CT (1 PM ET); 11:30 CT is ~30 min before first pitch. Evening games
+# get an "early-evening" line proxy rather than a true closing line —
+# acceptable for the headline ROI metric but documented so it doesn't
+# get conflated with a multi-fetch true-closing implementation.
+
+on:
+  schedule:
+    - cron: "30 16 * * *"  # 11:30 CT during CDT (Mar-Nov)
+    - cron: "30 17 * * *"  # 11:30 CT during CST (Nov-Mar)
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: "Slate date (YYYY-MM-DD). Leave blank for today UTC."
+        required: false
+        default: ""
+
+jobs:
+  capture-odds:
+    runs-on: ubuntu-latest
+    env:
+      THE_ODDS_API_KEY:    ${{ secrets.THE_ODDS_API_KEY }}
+      EDGE_EQUATION_FAILSAFE_DIR: ${{ github.workspace }}/data/failsafes
+      R2_ACCESS_KEY_ID:     ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_ENDPOINT_URL:      ${{ secrets.R2_ENDPOINT_URL }}
+      R2_BUCKET_NAME:       ${{ secrets.R2_BUCKET_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: CT-hour guard
+        # Cron fires on both UTC slots (CDT + CST). Skip the wrong one.
+        if: github.event_name == 'schedule'
+        run: |
+          python - <<'PY'
+          import os, sys
+          from datetime import datetime
+          try:
+              from zoneinfo import ZoneInfo
+          except ImportError:
+              sys.exit(0)
+          ct = datetime.now(ZoneInfo("America/Chicago"))
+          if ct.hour != 11 or ct.minute < 25:
+              print(f"::warning::CT time is {ct.strftime('%H:%M')}, expected ~11:30 — skipping.")
+              with open(os.environ["GITHUB_ENV"], "a") as f:
+                  f.write("SKIP_RUN=1\n")
+          PY
+
+      - name: Install [nrfi] extras
+        if: env.SKIP_RUN != '1'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[nrfi]"
+
+      # Hydrate from the most recent backfill artifact so games_for_date
+      # has rows to match Odds API events against.
+      - name: Hydrate DuckDB from latest backfill artifact
+        if: env.SKIP_RUN != '1'
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: backfill-historical.yml
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
+      - name: Capture closing-line snapshots
+        if: env.SKIP_RUN != '1'
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ github.event.inputs.target_date }}" ]; then
+            DATE_ARG="--date ${{ github.event.inputs.target_date }}"
+          fi
+          python -m edge_equation.engines.nrfi.data.odds capture $DATE_ARG
+
+      - name: Re-upload populated DuckDB (latest)
+        if: always() && env.SKIP_RUN != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/nrfi.duckdb
+          if-no-files-found: warn
+          retention-days: 30
+          overwrite: true

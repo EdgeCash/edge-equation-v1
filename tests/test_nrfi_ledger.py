@@ -434,3 +434,86 @@ def test_render_ledger_section_formats_records_and_units():
     assert "3-2" in text          # wins-losses for the STRONG row
     assert "+3.33u" in text       # signed units format
     assert "+0.50u" in text
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: live closing-odds path
+# ---------------------------------------------------------------------------
+
+
+def test_settle_uses_captured_closing_odds_when_available(monkeypatch):
+    """When a closing-line snapshot exists for the staked side, the
+    settled row uses the captured american_odds and computes payout
+    against it instead of the -120/-105 default."""
+    store = _FakeStore()
+    preds = _predictions_df([
+        # LOCK NRFI win — but the closing line was actually -150,
+        # not the default -120, so units_delta should reflect the worse
+        # price (lower payout per win).
+        (5001, 0.85, 0.4, "2026-04-15", 2026, True, 0),
+    ])
+    store.queue_query("FROM predictions p", preds)
+    store.queue_query("FROM nrfi_pick_settled", _empty_settled_df())
+    store.queue_query("GROUP BY season, market_type, tier", pd.DataFrame())
+    store.queue_query("GROUP BY season, market_type", pd.DataFrame())
+    store.queue_query("GROUP BY season", pd.DataFrame())
+
+    monkeypatch.setattr(
+        ledger_mod, "_lookup_closing_odds_safe",
+        lambda *a, **kw: -150.0,
+    )
+
+    ledger_mod.settle_predictions(
+        store, season=2026, cutoff_date="2026-04-15", pull_actuals=False,
+    )
+
+    rows = [u for u in store.upserts if u[0] == "nrfi_pick_settled"][0][1]
+    assert len(rows) == 1
+    assert rows[0]["american_odds"] == pytest.approx(-150.0)
+    # 1u win at -150 = 100/150 = 0.6667u, NOT the -120 default's 0.8333u.
+    assert rows[0]["units_delta"] == pytest.approx(100.0 / 150.0)
+
+
+def test_settle_falls_back_to_default_odds_when_no_snapshot(monkeypatch):
+    """No captured snapshot → default -120/-105 odds path. Confirms the
+    lookup never blocks settlement even when the odds module errors out."""
+    store = _FakeStore()
+    preds = _predictions_df([
+        (6001, 0.85, 0.4, "2026-04-15", 2026, True, 0),
+    ])
+    store.queue_query("FROM predictions p", preds)
+    store.queue_query("FROM nrfi_pick_settled", _empty_settled_df())
+    store.queue_query("GROUP BY season, market_type, tier", pd.DataFrame())
+    store.queue_query("GROUP BY season, market_type", pd.DataFrame())
+    store.queue_query("GROUP BY season", pd.DataFrame())
+
+    monkeypatch.setattr(
+        ledger_mod, "_lookup_closing_odds_safe",
+        lambda *a, **kw: None,
+    )
+
+    ledger_mod.settle_predictions(
+        store, season=2026, cutoff_date="2026-04-15", pull_actuals=False,
+    )
+
+    rows = [u for u in store.upserts if u[0] == "nrfi_pick_settled"][0][1]
+    assert rows[0]["american_odds"] == pytest.approx(
+        ledger_mod.DEFAULT_NRFI_ODDS,
+    )
+    assert rows[0]["units_delta"] == pytest.approx(100.0 / 120.0)
+
+
+def test_lookup_closing_odds_safe_swallows_module_errors(monkeypatch):
+    """If the odds module raises, settlement must still see None (not
+    the exception). Simulates the case where the odds table doesn't
+    exist yet on a fresh DB."""
+    def _boom(*a, **kw):
+        raise RuntimeError("odds table missing")
+
+    # Force `from .data.odds import lookup_closing_odds` to resolve to
+    # the boom function by monkey-patching the module attribute.
+    from edge_equation.engines.nrfi.data import odds as odds_mod
+    monkeypatch.setattr(odds_mod, "lookup_closing_odds", _boom)
+
+    out = ledger_mod._lookup_closing_odds_safe(_FakeStore(), 1, "NRFI")
+    assert out is None
