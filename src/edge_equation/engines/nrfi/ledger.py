@@ -436,6 +436,7 @@ def get_tier_ledger(store: NRFIStore, season: int):
 
     Empty DataFrame when nothing has settled yet for the season.
     """
+    init_ledger_tables(store)
     df = store.query_df(
         """
         SELECT season, market_type, tier,

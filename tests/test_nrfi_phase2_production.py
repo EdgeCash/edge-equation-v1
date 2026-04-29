@@ -57,6 +57,9 @@ def test_ledger_render_labels_yrfi_lean_independently():
     import pandas as pd
 
     class _Store:
+        def execute(self, sql, params=()):
+            return None
+
         def query_df(self, sql, params=()):
             return pd.DataFrame([
                 {
