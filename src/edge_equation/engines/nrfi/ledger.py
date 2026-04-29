@@ -160,12 +160,36 @@ def _pick_payout_units(american_odds: float) -> float:
     return american_to_decimal(american_odds) - 1.0
 
 
+def _lookup_closing_odds_safe(
+    store: NRFIStore, game_pk: int, market_type: str,
+) -> Optional[float]:
+    """Wrapper around `odds.lookup_closing_odds` that swallows the
+    ImportError on environments where the odds module's deps aren't
+    installed, and the AssertionError DuckDB raises when the
+    `nrfi_odds_snapshot` table doesn't exist yet (first settlement on
+    a fresh DB before the daily-odds workflow has ever run).
+    """
+    try:
+        from .data.odds import lookup_closing_odds
+        return lookup_closing_odds(store, game_pk, market_type)
+    except Exception as e:
+        log.debug("closing-odds lookup unavailable for game_pk=%s "
+                    "market=%s (%s): %s",
+                    game_pk, market_type, type(e).__name__, e)
+        return None
+
+
 def _stake_side_for_game(nrfi_prob: float) -> tuple[str, float, float]:
     """Pick whichever side (NRFI or YRFI) clears the higher tier.
 
-    Returns (market_type, side_probability, american_odds). When both
-    sides are sub-LEAN we still return the higher one — the tier
-    classifier downstream will mark it NO_PLAY and it won't be
+    Returns (market_type, side_probability, default_american_odds).
+    The odds returned here are the engine's flat -120/-105 default;
+    `settle_predictions` looks up a captured closing-line snapshot
+    via `lookup_closing_odds` and overrides this default when one is
+    present.
+
+    When both sides are sub-LEAN we still return the higher one — the
+    tier classifier downstream will mark it NO_PLAY and it won't be
     persisted into the ledger.
     """
     yrfi_prob = 1.0 - nrfi_prob
@@ -257,7 +281,7 @@ def settle_predictions(
         if nrfi_prob != nrfi_prob:  # NaN guard
             continue
 
-        market_type, side_p, odds = _stake_side_for_game(nrfi_prob)
+        market_type, side_p, default_odds = _stake_side_for_game(nrfi_prob)
         clf = classify_tier(market_type=market_type, side_probability=side_p)
         if not clf.tier.is_qualifying:
             continue
@@ -266,6 +290,14 @@ def settle_predictions(
         if key in settled_keys:
             result.n_picks_already_settled += 1
             continue
+
+        # Phase 4: prefer a captured closing-line snapshot when one
+        # exists; otherwise fall back to the engine's flat default.
+        # `lookup_closing_odds` returns None when no snapshot was
+        # captured (Odds API down, market not posted, plan-credit cap).
+        captured = _lookup_closing_odds_safe(store, int(row.game_pk),
+                                                market_type)
+        odds = captured if captured is not None else default_odds
 
         # Outcome.
         actual_nrfi = bool(row.actual_nrfi)
