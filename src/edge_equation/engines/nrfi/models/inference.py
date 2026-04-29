@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence
 
 import numpy as np
@@ -16,6 +17,7 @@ import pandas as pd
 
 from edge_equation.engines.tiering import classify_tier
 from ..config import NRFIConfig, get_default_config
+from ..output.drivers import format_driver_notes
 from ..utils.colors import gradient_hex, nrfi_band
 from edge_equation.utils.kelly import StakeRecommendation, kelly_stake
 from edge_equation.utils.logging import get_logger
@@ -119,9 +121,16 @@ class NRFIInferenceEngine:
         # closed-form baseline. Equal weight between the two NRFI estimates
         # of λ, then the user-tunable convex blend with the ML head.
         lam_p = np.exp(-np.maximum(lam, 0.0))
-        baseline_p = 0.5 * (lam_p + poisson_p)
-        w = self.cfg.model.ml_blend_weight
-        blended = w * ml_p + (1 - w) * baseline_p
+        model_quality = _model_quality_profile(
+            self.cfg.model.ml_blend_weight,
+            self.cfg.model_dir,
+        )
+        baseline_p = (
+            poisson_p
+            if model_quality.use_poisson_only_baseline
+            else 0.5 * (lam_p + poisson_p)
+        )
+        blended = model_quality.blend_weight * ml_p + (1 - model_quality.blend_weight) * baseline_p
 
         # SHAP top-N for each row (optional).
         shap_top: list[list[tuple[str, float]]] = [[] for _ in range(len(X))]
@@ -213,14 +222,38 @@ def _driver_text(
     shap_drivers: Sequence[tuple[str, float]],
     side_probability: float,
 ) -> str:
-    """Human-readable SHAP summary with rough probability-point deltas."""
-    out: list[str] = []
-    denom = max(1e-3, side_probability * (1.0 - side_probability))
-    for name, value in list(shap_drivers)[:4]:
-        delta_pct = float(value) / denom * 100.0
-        sign = "+" if delta_pct >= 0 else "-"
-        out.append(f"{sign}{abs(delta_pct):.1f} {name}")
-    return ", ".join(out)
+    """Human-readable SHAP summary for daily output."""
+    return ", ".join(format_driver_notes(shap_drivers, max_drivers=4))
+
+
+@dataclass(frozen=True)
+class _ModelQualityProfile:
+    blend_weight: float
+    use_poisson_only_baseline: bool = False
+
+
+def _model_quality_profile(default_weight: float, model_dir) -> _ModelQualityProfile:
+    """Shrink undersized local bundles toward the deterministic baseline.
+
+    A tiny slice-trained bundle can be useful for smoke-testing the trained path,
+    but it should not dominate live probabilities.  The production trainer writes
+    a manifest with walk-forward sample size; until that sample is meaningful,
+    use the ML head as a light nudge around the Poisson baseline.
+    """
+    manifest = Path(model_dir) / "elite_nrfi_v1_training_manifest.json"
+    try:
+        payload = json.loads(manifest.read_text())
+        n = int((payload.get("walkforward") or {}).get("n_predictions") or 0)
+    except Exception:
+        return _ModelQualityProfile(blend_weight=float(default_weight))
+    if n < 250:
+        return _ModelQualityProfile(
+            blend_weight=min(float(default_weight), 0.10),
+            use_poisson_only_baseline=True,
+        )
+    if n < 750:
+        return _ModelQualityProfile(blend_weight=min(float(default_weight), 0.35))
+    return _ModelQualityProfile(blend_weight=float(default_weight))
 
 
 def _mc_band_pp(low: Optional[float], high: Optional[float]) -> Optional[float]:

@@ -193,14 +193,15 @@ def _print_top_board(
             f"{float(r['edge_pp']):+.1f}pp"
             if r.get("edge_pp") is not None else "edge n/a"
         )
-        drivers = _decode_driver_text(r) or "drivers pending"
+        drivers = _decode_driver_text(r) or "model drivers pending"
+        band = str(r.get("color_band", ""))
         print(
             f"{idx:>2}. game_pk={int(r['game_pk']):>10}  {prob:<11} "
-            f"{str(r.get('tier', 'NO_PLAY')):<8} {str(r.get('color_hex', '')):<7} "
+            f"{str(r.get('tier', 'NO_PLAY')):<8} {band:<11} "
             f"lambda={float(r['lambda_total']):.2f}  {mc:<8} {edge:<10} "
             f"Kelly={r.get('kelly_suggestion') or 'Market unavailable'}"
         )
-        print(f"    Why: {drivers}; lambda={float(r['lambda_total']):.2f}")
+        print(f"    Why: {drivers}")
 
 
 if __name__ == "__main__":

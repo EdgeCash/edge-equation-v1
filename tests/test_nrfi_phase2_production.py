@@ -91,8 +91,12 @@ def test_daily_report_sort_and_why_note():
     assert ranked[0]["game_id"] == "fallback"
     assert ranked[1]["game_id"] == "high"
 
-    why = _why_note(["+4.1 pitcher_csw", "-2.0 park_factor"], 0.72, 3.5)
-    assert "pitcher_csw" in why
+    why = _why_note(
+        ["+8 from strong first-inning pitcher xFIP", "-6 from opposing top-3 OBP"],
+        0.72,
+        3.5,
+    )
+    assert "first-inning pitcher xFIP" in why
     assert "lambda=0.72" in why
     assert "MC +/-3.5pp" in why
 
@@ -152,3 +156,30 @@ def test_email_market_inputs_use_captured_nrfi_odds(monkeypatch):
     assert market_probs[0] == pytest.approx(120 / 220)
     assert market_probs[1] is None
     assert american_odds == [-120.0, -110.0]
+
+
+def test_human_driver_notes_are_readable_and_capped():
+    from edge_equation.engines.nrfi.output.drivers import format_driver_notes
+
+    notes = format_driver_notes([
+        ("home_p_xera", -0.80),
+        ("vs_home_p_top3_obp", 0.31),
+        ("wx_wind_in_mph", 0.24),
+        ("int_temp_x_park_runs", -0.20),
+    ])
+
+    assert notes[0] == "-14 from home starter xERA"
+    assert notes[1] == "+9 from opposing lineup vs home starter top-3 OBP"
+    assert notes[2] == "+7 from wind blowing in"
+    assert all("_" not in n for n in notes)
+
+
+def test_undersized_manifest_shrinks_model_weight(tmp_path):
+    from edge_equation.engines.nrfi.models.inference import _model_quality_profile
+
+    manifest = tmp_path / "elite_nrfi_v1_training_manifest.json"
+    manifest.write_text('{"walkforward": {"n_predictions": 61}}')
+    profile = _model_quality_profile(0.65, tmp_path)
+
+    assert profile.blend_weight == pytest.approx(0.10)
+    assert profile.use_poisson_only_baseline is True

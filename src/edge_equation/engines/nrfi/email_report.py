@@ -308,7 +308,7 @@ def _to_card_pick(bridge_output, engine_label: str,
 
 def _why_note(drivers: list[str], lambda_total: float, mc_band_pp: float | None) -> str:
     """Compact operator-facing explanation for a daily report row."""
-    lead = ", ".join(drivers[:2]) if drivers else "model edge"
+    lead = "; ".join(drivers[:3]) if drivers else "model drivers pending"
     mc = f", MC +/-{mc_band_pp:.1f}pp" if mc_band_pp is not None else ""
     return f"{lead}; lambda={lambda_total:.2f}{mc}"
 
