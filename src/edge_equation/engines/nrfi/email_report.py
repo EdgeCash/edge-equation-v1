@@ -172,6 +172,21 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         log.warning("props daily card skipped (%s): %s",
                       type(e).__name__, e)
 
+    # Full-game integration (FG-3): build today's full-game card and
+    # append the polished top-N-by-edge block + per-tier YTD ledger
+    # below the props block. Best-effort — Odds API errors / missing
+    # rates / DuckDB issues all degrade silently.
+    fullgame_top_text = ""
+    fullgame_ledger_text = ""
+    try:
+        from edge_equation.engines.full_game.daily import build_full_game_card
+        fullgame_card = build_full_game_card(target_date)
+        fullgame_top_text = fullgame_card.top_board_text
+        fullgame_ledger_text = fullgame_card.ledger_text
+    except Exception as e:
+        log.warning("full-game daily card skipped (%s): %s",
+                      type(e).__name__, e)
+
     subject_date = target_date
     return {
         "card_type": CARD_TYPE,
@@ -187,6 +202,8 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         "parlay_ledger_text": parlay_ledger_text,
         "props_top_text": props_top_text,
         "props_ledger_text": props_ledger_text,
+        "fullgame_top_text": fullgame_top_text,
+        "fullgame_ledger_text": fullgame_ledger_text,
     }
 
 
@@ -612,6 +629,22 @@ def render_body(card: dict) -> str:
     if props_ledger_text:
         lines.append("")
         lines.append(props_ledger_text)
+        lines.append("")
+
+    # 8. Full-game block (FG-3). Top picks by edge across the four
+    # supported full-game markets + per-tier YTD ledger. Lives below
+    # props so the email reads top → bottom: NRFI → parlays → props
+    # → full-game → footer.
+    fullgame_top_text = card.get("fullgame_top_text", "")
+    if fullgame_top_text:
+        lines.append("")
+        lines.append(fullgame_top_text)
+        lines.append("")
+
+    fullgame_ledger_text = card.get("fullgame_ledger_text", "")
+    if fullgame_ledger_text:
+        lines.append("")
+        lines.append(fullgame_ledger_text)
         lines.append("")
 
     lines.append(card.get("tagline", "")
