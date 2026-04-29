@@ -235,13 +235,171 @@ def _to_card_pick(bridge_output, engine_label: str,
         "lambda_total": out.lambda_total,
         "mc_band_pp": out.mc_band_pp,
         "edge": (f"{out.edge_pp:+.1f}pp" if out.edge_pp is not None else None),
+        # Phase NRFI-elite: keep the raw numeric edge so the top-board
+        # renderer can sort by it without parsing the formatted string back.
+        "edge_pp_raw": float(out.edge_pp) if out.edge_pp is not None else None,
         "kelly": (f"{out.kelly_units:.2f}u" if (out.kelly_units or 0) > 0 else None),
+        "kelly_units_raw": float(out.kelly_units) if out.kelly_units is not None else None,
         "grade": out.grade,
         "tier": tier_clf.tier.value,
         "tier_basis": tier_clf.basis,
         "drivers": out.driver_text,
         "rendered": pretty,
     }
+
+
+# ---------------------------------------------------------------------------
+# NRFI-elite polish: top-N-by-edge board with cleaner one-liner format.
+# ---------------------------------------------------------------------------
+
+
+# Operator-friendly labels for the most common SHAP feature names. The
+# raw column names are descriptive but unreadable in a public-facing
+# email ("home_p_xera_t30"); this map converts to phrases a casual
+# reader can parse at first glance. Unmapped features fall through
+# unchanged so the renderer never hides information.
+_DRIVER_NAME_MAP: dict[str, str] = {
+    "home_p_xera":           "home pitcher xERA",
+    "away_p_xera":           "away pitcher xERA",
+    "home_p_xera_t30":       "home pitcher xERA (30d)",
+    "away_p_xera_t30":       "away pitcher xERA (30d)",
+    "home_xwoba_t90":        "home offense xwOBA (90d)",
+    "away_xwoba_t90":        "away offense xwOBA (90d)",
+    "home_k_pct":            "home K%",
+    "away_k_pct":            "away K%",
+    "home_bb_pct":           "home BB%",
+    "away_bb_pct":           "away BB%",
+    "k_pct":                 "strikeout rate",
+    "bb_pct":                "walk rate",
+    "ump_zone_idx":          "umpire zone size",
+    "ump_run_environment":   "umpire run environment",
+    "abs_overturn_rate":     "ABS challenge rate",
+    "bb_pct_uplift":         "ABS walk uplift",
+    "park_factor_runs":      "park run factor",
+    "weather_temp_f":        "temperature",
+    "weather_wind_speed":    "wind speed",
+    "weather_wind_dir_deg":  "wind direction",
+    "humidity_pct":          "humidity",
+    "air_density":           "air density",
+    "roof_open":             "roof status",
+    "home_lineup_xwoba":     "home lineup xwOBA",
+    "away_lineup_xwoba":     "away lineup xwOBA",
+    "home_p_first_inn_era":  "home pitcher 1st-inning ERA",
+    "away_p_first_inn_era":  "away pitcher 1st-inning ERA",
+    "poisson_p_nrfi":        "baseline NRFI prior",
+}
+
+
+def _humanize_driver(driver: str) -> str:
+    """Translate one `+4.2 home_xwoba_t90` driver string into something
+    a casual reader can parse: "+4.2 home offense xwOBA (90d)".
+    Unmapped features pass through unchanged.
+    """
+    # driver_text rows look like "+4.2 feature_name" or "−2.1 feature_name".
+    parts = driver.split(" ", 1)
+    if len(parts) != 2:
+        return driver
+    delta, name = parts
+    friendly = _DRIVER_NAME_MAP.get(name.strip(), name.strip())
+    return f"{delta} {friendly}"
+
+
+def _polished_pick_line(pick: dict) -> str:
+    """Render one pick in the elite-polish format used by the top board.
+
+    Layout::
+
+        BOS @ NYY                                        [STRONG  ]
+        78.4% NRFI · Light Green · λ 1.20  MC ±3.2pp  edge +5.1pp  stake 0.50u
+        Why: home offense soft (+4.2), umpire pitcher-friendly (+2.1),
+              cool air boost (+1.5)
+
+    Robust to missing fields — every optional metric (MC, edge, Kelly,
+    drivers) drops out cleanly when not present.
+    """
+    matchup = str(pick.get("game_id", "—"))
+    tier = pick.get("tier", "")
+    market = pick.get("market_type", "NRFI")
+    pct = pick.get("pct", 0.0)
+    band = pick.get("color_band", "")
+    lam = pick.get("lambda_total")
+
+    # Top line: matchup + right-justified tier tag.
+    tier_tag = f"[{tier:<8}]" if tier else ""
+    head = f"{matchup:<48}{tier_tag}".rstrip()
+
+    # Headline metric line.
+    metric_parts = [f"{pct:.1f}% {market}"]
+    if band:
+        metric_parts.append(band)
+    if isinstance(lam, (int, float)):
+        metric_parts.append(f"λ {lam:.2f}")
+    metric_line = " · ".join(metric_parts)
+
+    extras: list[str] = []
+    mc = pick.get("mc_band_pp")
+    if isinstance(mc, (int, float)):
+        extras.append(f"MC ±{mc:.1f}pp")
+    edge = pick.get("edge")
+    if edge:
+        extras.append(f"edge {edge}")
+    kelly = pick.get("kelly")
+    if kelly:
+        extras.append(f"stake {kelly}")
+    if extras:
+        metric_line += "  " + "  ".join(extras)
+
+    drivers = pick.get("drivers") or []
+    lines = [head, metric_line]
+    if drivers:
+        why = ", ".join(_humanize_driver(d) for d in drivers[:4])
+        lines.append(f"  Why: {why}")
+    return "\n".join(lines)
+
+
+def _select_top_picks_by_edge(picks: list[dict], *, n: int = 8) -> list[dict]:
+    """Pick the higher-tier side per game, sort by edge desc (NRFI%
+    desc as tiebreak), return the top `n`.
+
+    Falls back gracefully when no edge values are present (no live odds
+    yet) — sorts purely by tier rank then NRFI%.
+    """
+    if not picks:
+        return []
+    # Group by game_id and keep the higher-tier side per game.
+    tier_rank = {"LOCK": 4, "STRONG": 3, "MODERATE": 2,
+                   "LEAN": 1, "NO_PLAY": 0}
+    by_game: dict[str, dict] = {}
+    for p in picks:
+        gid = p.get("game_id", "")
+        cur = by_game.get(gid)
+        if cur is None:
+            by_game[gid] = p
+            continue
+        if tier_rank.get(p.get("tier", ""), 0) > tier_rank.get(
+                cur.get("tier", ""), 0):
+            by_game[gid] = p
+    one_per_game = list(by_game.values())
+    one_per_game.sort(key=lambda p: (
+        -tier_rank.get(p.get("tier", ""), 0),
+        -(p.get("edge_pp_raw") or 0.0),
+        -float(p.get("pct", 0.0)),
+    ))
+    return one_per_game[:n]
+
+
+def _render_top_board(picks: list[dict], *, n: int = 8) -> str:
+    """Plain-text top-N board with the polished pick lines."""
+    top = _select_top_picks_by_edge(picks, n=n)
+    if not top:
+        return ""
+    lines = [f"TOP BOARD — Top {len(top)} by Edge", "═" * 60]
+    for i, pick in enumerate(top, 1):
+        lines.append(f"{i:>2}.  {_polished_pick_line(pick)}".replace(
+            "\n", "\n     ",  # indent continuation lines under the rank
+        ))
+        lines.append("")
+    return "\n".join(lines)
 
 
 def _build_parlay_block(
@@ -345,21 +503,52 @@ def _footer_text(engine: str) -> str:
 def render_body(card: dict) -> str:
     """Render the full plain-text email body from a card dict.
 
-    We bypass `EmailPublisher.build_body` because its default renderer
-    is shaped for ML/Total/HR picks, not first-inning markets with
-    SHAP drivers + MC bands.
+    Layout (production-elite ordering, NRFI-elite push):
+      1. Header
+      2. YTD per-tier ledger (always rendered, even when empty so the
+         operator can confirm the table exists and tiers are wired)
+      3. TOP BOARD — top 8 picks by edge with polished one-liner format
+      4. Per-side NRFI / YRFI boards (full slate, classic format)
+      5. Parlay candidates (Phase 6)
+      6. Parlay ledger (Phase 6)
+      7. Footer
     """
     lines = [
         f"Edge Equation — {card.get('headline', 'NRFI/YRFI Daily')}",
         card.get("subhead", "Facts. Not Feelings."),
         "",
     ]
+
+    # 2. YTD per-tier ledger — top of page so the operator sees
+    # conviction history before today's picks. Always rendered, even
+    # when empty, with a friendly placeholder so the section exists.
+    ledger_text = card.get("ledger_text", "")
+    if ledger_text:
+        lines.append(ledger_text)
+        lines.append("")
+    else:
+        season = (card.get("target_date") or "")[:4] or "—"
+        lines.append(f"YTD LEDGER ({season})")
+        lines.append("─" * 60)
+        lines.append("  (no settled picks yet — ledger populates after "
+                       "the first qualifying game finishes)")
+        lines.append("")
+
     picks = card.get("picks", []) or []
     if not picks:
         lines.append("(No games on the slate or feature reconstruction failed.)")
         lines.append("")
     else:
-        # NRFI side
+        # 3. TOP BOARD — top N (default 8) by edge then NRFI%, polished
+        # one-liner with tier + color + λ + MC + edge + Kelly. The
+        # operator's eye lands here first.
+        top_text = _render_top_board(picks, n=8)
+        if top_text:
+            lines.append(top_text)
+            lines.append("")
+
+        # 4. Per-side boards — classic full-slate rendering (kept for
+        # operators who want every game's NRFI + YRFI rows to scan).
         nrfi = [p for p in picks if p["market_type"] == "NRFI"]
         yrfi = [p for p in picks if p["market_type"] == "YRFI"]
         if nrfi:
@@ -377,25 +566,14 @@ def render_body(card: dict) -> str:
                 lines.append(rendered)
                 lines.append("")
 
-    # YTD per-tier ledger — appended below the day's picks so the
-    # operator's eye lands on conviction history while reading the new
-    # board. Skipped silently when no picks have settled yet.
-    ledger_text = card.get("ledger_text", "")
-    if ledger_text:
-        lines.append("")
-        lines.append(ledger_text)
-        lines.append("")
-
-    # Parlay candidates ("Special Drops") — typically 0 on a normal
-    # slate, 1-2 when the model lines up multiple LOCK-tier games.
+    # 5. Parlay candidates (already top-2 capped in _build_parlay_block).
     parlay_text = card.get("parlay_text", "")
     if parlay_text:
         lines.append("")
         lines.append(parlay_text)
         lines.append("")
 
-    # Parlay ledger — only renders once the operator has recorded a
-    # ticket via the CLI. Empty until then.
+    # 6. Parlay ledger summary (Phase 6).
     parlay_ledger_text = card.get("parlay_ledger_text", "")
     if parlay_ledger_text:
         lines.append("")
