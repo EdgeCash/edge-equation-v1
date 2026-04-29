@@ -47,11 +47,11 @@ def _pick(*, tier=Tier.STRONG, edge_pp=7.4, market_prob=0.286,
 
 
 def test_color_band_returns_brand_label_per_tier():
-    assert color_band_for_tier(Tier.LOCK) == "Deep Green"
-    assert color_band_for_tier(Tier.STRONG) == "Light Green"
-    assert color_band_for_tier(Tier.MODERATE) == "Yellow"
-    assert color_band_for_tier(Tier.LEAN) == "Orange"
-    assert color_band_for_tier(Tier.NO_PLAY) == "Deep Red"
+    assert color_band_for_tier(Tier.ELITE) == "Electric Blue"
+    assert color_band_for_tier(Tier.STRONG) == "Deep Green"
+    assert color_band_for_tier(Tier.MODERATE) == "Light Green"
+    assert color_band_for_tier(Tier.LEAN) == "Yellow"
+    assert color_band_for_tier(Tier.NO_PLAY) == "Orange"
 
 
 def test_color_hex_is_seven_char_hex():
@@ -81,7 +81,7 @@ def test_build_prop_output_carries_pick_fields():
     assert out.model_prob == pytest.approx(0.36, abs=1e-6)
     assert out.model_pct == pytest.approx(36.0, abs=0.05)
     assert out.tier == "STRONG"
-    assert out.color_band == "Light Green"
+    assert out.color_band == "Deep Green"
     assert out.book == "draftkings"
     assert out.lam == pytest.approx(0.28)
     assert out.blend_n == 250
@@ -91,7 +91,7 @@ def test_build_prop_output_carries_pick_fields():
 def test_build_prop_output_kelly_uses_tier_multiplier():
     """LOCK (multiplier 0.75) gives a larger Kelly than STRONG (0.375)
     on the same edge — the per-tier discipline."""
-    lock_pick = _pick(tier=Tier.LOCK, edge_pp=12.0,
+    lock_pick = _pick(tier=Tier.ELITE, edge_pp=12.0,
                         model_prob=0.41, market_prob=0.29)
     strong_pick = _pick(tier=Tier.STRONG, edge_pp=7.0,
                           model_prob=0.36, market_prob=0.29)
@@ -131,7 +131,7 @@ def test_to_email_card_includes_tier_color_lambda_edge_kelly():
     text = to_email_card(out)
     assert "Aaron Judge · Home Runs Over 0.5" in text
     assert "[STRONG" in text
-    assert "Light Green" in text
+    assert "Deep Green" in text
     assert "λ 0.28" in text
     assert "conf 72%" in text
     assert "edge +7.4pp" in text

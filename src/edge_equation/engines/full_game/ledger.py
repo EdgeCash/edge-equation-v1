@@ -456,7 +456,7 @@ def get_tier_ledger(store: FullGameStore, season: int):
     if df is None or df.empty:
         return df
     tier_order = {t.value: i for i, t in enumerate(
-        [Tier.LOCK, Tier.STRONG, Tier.MODERATE, Tier.LEAN]
+        [Tier.ELITE, Tier.STRONG, Tier.MODERATE, Tier.LEAN]
     )}
     tier_order["ALL"] = 99
     df["_tier_rank"] = df["tier"].map(lambda t: tier_order.get(t, 100))

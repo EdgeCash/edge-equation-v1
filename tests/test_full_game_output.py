@@ -46,11 +46,11 @@ def _pick(*, market="Total", side="Over", line_value=8.5,
 
 
 def test_color_band_per_tier():
-    assert color_band_for_tier(Tier.LOCK) == "Deep Green"
-    assert color_band_for_tier(Tier.STRONG) == "Light Green"
-    assert color_band_for_tier(Tier.MODERATE) == "Yellow"
-    assert color_band_for_tier(Tier.LEAN) == "Orange"
-    assert color_band_for_tier(Tier.NO_PLAY) == "Deep Red"
+    assert color_band_for_tier(Tier.ELITE) == "Electric Blue"
+    assert color_band_for_tier(Tier.STRONG) == "Deep Green"
+    assert color_band_for_tier(Tier.MODERATE) == "Light Green"
+    assert color_band_for_tier(Tier.LEAN) == "Yellow"
+    assert color_band_for_tier(Tier.NO_PLAY) == "Orange"
 
 
 def test_color_hex_round_trip_seven_chars():
@@ -78,14 +78,14 @@ def test_build_full_game_output_carries_pick_fields():
     assert out.line_value == 8.5
     assert out.model_prob == pytest.approx(0.58)
     assert out.tier == "STRONG"
-    assert out.color_band == "Light Green"
+    assert out.color_band == "Deep Green"
     assert out.lam_used == pytest.approx(9.54)
     assert out.confidence == pytest.approx(0.72)
 
 
 def test_build_full_game_output_kelly_uses_tier_multiplier():
     """LOCK gives larger Kelly than STRONG on the same edge."""
-    lock_pick = _pick(tier=Tier.LOCK, edge_pp=12.0,
+    lock_pick = _pick(tier=Tier.ELITE, edge_pp=12.0,
                           model_prob=0.62, market_prob=0.50)
     strong_pick = _pick(tier=Tier.STRONG, edge_pp=7.0,
                             model_prob=0.57, market_prob=0.50)
@@ -158,7 +158,7 @@ def test_email_card_includes_matchup_market_tier_metrics():
     assert "Total Runs" in text
     assert "Over 8.5" in text
     assert "[STRONG" in text
-    assert "Light Green" in text
+    assert "Deep Green" in text
     assert "λ 9.54" in text
     assert "conf 72%" in text
     assert "edge +7.4pp" in text
@@ -170,10 +170,10 @@ def test_email_card_renders_run_line_with_signed_spread():
     pick = _pick(market="Run_Line", side="NYY", line_value=-1.5,
                    team_tricode="NYY", american_odds=+135,
                    model_prob=0.50, market_prob=0.42, edge_pp=8.0,
-                   tier=Tier.LOCK)
+                   tier=Tier.ELITE)
     text = to_email_card(build_full_game_output(pick))
     assert "NYY -1.5" in text
-    assert "[LOCK" in text
+    assert "[ELITE" in text
 
 
 def test_email_card_renders_moneyline_without_line_value():

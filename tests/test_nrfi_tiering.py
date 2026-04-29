@@ -16,7 +16,7 @@ import pytest
 
 def test_tier_enum_values():
     from edge_equation.engines.tiering import Tier
-    assert Tier.LOCK.value == "LOCK"
+    assert Tier.ELITE.value == "ELITE"
     assert Tier.STRONG.value == "STRONG"
     assert Tier.MODERATE.value == "MODERATE"
     assert Tier.LEAN.value == "LEAN"
@@ -25,7 +25,7 @@ def test_tier_enum_values():
 
 def test_is_qualifying_includes_lean_and_above():
     from edge_equation.engines.tiering import Tier
-    assert Tier.LOCK.is_qualifying
+    assert Tier.ELITE.is_qualifying
     assert Tier.STRONG.is_qualifying
     assert Tier.MODERATE.is_qualifying
     assert Tier.LEAN.is_qualifying
@@ -35,7 +35,7 @@ def test_is_qualifying_includes_lean_and_above():
 def test_is_betting_tier_excludes_lean_and_no_play():
     """LEAN is content-only per the audit; NO_PLAY obviously isn't bet."""
     from edge_equation.engines.tiering import Tier
-    assert Tier.LOCK.is_betting_tier
+    assert Tier.ELITE.is_betting_tier
     assert Tier.STRONG.is_betting_tier
     assert Tier.MODERATE.is_betting_tier
     assert not Tier.LEAN.is_betting_tier
@@ -50,8 +50,8 @@ def test_is_betting_tier_excludes_lean_and_no_play():
 @pytest.mark.parametrize("market_type", ["NRFI", "YRFI"])
 @pytest.mark.parametrize("prob,expected_tier", [
     # LOCK: ≥70%
-    (0.85, "LOCK"),
-    (0.70, "LOCK"),
+    (0.85, "ELITE"),
+    (0.70, "ELITE"),
     # STRONG: 64-69%
     (0.69, "STRONG"),
     (0.64, "STRONG"),
@@ -87,8 +87,8 @@ def test_nrfi_classifier_requires_probability():
 
 @pytest.mark.parametrize("market_type", ["ML", "Total", "Run_Line", "HR", "K"])
 @pytest.mark.parametrize("edge,expected_tier", [
-    (0.12,  "LOCK"),
-    (0.08,  "LOCK"),
+    (0.12,  "ELITE"),
+    (0.08,  "ELITE"),
     (0.07,  "STRONG"),
     (0.05,  "STRONG"),
     (0.04,  "MODERATE"),
@@ -136,7 +136,7 @@ def test_kelly_multiplier_per_tier():
     """Per the audit: LOCK 0.5–1×, STRONG 0.25–0.5×, MODERATE 0.10–0.25×.
     LEAN and NO_PLAY are 0 (content-only / no bet)."""
     from edge_equation.engines.tiering import Tier, kelly_multiplier
-    assert 0.5 <= kelly_multiplier(Tier.LOCK) <= 1.0
+    assert 0.5 <= kelly_multiplier(Tier.ELITE) <= 1.0
     assert 0.25 <= kelly_multiplier(Tier.STRONG) <= 0.5
     assert 0.10 <= kelly_multiplier(Tier.MODERATE) <= 0.25
     assert kelly_multiplier(Tier.LEAN) == 0.0
@@ -147,7 +147,7 @@ def test_tier_to_grade_mapping_aligns_with_confidence_scorer():
     """LOCK→A+, STRONG→A, MODERATE→B, LEAN→C, NO_PLAY→F.
     Single grading system across the engine."""
     from edge_equation.engines.tiering import Tier, tier_to_grade
-    assert tier_to_grade(Tier.LOCK) == "A+"
+    assert tier_to_grade(Tier.ELITE) == "A+"
     assert tier_to_grade(Tier.STRONG) == "A"
     assert tier_to_grade(Tier.MODERATE) == "B"
     assert tier_to_grade(Tier.LEAN) == "C"
@@ -184,5 +184,5 @@ def test_classification_top_tier_band_upper_is_inf():
     from edge_equation.engines.tiering import classify_tier
     import math
     clf = classify_tier(market_type="NRFI", side_probability=0.85)
-    assert clf.tier.value == "LOCK"
+    assert clf.tier.value == "ELITE"
     assert math.isinf(clf.band_upper)

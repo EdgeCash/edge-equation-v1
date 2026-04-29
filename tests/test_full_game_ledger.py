@@ -181,12 +181,12 @@ def test_settlement_result_summary_renders_tier_breakdown():
         n_picks_examined=10, n_picks_already_settled=3,
         n_picks_settled=5, n_picks_no_actual=2,
     )
-    r.by_tier[Tier.LOCK] = 1
+    r.by_tier[Tier.ELITE] = 1
     r.by_tier[Tier.STRONG] = 4
     text = r.summary()
     assert "Full-game settlement run" in text
     assert "newly settled          5" in text
-    assert "LOCK" in text
+    assert "ELITE" in text
     assert "STRONG" in text
 
 
@@ -254,7 +254,7 @@ def test_settle_predictions_classifies_total_over_lock_win():
     store = _FakeStore()
     preds = _pred_df([
         # LOCK Over 8.5 win — total = 12 actual.
-        (700001, "Total", "Over", "", 8.5, "LOCK",
+        (700001, "Total", "Over", "", 8.5, "ELITE",
            -110.0, 0.62, "2026-04-15", 7, 5, 4, 3),
     ])
     store.queue_query("FROM fullgame_predictions p JOIN fullgame_actuals", preds)
@@ -267,7 +267,7 @@ def test_settle_predictions_classifies_total_over_lock_win():
         store, season=2026, cutoff_date="2026-04-15",
     )
     assert result.n_picks_settled == 1
-    assert result.by_tier[Tier.LOCK] == 1
+    assert result.by_tier[Tier.ELITE] == 1
     rows = [u for u in store.upserts if u[0] == "fullgame_pick_settled"][0][1]
     assert rows[0]["actual_hit"] is True
     assert rows[0]["units_delta"] == pytest.approx(100.0 / 110.0)
@@ -297,7 +297,7 @@ def test_settle_predictions_classifies_ml_loss_at_negative_odds():
 def test_settle_predictions_idempotent():
     store = _FakeStore()
     preds = _pred_df([
-        (700001, "Total", "Over", "", 8.5, "LOCK",
+        (700001, "Total", "Over", "", 8.5, "ELITE",
            -110.0, 0.62, "2026-04-15", 7, 5, 4, 3),
     ])
     settled = pd.DataFrame([
@@ -316,7 +316,7 @@ def test_settle_predictions_idempotent():
 def test_settle_predictions_skips_nan_actuals():
     store = _FakeStore()
     preds = _pred_df([
-        (700001, "Total", "Over", "", 8.5, "LOCK",
+        (700001, "Total", "Over", "", 8.5, "ELITE",
            -110.0, 0.62, "2026-04-15", math.nan, math.nan, None, None),
     ])
     store.queue_query("FROM fullgame_predictions p JOIN fullgame_actuals", preds)
@@ -345,7 +345,7 @@ def test_settle_predictions_empty_returns_zero():
 def test_refresh_tier_ledger_writes_per_tier_market_and_rollups():
     store = _FakeStore()
     per_tier = pd.DataFrame([
-        {"season": 2026, "market_type": "Total", "tier": "LOCK",
+        {"season": 2026, "market_type": "Total", "tier": "ELITE",
            "n_settled": 4, "wins": 3, "losses": 1, "units_won": 1.5},
         {"season": 2026, "market_type": "ML", "tier": "STRONG",
            "n_settled": 6, "wins": 4, "losses": 2, "units_won": 1.0},
@@ -387,7 +387,7 @@ def test_get_tier_ledger_orders_by_market_then_tier():
     store = _FakeStore()
     rows = _ledger_df([
         (2026, "ML",     "STRONG", 6, 4, 2, 1.0, None),
-        (2026, "Total",  "LOCK",   4, 3, 1, 1.5, None),
+        (2026, "Total",  "ELITE",   4, 3, 1, 1.5, None),
         (2026, "ALL",    "ALL",    10, 7, 3, 2.5, None),
     ])
     store.queue_query("FROM fullgame_tier_ledger", rows)
@@ -408,7 +408,7 @@ def test_render_ledger_section_empty_returns_empty_string():
 def test_render_ledger_section_formats_record_units_roi():
     store = _FakeStore()
     rows = _ledger_df([
-        (2026, "Total",   "LOCK",   4, 4, 0, 3.50, None),
+        (2026, "Total",   "ELITE",   4, 4, 0, 3.50, None),
         (2026, "Run_Line", "STRONG", 6, 4, 2, 0.40, None),
     ])
     store.queue_query("FROM fullgame_tier_ledger", rows)

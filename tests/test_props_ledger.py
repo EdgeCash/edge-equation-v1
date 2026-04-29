@@ -72,12 +72,12 @@ def test_settlement_result_summary_includes_tier_breakdown():
         n_picks_examined=8, n_picks_already_settled=2,
         n_picks_settled=4, n_picks_no_actual=2,
     )
-    r.by_tier[Tier.LOCK] = 1
+    r.by_tier[Tier.ELITE] = 1
     r.by_tier[Tier.STRONG] = 3
     text = r.summary()
     assert "Props settlement run" in text
     assert "newly settled          4" in text
-    assert "LOCK" in text
+    assert "ELITE" in text
     assert "STRONG" in text
     assert "MODERATE" not in text  # zero-count tiers omitted
 
@@ -149,7 +149,7 @@ def test_settle_predictions_classifies_and_writes_new_rows():
     store = _FakeStore()
     preds = _pred_df([
         # LOCK win: Judge HR Over 0.5, actual=2 HRs hit
-        (700001, "HR", "Aaron Judge", 0.5, "Over", "LOCK",
+        (700001, "HR", "Aaron Judge", 0.5, "Over", "ELITE",
          +250.0, 0.42, "2026-04-15", 2.0),
         # STRONG loss: Crochet K Over 7.5, actual=6
         (700002, "K", "Garrett Crochet", 7.5, "Over", "STRONG",
@@ -169,7 +169,7 @@ def test_settle_predictions_classifies_and_writes_new_rows():
     )
     assert result.n_picks_examined == 3
     assert result.n_picks_settled == 2
-    assert result.by_tier[Tier.LOCK] == 1
+    assert result.by_tier[Tier.ELITE] == 1
     assert result.by_tier[Tier.STRONG] == 1
 
     rows = [u for u in store.upserts if u[0] == "props_pick_settled"][0][1]
@@ -184,7 +184,7 @@ def test_settle_predictions_classifies_and_writes_new_rows():
 def test_settle_predictions_is_idempotent():
     store = _FakeStore()
     preds = _pred_df([
-        (700001, "HR", "Judge", 0.5, "Over", "LOCK",
+        (700001, "HR", "Judge", 0.5, "Over", "ELITE",
          +250.0, 0.42, "2026-04-15", 2.0),
     ])
     settled = pd.DataFrame([
@@ -206,7 +206,7 @@ def test_settle_predictions_skips_nan_actuals():
     skip them silently rather than book them as a loss."""
     store = _FakeStore()
     preds = _pred_df([
-        (700001, "HR", "Judge", 0.5, "Over", "LOCK",
+        (700001, "HR", "Judge", 0.5, "Over", "ELITE",
          +250.0, 0.42, "2026-04-15", math.nan),
     ])
     store.queue_query("FROM prop_predictions p JOIN prop_actuals", preds)
@@ -254,7 +254,7 @@ def test_settle_predictions_empty_returns_zero():
 def test_refresh_tier_ledger_writes_per_tier_market_and_rollups():
     store = _FakeStore()
     per_tier = pd.DataFrame([
-        {"season": 2026, "market_type": "HR", "tier": "LOCK",
+        {"season": 2026, "market_type": "HR", "tier": "ELITE",
          "n_settled": 2, "wins": 2, "losses": 0, "units_won": 5.0},
         {"season": 2026, "market_type": "K", "tier": "STRONG",
          "n_settled": 4, "wins": 2, "losses": 2, "units_won": -0.10},
@@ -313,7 +313,7 @@ def test_get_tier_ledger_orders_by_market_then_tier():
     store = _FakeStore()
     rows = _ledger_df([
         (2026, "K",   "STRONG", 4, 2, 2, -0.10, None),
-        (2026, "HR",  "LOCK",   2, 2, 0, 5.00, None),
+        (2026, "HR",  "ELITE",   2, 2, 0, 5.00, None),
         (2026, "HR",  "ALL",    2, 2, 0, 5.00, None),
         (2026, "ALL", "ALL",    6, 4, 2, 4.90, None),
     ])
@@ -324,7 +324,7 @@ def test_get_tier_ledger_orders_by_market_then_tier():
     tiers = list(df["tier"])
     # HR rows first (earlier in market_order), with LOCK before ALL
     assert markets[0] == "HR"
-    assert tiers[0] == "LOCK"
+    assert tiers[0] == "ELITE"
     assert markets[2] == "K"
     assert markets[3] == "ALL"
 
@@ -345,14 +345,14 @@ def test_render_ledger_section_empty_returns_empty_string():
 def test_render_ledger_section_formats_record_units_roi():
     store = _FakeStore()
     rows = _ledger_df([
-        (2026, "HR", "LOCK", 4, 4, 0, 7.50, None),
+        (2026, "HR", "ELITE", 4, 4, 0, 7.50, None),
         (2026, "K",  "STRONG", 6, 4, 2, 0.20, None),
     ])
     store.queue_query("FROM props_tier_ledger", rows)
     text = ledger_mod.render_ledger_section(store, 2026)
     assert "PROPS YTD LEDGER (2026)" in text
     assert "HR" in text
-    assert "LOCK" in text
+    assert "ELITE" in text
     assert "4-0" in text
     assert "4-2" in text
     assert "+7.50u" in text

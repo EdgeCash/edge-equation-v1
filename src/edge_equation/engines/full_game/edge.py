@@ -136,7 +136,7 @@ def build_edge_picks(
         )
     devig = build_devig_table(lines)
     picks: list[FullGameEdgePick] = []
-    rank = {Tier.LOCK: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
+    rank = {Tier.ELITE: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
               Tier.LEAN: 1, Tier.NO_PLAY: 0}
     floor = rank[min_tier]
     for line, proj in zip(lines, projections):

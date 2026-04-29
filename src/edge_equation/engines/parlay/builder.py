@@ -224,8 +224,8 @@ def _vec_erf(x: np.ndarray) -> np.ndarray:
 
 
 def _tier_rank(tier: Tier) -> int:
-    """LOCK > STRONG > MODERATE > LEAN > NO_PLAY."""
-    return {Tier.LOCK: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
+    """ELITE > STRONG > MODERATE > LEAN > NO_PLAY."""
+    return {Tier.ELITE: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
             Tier.LEAN: 1, Tier.NO_PLAY: 0}[tier]
 
 
