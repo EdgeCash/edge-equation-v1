@@ -59,6 +59,14 @@ from dataclasses import asdict
 from datetime import date as _date, datetime, timezone
 from typing import Any, Iterable, Optional
 
+from edge_equation.engines.core.posting.conviction import (
+    conviction_band,
+    electric_indices,
+    format_conviction_line,
+    render_conviction_key,
+)
+from edge_equation.utils.logging import get_logger
+
 from .config import get_default_config
 from .data.odds import lookup_closing_odds
 from .data.scrapers_etl import daily_etl
@@ -66,8 +74,7 @@ from .data.storage import NRFIStore
 from .evaluation.backtest import reconstruct_features_for_date
 from .integration.engine_bridge import NRFIEngineBridge
 from .ledger import render_ledger_section
-from .output import build_output, to_email_card
-from edge_equation.utils.logging import get_logger
+from .output import build_output
 
 log = get_logger(__name__, "INFO")
 
@@ -129,7 +136,7 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         for o in outputs:
             picks.append(_to_card_pick(o, engine_label, label_map))
 
-    picks = _top_six_by_edge(picks)
+    picks = _top_first_inning_board(picks, limit=10)
 
     # Settle yesterday's slate before rendering today's so the YTD
     # ledger reflects last night's results. Best-effort — a network
@@ -170,6 +177,8 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         "engine": engine_label,
         "target_date": subject_date,
         "picks": picks,
+        "props": [],
+        "full_game": [],
         "ledger_text": ledger_text,
         "parlay_text": parlay_text,
         "parlay_ledger_text": parlay_ledger_text,
@@ -197,14 +206,42 @@ def _ledger_headline(ledger_text: str) -> str:
 
 
 def _top_six_by_edge(picks: list[dict]) -> list[dict]:
-    """Daily report policy: show the top six by available edge strength."""
+    """Backward-compatible alias for older tests/callers."""
+    return _top_first_inning_board(picks, limit=6)
+
+
+def _top_first_inning_board(picks: list[dict], *, limit: int = 10) -> list[dict]:
+    """Unified NRFI/YRFI board sorted by edge, then raw side probability."""
     def _strength(pick: dict) -> float:
         edge_pp = pick.get("edge_pp")
         if edge_pp is not None:
             return float(edge_pp)
-        return abs(float(pick.get("pct", 50.0)) - 50.0)
+        return float(pick.get("pct", 0.0))
 
-    return sorted(picks, key=_strength, reverse=True)[:6]
+    ranked = sorted(picks, key=_strength, reverse=True)[:limit]
+    _annotate_conviction(ranked)
+    return ranked
+
+
+def _annotate_conviction(picks: list[dict]) -> None:
+    """Attach shared conviction color fields across NRFI and YRFI rows."""
+    rows = []
+    for pick in picks:
+        edge_pp = pick.get("edge_pp")
+        rows.append({
+            "model_probability": float(pick.get("pct", 0.0)) / 100.0,
+            "edge": (float(edge_pp) / 100.0) if edge_pp is not None else None,
+        })
+    electric = electric_indices(rows, top_n=3, min_probability=0.58)
+    for idx, pick in enumerate(picks):
+        edge_pp = pick.get("edge_pp")
+        band = conviction_band(
+            float(pick.get("pct", 0.0)) / 100.0,
+            edge=(float(edge_pp) / 100.0) if edge_pp is not None else None,
+            is_electric=idx in electric,
+        )
+        pick["conviction_color"] = band.label
+        pick["conviction_hex"] = band.hex_color
 
 
 def _market_inputs_for_games(
@@ -219,7 +256,10 @@ def _market_inputs_for_games(
     market_probs: list[float | None] = []
     american_odds: list[float] = []
     for game_pk in game_pks:
-        odds = lookup_closing_odds(store, int(game_pk), "NRFI")
+        try:
+            odds = lookup_closing_odds(store, int(game_pk), "NRFI")
+        except Exception:
+            odds = None
         market_probs.append(_implied_prob(odds) if odds is not None else None)
         american_odds.append(float(odds) if odds is not None else -110.0)
     return market_probs, american_odds
@@ -274,13 +314,7 @@ def _to_card_pick(bridge_output, engine_label: str,
         market_type=out.market_type,
         side_probability=out.nrfi_prob,
     )
-
-    pretty = to_email_card(out)
-    if tier_clf.tier.is_qualifying:
-        # Prepend the tier tag so the operator sees conviction at a glance.
-        pretty_lines = pretty.split("\n", 1)
-        pretty_lines[0] = f"[{tier_clf.tier.value:<8}] {pretty_lines[0]}"
-        pretty = "\n".join(pretty_lines)
+    rendered = f"{out.game_id} · {out.market_type} {out.nrfi_pct:.1f}%"
 
     return {
         "game_id": out.game_id,
@@ -302,7 +336,7 @@ def _to_card_pick(bridge_output, engine_label: str,
         "tier_basis": tier_clf.basis,
         "drivers": out.driver_text,
         "why": _why_note(out.driver_text, out.lambda_total, out.mc_band_pp),
-        "rendered": pretty,
+        "rendered": rendered,
     }
 
 
@@ -428,27 +462,16 @@ def render_body(card: dict) -> str:
         lines.append("(No games on the slate or feature reconstruction failed.)")
         lines.append("")
     else:
-        # NRFI side
-        nrfi = [p for p in picks if p["market_type"] == "NRFI"]
-        yrfi = [p for p in picks if p["market_type"] == "YRFI"]
-        if nrfi:
-            lines.append(f"NRFI BOARD ({len(nrfi)} games)")
-            lines.append("─" * 60)
-            for p in nrfi:
-                rendered = p.get("rendered") or _render_fallback(p)
-                lines.append(rendered)
-                if p.get("why"):
-                    lines.append(f"  why: {p['why']}")
-                lines.append("")
-        if yrfi:
-            lines.append(f"YRFI BOARD ({len(yrfi)} games)")
-            lines.append("─" * 60)
-            for p in yrfi:
-                rendered = p.get("rendered") or _render_fallback(p)
-                lines.append(rendered)
-                if p.get("why"):
-                    lines.append(f"  why: {p['why']}")
-                lines.append("")
+        lines.append(f"FIRST INNING BOARD - Top {min(10, len(picks))} by Edge")
+        lines.append("-" * 60)
+        for p in picks:
+            lines.append(_render_first_inning_row(p))
+            if p.get("why"):
+                lines.append(f"  Why: {p['why']}")
+            lines.append("")
+
+    _append_generic_board(lines, "PROPS BOARD", card.get("props") or [])
+    _append_generic_board(lines, "FULL-GAME BOARD", card.get("full_game") or [])
 
     # YTD per-tier ledger — appended below the day's picks so the
     # operator's eye lands on conviction history while reading the new
@@ -475,9 +498,54 @@ def render_body(card: dict) -> str:
         lines.append(parlay_ledger_text)
         lines.append("")
 
+    lines.append("")
+    lines.append(render_conviction_key())
+    lines.append("")
+
     lines.append(card.get("tagline", "")
                   or _footer_text(card.get("engine", "unknown")))
     return "\n".join(lines)
+
+
+def _render_first_inning_row(p: dict) -> str:
+    label = f"{p.get('game_id', '?')} · {p.get('market_type', '?')}"
+    model_probability = float(p.get("pct", 0.0)) / 100.0
+    edge_pp = p.get("edge_pp")
+    band = conviction_band(
+        model_probability,
+        edge=(float(edge_pp) / 100.0) if edge_pp is not None else None,
+        is_electric=p.get("conviction_color") == "Electric Blue",
+    )
+    line = format_conviction_line(
+        label=label,
+        model_probability=model_probability,
+        band=band,
+        stake_units=_kelly_units_for_display(p),
+    )
+    return f"{line} · lambda {float(p.get('lambda_total', 0.0)):.2f}"
+
+
+def _kelly_units_for_display(p: dict) -> Optional[float]:
+    raw = p.get("kelly")
+    if not raw:
+        return None
+    try:
+        return float(str(raw).replace("u", ""))
+    except ValueError:
+        return None
+
+
+def _append_generic_board(lines: list[str], title: str, rows: list[dict]) -> None:
+    lines.append("")
+    lines.append(title)
+    lines.append("-" * 60)
+    if not rows:
+        lines.append("  (no qualifying plays today)")
+        lines.append("")
+        return
+    for row in rows[:10]:
+        lines.append(str(row.get("rendered") or row))
+    lines.append("")
 
 
 def _render_fallback(p: dict) -> str:

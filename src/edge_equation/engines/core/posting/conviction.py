@@ -64,9 +64,9 @@ def conviction_band(
     p = max(0.0, min(1.0, float(model_probability)))
     if p >= 0.70:
         return DEEP_GREEN
-    if p >= 0.60:
-        return LIGHT_GREEN
     if p >= 0.55:
+        return LIGHT_GREEN
+    if p >= 0.50:
         return YELLOW
     if p >= 0.45:
         return ORANGE
@@ -115,7 +115,7 @@ def format_conviction_line(
     stake = f"{float(stake_units):.1f}u" if stake_units is not None else ""
     return (
         f"{label:<32}  {conviction_text(model_probability)} "
-        f"* {band.label:<13}  {stake}"
+        f"· {band.label:<13}  {stake}"
     ).rstrip()
 
 

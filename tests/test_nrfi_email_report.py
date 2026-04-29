@@ -66,14 +66,15 @@ def _make_card_with_picks(n_nrfi=2, n_yrfi=1):
     }
 
 
-def test_render_body_groups_nrfi_then_yrfi():
+def test_render_body_uses_unified_first_inning_board():
     from edge_equation.engines.nrfi.email_report import render_body
     card = _make_card_with_picks(n_nrfi=3, n_yrfi=2)
     body = render_body(card)
-    assert "NRFI BOARD (3 games)" in body
-    assert "YRFI BOARD (2 games)" in body
-    # NRFI section appears before YRFI section.
-    assert body.index("NRFI BOARD") < body.index("YRFI BOARD")
+    assert "FIRST INNING BOARD - Top 5 by Edge" in body
+    assert "NRFI BOARD" not in body
+    assert "YRFI BOARD" not in body
+    assert "MLB-2026-04-28-NYY-BOS-0 · NRFI" in body
+    assert "MLB-2026-04-28-COL-LAD-0 · YRFI" in body
     # Footer present.
     assert "Internal testing" in body
 
@@ -199,14 +200,12 @@ def test_build_card_uses_bridge_and_builds_picks(monkeypatch):
     assert card["card_type"] == "nrfi-daily"
     assert card["target_date"] == "2026-04-28"
     assert card["engine"] == "ml"
-    assert len(card["picks"]) == 4    # 2 games × (NRFI + YRFI)
+    assert len(card["picks"]) == 4    # 2 games x (NRFI + YRFI)
     nrfi = [p for p in card["picks"] if p["market_type"] == "NRFI"]
     yrfi = [p for p in card["picks"] if p["market_type"] == "YRFI"]
     assert len(nrfi) == 2
     assert len(yrfi) == 2
-    # Sorted: NRFI first, then YRFI; within each, descending pct.
-    assert card["picks"][0]["market_type"] == "NRFI"
-    assert card["picks"][2]["market_type"] == "YRFI"
+    assert any(p["conviction_color"] == "Electric Blue" for p in card["picks"])
 
 
 def test_build_card_handles_no_games(monkeypatch):
