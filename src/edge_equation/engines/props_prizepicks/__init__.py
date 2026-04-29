@@ -37,6 +37,24 @@ Usage example
 
 from __future__ import annotations
 
+from .config import (
+    APIConfig,
+    ProjectionKnobs,
+    PropsConfig,
+    get_default_config,
+)
+from .data.statcast_loader import (
+    BatterRollingRates,
+    LEAGUE_BATTER_PRIOR_PER_PA,
+    LEAGUE_PITCHER_PRIOR_PER_BF,
+    PitcherRollingRates,
+    bayesian_blend,
+    compute_batter_rates_from_statcast,
+    compute_pitcher_rates_from_statcast,
+    load_batter_rates,
+    load_pitcher_rates,
+)
+from .data.storage import PropsStore
 from .edge import (
     PropEdgePick,
     build_devig_table,
@@ -65,6 +83,22 @@ from .projection import (
 
 
 __all__ = [
+    # config
+    "APIConfig",
+    "ProjectionKnobs",
+    "PropsConfig",
+    "get_default_config",
+    # data
+    "BatterRollingRates",
+    "LEAGUE_BATTER_PRIOR_PER_PA",
+    "LEAGUE_PITCHER_PRIOR_PER_BF",
+    "PitcherRollingRates",
+    "PropsStore",
+    "bayesian_blend",
+    "compute_batter_rates_from_statcast",
+    "compute_pitcher_rates_from_statcast",
+    "load_batter_rates",
+    "load_pitcher_rates",
     # markets
     "MLB_PROP_MARKETS",
     "ODDS_API_MARKETS_PARAM",
