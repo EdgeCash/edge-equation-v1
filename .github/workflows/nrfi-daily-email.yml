@@ -41,6 +41,11 @@ jobs:
       EMAIL_TO:         ${{ secrets.NRFI_EMAIL_TO || secrets.EMAIL_TO || 'ProfessorEdgeCash@gmail.com' }}
       SMTP_TO:          ${{ secrets.NRFI_EMAIL_TO || secrets.SMTP_TO || 'ProfessorEdgeCash@gmail.com' }}
       EDGE_EQUATION_FAILSAFE_DIR: ${{ github.workspace }}/data/failsafes
+      # Required by the props + full-game engine fetchers invoked from
+      # build_card. Without this the orchestrators short-circuit with
+      # "Odds API key not set" and the email's PROPS BOARD / FULL-GAME
+      # BOARD sections render empty even on a fully-priced slate.
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
