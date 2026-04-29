@@ -18,7 +18,7 @@ import argparse
 import json
 import sys
 from dataclasses import asdict, dataclass, field
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -194,11 +194,20 @@ def _write_manifest(cfg: NRFIConfig, report: ProductionTrainingReport) -> Path:
         "window_months": report.window_months,
         "chunk_days": report.chunk_days,
         "calibration_method": report.calibration_method,
+        "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "artifact_version": _artifact_version(report),
         "walkforward": asdict(report.walkforward),
         "reliability": [asdict(r) for r in report.reliability],
     }
     path.write_text(json.dumps(payload, indent=2, default=str))
     return path
+
+
+def _artifact_version(report: ProductionTrainingReport) -> str:
+    """Human-readable model artifact version for dashboards/runbooks."""
+
+    compact_end = report.end_date.replace("-", "")
+    return f"elite_nrfi_v1_{compact_end}_wf{report.walkforward.n_predictions}"
 
 
 def main(argv: Optional[Iterable[str]] = None) -> int:

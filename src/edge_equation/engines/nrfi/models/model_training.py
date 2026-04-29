@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import pickle
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Mapping, Sequence
 
@@ -225,6 +226,13 @@ class TrainedBundle:
             pickle.dump(self.poisson_glm, fh)
         (model_dir / f"{self.model_version}_features.json").write_text(
             json.dumps(self.feature_names)
+        )
+        (model_dir / f"{self.model_version}_metadata.json").write_text(
+            json.dumps({
+                "model_version": self.model_version,
+                "feature_count": len(self.feature_names),
+                "saved_at": datetime.now(timezone.utc).isoformat(),
+            }, indent=2)
         )
 
     @classmethod
