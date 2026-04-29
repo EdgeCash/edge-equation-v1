@@ -60,6 +60,7 @@ from datetime import date as _date, datetime, timezone
 from typing import Any, Iterable, Optional
 
 from .config import get_default_config
+from .data.odds import lookup_closing_odds
 from .data.scrapers_etl import daily_etl
 from .data.storage import NRFIStore
 from .evaluation.backtest import reconstruct_features_for_date
@@ -112,10 +113,16 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
 
     picks: list[dict] = []
     if feats_per_game:
+        market_probs, american_odds = _market_inputs_for_games(
+            store,
+            [pk for pk, _ in feats_per_game],
+        )
         # Engine-bridge produces NRFI + YRFI rows per game
         outputs = bridge.predict_for_features(
             [f for _, f in feats_per_game],
             game_ids=[str(pk) for pk, _ in feats_per_game],
+            market_probs=market_probs,
+            american_odds=american_odds,
         )
         # Rebuild canonical NRFIOutput so we get all the email-friendly
         # fields (mc_band_pp, driver_text, etc.).
@@ -200,6 +207,30 @@ def _top_six_by_edge(picks: list[dict]) -> list[dict]:
     return sorted(picks, key=_strength, reverse=True)[:6]
 
 
+def _market_inputs_for_games(
+    store: NRFIStore, game_pks: list[int],
+) -> tuple[list[float | None], list[float]]:
+    """Return NRFI market implied probabilities + American odds.
+
+    The engine can make probability forecasts without odds.  Kelly and edge
+    require a market snapshot, so we pass ``None`` when no The Odds API capture
+    exists and let downstream render "Market unavailable" honestly.
+    """
+    market_probs: list[float | None] = []
+    american_odds: list[float] = []
+    for game_pk in game_pks:
+        odds = lookup_closing_odds(store, int(game_pk), "NRFI")
+        market_probs.append(_implied_prob(odds) if odds is not None else None)
+        american_odds.append(float(odds) if odds is not None else -110.0)
+    return market_probs, american_odds
+
+
+def _implied_prob(american_odds: float) -> float:
+    if american_odds < 0:
+        return abs(float(american_odds)) / (abs(float(american_odds)) + 100.0)
+    return 100.0 / (float(american_odds) + 100.0)
+
+
 def _to_card_pick(bridge_output, engine_label: str,
                    label_map: dict[str, str] | None = None) -> dict:
     """Map an `NRFIBridgeOutput` to the dict shape expected by
@@ -278,8 +309,8 @@ def _to_card_pick(bridge_output, engine_label: str,
 def _why_note(drivers: list[str], lambda_total: float, mc_band_pp: float | None) -> str:
     """Compact operator-facing explanation for a daily report row."""
     lead = ", ".join(drivers[:2]) if drivers else "model edge"
-    mc = f", MC ±{mc_band_pp:.1f}pp" if mc_band_pp is not None else ""
-    return f"{lead}; λ={lambda_total:.2f}{mc}"
+    mc = f", MC +/-{mc_band_pp:.1f}pp" if mc_band_pp is not None else ""
+    return f"{lead}; lambda={lambda_total:.2f}{mc}"
 
 
 def _build_parlay_block(
@@ -406,6 +437,8 @@ def render_body(card: dict) -> str:
             for p in nrfi:
                 rendered = p.get("rendered") or _render_fallback(p)
                 lines.append(rendered)
+                if p.get("why"):
+                    lines.append(f"  why: {p['why']}")
                 lines.append("")
         if yrfi:
             lines.append(f"YRFI BOARD ({len(yrfi)} games)")
@@ -413,6 +446,8 @@ def render_body(card: dict) -> str:
             for p in yrfi:
                 rendered = p.get("rendered") or _render_fallback(p)
                 lines.append(rendered)
+                if p.get("why"):
+                    lines.append(f"  why: {p['why']}")
                 lines.append("")
 
     # YTD per-tier ledger — appended below the day's picks so the

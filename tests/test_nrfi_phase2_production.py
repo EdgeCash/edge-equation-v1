@@ -93,8 +93,8 @@ def test_daily_report_sort_and_why_note():
 
     why = _why_note(["+4.1 pitcher_csw", "-2.0 park_factor"], 0.72, 3.5)
     assert "pitcher_csw" in why
-    assert "λ=0.72" in why
-    assert "MC ±3.5pp" in why
+    assert "lambda=0.72" in why
+    assert "MC +/-3.5pp" in why
 
 
 def test_shared_core_parlay_facade_builds_candidates():
@@ -111,3 +111,22 @@ def test_shared_core_parlay_facade_builds_candidates():
     candidates = build_parlay_candidates(legs)
     assert candidates
     assert candidates[0].n_legs == 2
+
+
+def test_email_market_inputs_use_captured_nrfi_odds(monkeypatch):
+    from edge_equation.engines.nrfi import email_report
+
+    monkeypatch.setattr(
+        email_report,
+        "lookup_closing_odds",
+        lambda store, game_pk, market_type: -120.0 if game_pk == 1 else None,
+    )
+
+    market_probs, american_odds = email_report._market_inputs_for_games(
+        object(),
+        [1, 2],
+    )
+
+    assert market_probs[0] == pytest.approx(120 / 220)
+    assert market_probs[1] is None
+    assert american_odds == [-120.0, -110.0]

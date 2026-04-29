@@ -20,13 +20,12 @@ from datetime import date
 from pathlib import Path
 
 from .config import get_default_config
+from .data.odds import init_odds_tables, lookup_closing_odds
 from .data.scrapers_etl import daily_etl
 from .data.storage import NRFIStore
 from .evaluation.backtest import reconstruct_features_for_date
-from .ledger import render_ledger_section
 from .models.inference import NRFIInferenceEngine
 from .models.model_training import MODEL_VERSION, TrainedBundle
-from .ledger import render_ledger_section
 from .output import build_output
 from edge_equation.utils.logging import get_logger
 
@@ -54,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
     cfg = cfg.resolve_paths()
 
     store = NRFIStore(cfg.duckdb_path)
+    init_odds_tables(store)
 
     # Pull schedule + lineups + ump.
     n = daily_etl(args.date, store, config=cfg)
@@ -78,7 +78,23 @@ def main(argv: list[str] | None = None) -> int:
         engine = NRFIInferenceEngine(bundle, cfg)
         feature_dicts = [f for _, f in feats_per_game]
         game_pks = [pk for pk, _ in feats_per_game]
-        preds = engine.predict_many(feature_dicts, game_pks=game_pks)
+        american_odds = [
+            lookup_closing_odds(store, int(pk), "NRFI")
+            for pk in game_pks
+        ]
+        market_probs = [
+            _implied_prob(odds) if odds is not None else None
+            for odds in american_odds
+        ]
+        preds = engine.predict_many(
+            feature_dicts,
+            game_pks=game_pks,
+            market_probs=market_probs,
+            american_odds=[
+                float(odds) if odds is not None else cfg.betting.default_juice
+                for odds in american_odds
+            ],
+        )
         engine.attach_monte_carlo(preds, feature_dicts)
         rows = [p.as_row() for p in preds]
     else:
@@ -138,6 +154,12 @@ def _row_sort_strength(row: dict) -> float:
     return abs(float(row.get("nrfi_prob", 0.5)) - 0.5)
 
 
+def _implied_prob(american_odds: float) -> float:
+    if american_odds < 0:
+        return abs(float(american_odds)) / (abs(float(american_odds)) + 100.0)
+    return 100.0 / (float(american_odds) + 100.0)
+
+
 def _decode_driver_text(row: dict) -> str:
     raw = row.get("driver_text") or ""
     if isinstance(raw, list):
@@ -163,7 +185,7 @@ def _print_top_board(
     for idx, r in enumerate(ranked, start=1):
         prob = r.get("probability_display") or f"{float(r['nrfi_pct']):.1f}% NRFI"
         mc = (
-            f"±{float(r['mc_band_pp']):.1f}pp"
+            f"+/-{float(r['mc_band_pp']):.1f}pp"
             if r.get("mc_band_pp") is not None else "MC --"
         )
         edge = (
@@ -174,10 +196,10 @@ def _print_top_board(
         print(
             f"{idx:>2}. game_pk={int(r['game_pk']):>10}  {prob:<11} "
             f"{str(r.get('tier', 'NO_PLAY')):<8} {str(r.get('color_hex', '')):<7} "
-            f"λ={float(r['lambda_total']):.2f}  {mc:<8} {edge:<10} "
+            f"lambda={float(r['lambda_total']):.2f}  {mc:<8} {edge:<10} "
             f"Kelly={r.get('kelly_suggestion') or 'Market unavailable'}"
         )
-        print(f"    Why: {drivers}; λ={float(r['lambda_total']):.2f}")
+        print(f"    Why: {drivers}; lambda={float(r['lambda_total']):.2f}")
 
 
 if __name__ == "__main__":
