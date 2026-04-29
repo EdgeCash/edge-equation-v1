@@ -20,6 +20,13 @@ from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
+from edge_equation.engines.core.posting.conviction import (
+    conviction_band,
+    electric_indices,
+    format_conviction_line,
+    render_conviction_key,
+)
+
 from .config import get_default_config
 from .data.odds import capture_closing_lines, init_odds_tables, lookup_closing_odds
 from .data.scrapers_etl import daily_etl
@@ -145,6 +152,7 @@ def main(argv: list[str] | None = None) -> int:
             })
 
     if rows:
+        _annotate_conviction(rows)
         store.upsert("predictions", rows)
         Path(args.output_json).write_text(json.dumps(rows, indent=2, default=str))
         log.info("Wrote %d predictions → %s", len(rows), args.output_json)
@@ -157,6 +165,30 @@ def main(argv: list[str] | None = None) -> int:
         odds_status=odds_status,
     )
     return 0
+
+
+def _annotate_conviction(rows: list[dict]) -> None:
+    """Attach shared conviction color fields to daily rows in-place."""
+    ordered = sorted(rows, key=_row_sort_strength, reverse=True)
+    candidates = [
+        {
+            "model_probability": float(r.get("nrfi_prob", 0.0)),
+            "edge": r.get("edge"),
+        }
+        for r in ordered
+    ]
+    electric = electric_indices(candidates, top_n=3, min_probability=0.58)
+    electric_ids = {id(ordered[idx]) for idx in electric}
+    for row in rows:
+        p = float(row.get("nrfi_prob", 0.0))
+        band = conviction_band(
+            p,
+            edge=row.get("edge"),
+            is_electric=id(row) in electric_ids,
+        )
+        row["conviction_color"] = band.label
+        row["conviction_hex"] = band.hex_color
+        row["conviction_rank"] = band.rank
 
 
 def _row_sort_strength(row: dict) -> float:
@@ -259,6 +291,7 @@ def _print_top_board(
     odds_status: LiveOddsStatus | None = None,
 ) -> None:
     """Print a compact production board: Top 6 by edge-strength."""
+    _annotate_conviction(rows)
     ranked = sorted(rows, key=_row_sort_strength, reverse=True)[:6]
     print(f"\n=== NRFI Elite Board {game_date} - Top 6 by edge ===")
     if baseline_fallback:
@@ -273,7 +306,10 @@ def _print_top_board(
         else:
             print(f"Odds API: unavailable ({odds_status.message})")
     for idx, r in enumerate(ranked, start=1):
-        prob = r.get("probability_display") or f"{float(r['nrfi_pct']):.1f}% NRFI"
+        side = "NRFI"
+        label = f"game_pk={int(r['game_pk'])} {side}"
+        band_label = str(r.get("conviction_color") or r.get("color_band") or "")
+        model_p = float(r.get("nrfi_prob", 0.0))
         mc = (
             f"+/-{float(r['mc_band_pp']):.1f}pp"
             if r.get("mc_band_pp") is not None else "MC --"
@@ -283,16 +319,20 @@ def _print_top_board(
             if r.get("edge_pp") is not None else "edge n/a"
         )
         drivers = _decode_driver_text(r) or "model drivers pending"
-        tier = str(r.get("tier", "NO_PLAY"))
-        band = str(r.get("color_band", ""))
-        tier_color = f"{tier} ({band})" if band else tier
+        tier = str(r.get("tier", ""))
+        color = f"{tier} ({band_label})" if tier else band_label
         print(
-            f"{idx:>2}. game_pk={int(r['game_pk']):>10}  {prob:<11} "
-            f"{tier_color:<24} "
+            f"{idx:>2}. "
+            f"{format_conviction_line(label=label, model_probability=model_p, band=conviction_band(model_p, edge=r.get('edge'), is_electric=band_label == 'Electric Blue'), stake_units=r.get('kelly_units') if r.get('kelly_units') else None)}"
+        )
+        print(
+            f"    {color:<24} "
             f"lambda={float(r['lambda_total']):.2f}  {mc:<8} {edge:<10} "
             f"Kelly={r.get('kelly_suggestion') or 'Market unavailable'}"
         )
         print(f"    Why: {drivers}")
+    print()
+    print(render_conviction_key())
 
 
 if __name__ == "__main__":

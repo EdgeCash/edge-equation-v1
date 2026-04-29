@@ -194,6 +194,9 @@ class NRFIStore:
             ("tier_band", "VARCHAR"),
             ("probability_display", "VARCHAR"),
             ("sort_edge", "DOUBLE"),
+            ("conviction_color", "VARCHAR"),
+            ("conviction_hex", "VARCHAR"),
+            ("conviction_rank", "INTEGER"),
         ):
             self._conn.execute(
                 f"ALTER TABLE predictions ADD COLUMN IF NOT EXISTS {col} {typ}"

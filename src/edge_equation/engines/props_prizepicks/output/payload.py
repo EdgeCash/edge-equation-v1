@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from edge_equation.engines.core.posting.conviction import (
+    conviction_band,
+    format_conviction_line,
+)
 from edge_equation.engines.tiering import Tier
 
 from ..models.projection import PropProjection
@@ -21,6 +25,8 @@ class PropOutput:
     edge: float
     tier: Tier
     bookmaker: str
+    conviction_color: str
+    conviction_hex: str
 
     @property
     def edge_pp(self) -> float:
@@ -41,6 +47,16 @@ def build_prop_output(projection: PropProjection) -> PropOutput:
         edge=projection.edge,
         tier=projection.tier,
         bookmaker=projection.bookmaker,
+        conviction_color=conviction_band(
+            projection.model_prob,
+            edge=projection.edge,
+            is_electric=projection.tier in (Tier.LOCK, Tier.STRONG),
+        ).label,
+        conviction_hex=conviction_band(
+            projection.model_prob,
+            edge=projection.edge,
+            is_electric=projection.tier in (Tier.LOCK, Tier.STRONG),
+        ).hex_color,
     )
 
 
@@ -49,11 +65,15 @@ def render_prop_output(out: PropOutput) -> str:
 
     line = f" {out.line:g}" if out.line is not None else ""
     player = f"{out.player_name} " if out.player_name else ""
+    band = conviction_band(
+        out.model_prob,
+        edge=out.edge,
+        is_electric=out.conviction_color == "Electric Blue",
+    )
+    label = f"{player}{out.selection}{line}".strip()
     return (
-        f"{out.tier.value:<8} {player}{out.selection}{line} "
-        f"model={out.model_prob*100:.1f}% market={out.market_prob*100:.1f}% "
-        f"edge={out.edge_pp:+.1f}pp odds={out.american_odds:+.0f} "
-        f"book={out.bookmaker}"
+        format_conviction_line(label=label, model_probability=out.model_prob, band=band)
+        + f"  edge={out.edge_pp:+.1f}pp odds={out.american_odds:+.0f} book={out.bookmaker}"
     )
 
 

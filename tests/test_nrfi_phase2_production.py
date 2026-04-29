@@ -262,8 +262,9 @@ def test_top_board_renders_tier_color_and_odds_status(capsys):
     )
     out = capsys.readouterr().out
     assert "Odds API: 4 NRFI/YRFI snapshots, 12 prop games" in out
-    assert "MODERATE (Light Green)" in out
+    assert "MODERATE (Electric Blue)" in out
     assert "edge +5.1pp" in out
+    assert "59% Conviction" in out
     assert "Kelly=0.35u" in out
 
 

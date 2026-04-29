@@ -64,4 +64,6 @@ def test_prop_projection_and_output_classifies_edge():
     assert out.tier == Tier.LOCK
     rendered = render_prop_output(out)
     assert "Aaron Judge" in rendered
+    assert "Conviction" in rendered
+    assert "Electric Blue" in rendered
     assert "edge=+8.6pp" in rendered

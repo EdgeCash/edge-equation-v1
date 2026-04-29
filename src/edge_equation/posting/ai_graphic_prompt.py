@@ -7,8 +7,8 @@ render the Edge Equation daily/evening/overseas card the user showed:
 
   - Chalkboard-with-math-equations background
   - The Edge Equation logo + date / algorithm version header
-  - Three tier bands: A+ (Sigma Play) / A (Precision Play) / B (Sharp Play)
-  - Each pick rendered as one row with a "GRADE: X (NN)" badge
+  - Electric Blue public plays only, using the shared conviction system
+  - Each pick rendered as one row with raw model probability as "NN% Conviction"
   - Small engine-data footer box (Run Time / Data Points / Correlation
     Models / EV Simulations)
   - Play count + "Live data. 100% Verified." / "No feelings. Just facts."
@@ -25,21 +25,23 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 
+from edge_equation.engines.core.posting.conviction import render_conviction_key
+
+from edge_equation.engines.core.posting.conviction import render_conviction_key
+
 
 ALGORITHM_VERSION = "v2.0"
 
 
-# Grade -> tier label rendered on the card (matches the provided
-# reference graphic). Engine grades render as themselves (A+ / A / B);
-# the prior B -> A- relabel was removed in the Apr 26 email cleanup.
-_TIER_FOR_GRADE = {
-    "A+": ("A+ TIER -- Σ SIGMA PLAY", "A+"),
-    "A":  ("A TIER -- PRECISION PLAY", "A"),
-    "B":  ("B TIER -- SHARP PLAY", "B"),
-}
-
-# Order tiers A+ first on the graphic.
-_TIER_ORDER = ("A+", "A", "B")
+_ELECTRIC_BLUE = "Electric Blue"
+_CONVICTION_ORDER = (
+    "Electric Blue",
+    "Deep Green",
+    "Light Green",
+    "Yellow",
+    "Orange",
+    "Red",
+)
 
 
 @dataclass(frozen=True)
@@ -126,34 +128,27 @@ def _selection_label(pick: dict) -> str:
 
 def _pick_row(pick: dict) -> str:
     selection = _selection_label(pick)
-    odds = _american_odds(pick.get("line"))
     matchup = _matchup(pick.get("metadata"))
-    grade = pick.get("grade") or ""
-    tier_label = _TIER_FOR_GRADE.get(grade, (None, grade))[1]
-    edge = pick.get("edge")
+    label = f"{matchup} {selection}".strip() if matchup else selection
+    prob = pick.get("model_probability") or pick.get("fair_prob")
     try:
-        edge_dec = Decimal(str(edge)) if edge is not None else None
-    except Exception:
-        edge_dec = None
-    score = _grade_score(edge_dec)
-    left = f"    {selection}"
-    if odds:
-        left = f"{left} ({odds})"
-    middle = f"  {matchup}" if matchup else ""
-    right = f"    GRADE: {tier_label} ({score})"
-    return f"{left}{middle}{right}"
+        pct = float(prob) * 100.0 if prob is not None else 0.0
+    except (TypeError, ValueError):
+        pct = 0.0
+    color = pick.get("conviction_color") or pick.get("color_band") or "Yellow"
+    return f"    {label:<32}  {pct:.0f}% Conviction • {color}"
 
 
 def _group_by_tier(picks: List[dict]) -> Dict[str, List[dict]]:
-    buckets: Dict[str, List[dict]] = {g: [] for g in _TIER_ORDER}
+    buckets: Dict[str, List[dict]] = {g: [] for g in _CONVICTION_ORDER}
     for p in picks:
-        grade = p.get("grade") or ""
-        if grade in buckets:
-            buckets[grade].append(p)
-    # Sort each tier bucket by edge descending for consistent ordering.
-    for g, rows in buckets.items():
+        color = p.get("conviction_color") or p.get("color_band") or "Yellow"
+        if color in buckets:
+            buckets[color].append(p)
+    # Sort each color bucket by edge / probability descending.
+    for _, rows in buckets.items():
         rows.sort(
-            key=lambda p: Decimal(str(p.get("edge") or "0")),
+            key=lambda p: Decimal(str(p.get("edge") or p.get("fair_prob") or "0")),
             reverse=True,
         )
     return buckets
@@ -217,9 +212,9 @@ def build_ai_graphic_prompt(
         "style of a dark chalkboard with faint handwritten math equations, "
         "bar-graph sketches, and scientific-notation scribbles filling the "
         "background. Professional premium feel -- navy / charcoal palette, "
-        "clean white typography, gold accents on the A+ tier, muted blue "
-        "accents on the A and B tiers. No emoji, no hashtags, no "
-        "percentages, NO UNITS anywhere on the graphic."
+        "clean white typography, Electric Blue accents for the highest "
+        "conviction row, green/yellow/orange/red accents for the conviction "
+        "ladder. No emoji, no hashtags, no unit counts anywhere on the graphic."
     )
     out.append("")
     out.append("Header (centered at top):")
@@ -227,17 +222,23 @@ def build_ai_graphic_prompt(
     out.append(f"  Date line:  {date_header}  |  ALGORITHM {ALGORITHM_VERSION}")
     out.append(f"  Subline:    {sport_line}")
     out.append("")
-    out.append("Body (three horizontal pill-banner tiers, each followed by its rows):")
+    out.append("Body (conviction-color pill banners, each followed by its rows):")
+    out.append("Use this exact legend:")
+    for line in render_conviction_key().splitlines():
+        out.append(f"  {line}")
+    out.append("")
+    out.append("Conviction legend to render in a small side panel:")
+    for line in render_conviction_key().splitlines():
+        out.append(f"  {line}")
     out.append("")
 
     any_rendered = False
-    for grade in _TIER_ORDER:
-        rows = tier_buckets.get(grade) or []
+    for color in _CONVICTION_ORDER:
+        rows = tier_buckets.get(color) or []
         if not rows:
             continue
         any_rendered = True
-        tier_label = _TIER_FOR_GRADE[grade][0]
-        out.append(f"  [{tier_label}]")
+        out.append(f"  [{color.upper()}]")
         for r in rows:
             out.append(_pick_row(r))
         out.append("")
@@ -256,6 +257,14 @@ def build_ai_graphic_prompt(
     out.append(f"  Data Points Scanned . {stats.data_points_scanned:,}")
     out.append(f"  Correlation Models .. {stats.correlation_models}")
     out.append(f"  EV Simulations ...... {stats.ev_simulations:,}")
+    out.append("")
+    out.append("Conviction key footer:")
+    out.append("  Electric Blue = Highest Conviction")
+    out.append("  Deep Green = Strong conviction")
+    out.append("  Light Green = Moderate conviction")
+    out.append("  Yellow = Lean")
+    out.append("  Orange = Low conviction")
+    out.append("  Red = Avoid / bad edge / very low conviction")
     out.append("")
     out.append("Footer (centered, small caps gold text):")
     out.append(f"  TODAY'S CARD: {total_plays} PLAYS")
