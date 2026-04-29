@@ -9,3 +9,5 @@ dist/
 build/
 *.egg-info/
 data/failsafes/
+data/nrfi_cache/
+data/nrfi_models/

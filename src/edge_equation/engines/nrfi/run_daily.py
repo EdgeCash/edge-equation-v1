@@ -24,6 +24,7 @@ from .data.odds import init_odds_tables, lookup_closing_odds
 from .data.scrapers_etl import daily_etl
 from .data.storage import NRFIStore
 from .evaluation.backtest import reconstruct_features_for_date
+from .ledger import render_ledger_section
 from .models.inference import NRFIInferenceEngine
 from .models.model_training import MODEL_VERSION, TrainedBundle
 from .output import build_output

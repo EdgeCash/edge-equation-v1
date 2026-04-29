@@ -112,6 +112,9 @@ _SCHEMA: tuple[str, ...] = (
         color_band     VARCHAR,
         color_hex      VARCHAR,
         signal         VARCHAR,
+        poisson_p_nrfi DOUBLE,
+        ml_p_nrfi      DOUBLE,
+        blended_p_nrfi DOUBLE,
         mc_low         DOUBLE,
         mc_high        DOUBLE,
         mc_band_pp     DOUBLE,
@@ -127,6 +130,7 @@ _SCHEMA: tuple[str, ...] = (
         tier_value     DOUBLE,
         tier_band      VARCHAR,
         probability_display VARCHAR,
+        sort_edge      DOUBLE,
         created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (game_pk, model_version)
     )
@@ -177,6 +181,9 @@ class NRFIStore:
         """
         for col, typ in (
             ("color_hex", "VARCHAR"),
+            ("poisson_p_nrfi", "DOUBLE"),
+            ("ml_p_nrfi", "DOUBLE"),
+            ("blended_p_nrfi", "DOUBLE"),
             ("mc_band_pp", "DOUBLE"),
             ("driver_text", "VARCHAR"),
             ("edge_pp", "DOUBLE"),
@@ -186,6 +193,7 @@ class NRFIStore:
             ("tier_value", "DOUBLE"),
             ("tier_band", "VARCHAR"),
             ("probability_display", "VARCHAR"),
+            ("sort_edge", "DOUBLE"),
         ):
             self._conn.execute(
                 f"ALTER TABLE predictions ADD COLUMN IF NOT EXISTS {col} {typ}"

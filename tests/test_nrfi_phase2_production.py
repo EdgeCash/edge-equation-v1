@@ -113,6 +113,28 @@ def test_shared_core_parlay_facade_builds_candidates():
     assert candidates[0].n_legs == 2
 
 
+def test_prediction_schema_accepts_ml_audit_columns(tmp_path):
+    from edge_equation.engines.nrfi.data.storage import NRFIStore
+
+    store = NRFIStore(tmp_path / "nrfi.duckdb")
+    store.upsert("predictions", [{
+        "game_pk": 1,
+        "model_version": "elite_nrfi_v1",
+        "nrfi_prob": 0.61,
+        "nrfi_pct": 61.0,
+        "lambda_total": 0.92,
+        "color_band": "Light Green",
+        "color_hex": "#7cb342",
+        "signal": "LEAN_NRFI",
+        "poisson_p_nrfi": 0.58,
+        "ml_p_nrfi": 0.63,
+        "blended_p_nrfi": 0.61,
+        "sort_edge": 0.11,
+    }])
+    df = store.query_df("SELECT poisson_p_nrfi, ml_p_nrfi, blended_p_nrfi, sort_edge FROM predictions")
+    assert float(df.iloc[0].blended_p_nrfi) == 0.61
+
+
 def test_email_market_inputs_use_captured_nrfi_odds(monkeypatch):
     from edge_equation.engines.nrfi import email_report
 
