@@ -64,6 +64,7 @@ from .data.scrapers_etl import daily_etl
 from .data.storage import NRFIStore
 from .evaluation.backtest import reconstruct_features_for_date
 from .integration.engine_bridge import NRFIEngineBridge
+from .ledger import render_ledger_section
 from .output import build_output, to_email_card
 from edge_equation.utils.logging import get_logger
 
@@ -121,18 +122,14 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         for o in outputs:
             picks.append(_to_card_pick(o, engine_label, label_map))
 
-    # Sort: NRFI side first (descending NRFI%), then YRFI side.
-    picks.sort(key=lambda p: (
-        0 if p["market_type"] == "NRFI" else 1,
-        -float(p.get("pct", 0.0)),
-    ))
+    picks = _top_six_by_edge(picks)
 
     # Settle yesterday's slate before rendering today's so the YTD
     # ledger reflects last night's results. Best-effort — a network
     # blip on actuals shouldn't block the daily email.
     ledger_text = ""
     try:
-        from .ledger import render_ledger_section, settle_predictions
+        from .ledger import settle_predictions
         season = int(target_date[:4])
         settle_predictions(store, season=season, cutoff_date=target_date,
                             config=cfg, pull_actuals=True)
@@ -161,7 +158,7 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         "card_type": CARD_TYPE,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "headline": f"NRFI/YRFI Daily — {subject_date}",
-        "subhead": "Facts. Not Feelings.",
+        "subhead": _report_subhead(engine_label, ledger_text),
         "tagline": _footer_text(engine_label),
         "engine": engine_label,
         "target_date": subject_date,
@@ -170,6 +167,37 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         "parlay_text": parlay_text,
         "parlay_ledger_text": parlay_ledger_text,
     }
+
+
+def _report_subhead(engine_label: str, ledger_text: str) -> str:
+    """Short professional header for the daily report."""
+    disclaimer = ""
+    if engine_label != "ml":
+        disclaimer = " | BASELINE FALLBACK: trained bundle unavailable"
+    ledger_headline = _ledger_headline(ledger_text)
+    return f"Facts. Not Feelings.{disclaimer}{ledger_headline}"
+
+
+def _ledger_headline(ledger_text: str) -> str:
+    """Compress the YTD ALL/ALL row into a one-line header, if present."""
+    if not ledger_text:
+        return ""
+    for line in ledger_text.splitlines():
+        parts = line.split()
+        if len(parts) >= 4 and parts[0] == "ALL" and parts[1] == "ALL":
+            return f" | YTD {parts[2]} {parts[3]}"
+    return ""
+
+
+def _top_six_by_edge(picks: list[dict]) -> list[dict]:
+    """Daily report policy: show the top six by available edge strength."""
+    def _strength(pick: dict) -> float:
+        edge_pp = pick.get("edge_pp")
+        if edge_pp is not None:
+            return float(edge_pp)
+        return abs(float(pick.get("pct", 50.0)) - 50.0)
+
+    return sorted(picks, key=_strength, reverse=True)[:6]
 
 
 def _to_card_pick(bridge_output, engine_label: str,
@@ -235,13 +263,23 @@ def _to_card_pick(bridge_output, engine_label: str,
         "lambda_total": out.lambda_total,
         "mc_band_pp": out.mc_band_pp,
         "edge": (f"{out.edge_pp:+.1f}pp" if out.edge_pp is not None else None),
+        "edge_pp": out.edge_pp,
         "kelly": (f"{out.kelly_units:.2f}u" if (out.kelly_units or 0) > 0 else None),
+        "kelly_suggestion": out.kelly_suggestion,
         "grade": out.grade,
         "tier": tier_clf.tier.value,
         "tier_basis": tier_clf.basis,
         "drivers": out.driver_text,
+        "why": _why_note(out.driver_text, out.lambda_total, out.mc_band_pp),
         "rendered": pretty,
     }
+
+
+def _why_note(drivers: list[str], lambda_total: float, mc_band_pp: float | None) -> str:
+    """Compact operator-facing explanation for a daily report row."""
+    lead = ", ".join(drivers[:2]) if drivers else "model edge"
+    mc = f", MC ±{mc_band_pp:.1f}pp" if mc_band_pp is not None else ""
+    return f"{lead}; λ={lambda_total:.2f}{mc}"
 
 
 def _build_parlay_block(

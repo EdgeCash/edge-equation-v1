@@ -23,8 +23,10 @@ from .config import get_default_config
 from .data.scrapers_etl import daily_etl
 from .data.storage import NRFIStore
 from .evaluation.backtest import reconstruct_features_for_date
+from .ledger import render_ledger_section
 from .models.inference import NRFIInferenceEngine
 from .models.model_training import MODEL_VERSION, TrainedBundle
+from .ledger import render_ledger_section
 from .output import build_output
 from edge_equation.utils.logging import get_logger
 
@@ -122,7 +124,9 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.output_json).write_text(json.dumps(rows, indent=2, default=str))
         log.info("Wrote %d predictions → %s", len(rows), args.output_json)
 
-    _print_top_board(rows, args.date)
+    print(render_ledger_section(store, season=int(args.date[:4])) or
+          f"YTD LEDGER ({args.date[:4]}): no settled picks yet")
+    _print_top_board(rows, args.date, baseline_fallback=bundle is None)
     return 0
 
 
@@ -148,10 +152,14 @@ def _decode_driver_text(row: dict) -> str:
     return ""
 
 
-def _print_top_board(rows: list[dict], game_date: str) -> None:
+def _print_top_board(
+    rows: list[dict], game_date: str, *, baseline_fallback: bool = False,
+) -> None:
     """Print a compact production board: Top 6 by edge-strength."""
     ranked = sorted(rows, key=_row_sort_strength, reverse=True)[:6]
     print(f"\n=== NRFI Elite Board {game_date} - Top 6 by edge ===")
+    if baseline_fallback:
+        print("DISCLAIMER: trained calibrated bundle unavailable; using Poisson baseline.")
     for idx, r in enumerate(ranked, start=1):
         prob = r.get("probability_display") or f"{float(r['nrfi_pct']):.1f}% NRFI"
         mc = (
@@ -169,7 +177,7 @@ def _print_top_board(rows: list[dict], game_date: str) -> None:
             f"λ={float(r['lambda_total']):.2f}  {mc:<8} {edge:<10} "
             f"Kelly={r.get('kelly_suggestion') or 'Market unavailable'}"
         )
-        print(f"    SHAP: {drivers}")
+        print(f"    Why: {drivers}; λ={float(r['lambda_total']):.2f}")
 
 
 if __name__ == "__main__":

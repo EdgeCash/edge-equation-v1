@@ -52,10 +52,10 @@ def _render_streamlit() -> None:
         return [f"background-color: {row.color}; color: black"
                 for _ in row.index]
 
+    df["why"] = df.apply(_why_note, axis=1)
     show_cols = ["away_team", "home_team", "probability_display", "tier",
-                  "tier_band", "nrfi_pct", "lambda_total", "mc_band_pp",
-                  "edge_pp", "kelly_suggestion", "driver_text", "color_band",
-                  "signal"]
+                  "tier_band", "lambda_total", "mc_band_pp", "edge_pp",
+                  "kelly_suggestion", "why", "color_band", "signal"]
     show_cols = [c for c in show_cols if c in df.columns]
     st.subheader("Top 6 by edge")
     st.dataframe(df[show_cols + ["color"]].style.apply(style_row, axis=1),
@@ -112,6 +112,32 @@ def _prepare_board(df):
     else:
         df["_sort_edge"] = (df["nrfi_prob"].astype(float) - 0.5).abs()
     return df.sort_values("_sort_edge", ascending=False)
+
+
+def _why_note(row) -> str:
+    """Short dashboard explanation mirroring the daily report."""
+    drivers = _driver_text_list(row.get("driver_text"))
+    lead = ", ".join(drivers[:2]) if drivers else "model edge"
+    mc = ""
+    if row.get("mc_band_pp") is not None:
+        try:
+            mc = f", MC +/-{float(row.mc_band_pp):.1f}pp"
+        except Exception:
+            mc = ""
+    return f"{lead}; lambda={float(row.lambda_total):.2f}{mc}"
+
+
+def _driver_text_list(raw) -> list[str]:
+    if isinstance(raw, list):
+        return [str(x) for x in raw]
+    if isinstance(raw, str) and raw:
+        try:
+            val = json.loads(raw)
+            if isinstance(val, list):
+                return [str(x) for x in val]
+        except Exception:
+            return [raw]
+    return []
 
 
 def main() -> int:
