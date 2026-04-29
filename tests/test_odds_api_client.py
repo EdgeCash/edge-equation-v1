@@ -43,6 +43,10 @@ def test_cache_key_deterministic_regardless_of_market_order():
 
 
 def test_legacy_ingestion_client_reexports_shared_core_client():
+    from edge_equation.ingestion.odds_api_client import (
+        TheOddsApiClient as LegacyOddsApiClient,
+    )
+
     assert LegacyOddsApiClient is TheOddsApiClient
 
 

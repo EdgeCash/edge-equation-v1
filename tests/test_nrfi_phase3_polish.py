@@ -125,7 +125,8 @@ def test_to_email_card_renders_one_liner_plus_drivers():
     )
     s = to_email_card(out)
     assert "74.0% NRFI" in s
-    assert "[ Deep Green]" in s or "[Deep Green]" in s
+    assert "LOCK" in s
+    assert "Deep Green" in s
     assert "drivers:" in s
 
 
