@@ -1,41 +1,43 @@
-"""Naive baseline projection layer for MLB player props.
+"""Per-player Poisson projection for MLB player props.
 
-This is the **skeleton** projection — a league-average prior over the
-prop's natural rate that the engine uses until per-player Statcast
-features are wired in. It's deliberately simple:
+Replaces the Phase-4 league-average skeleton with a per-player rate
+model. The pipeline is:
 
-* For batter rate markets (HR / Hits / RBI / Total Bases) we model the
-  per-game count as Poisson(λ_market_implied) where λ comes from the
-  market line's mid-point. Then `P(over)` = 1 − Poisson CDF at the line.
-* For pitcher Strikeouts we use the same Poisson mid-point construction.
+1. Look up the batter / pitcher's rolling rate (per-PA / per-BF) over
+   the last ``lookback_days`` of Statcast events.
+2. Bayesian-blend that observed rate toward the league prior with
+   `prior_weight_pa` (or `prior_weight_bf`) pseudo-counts so call-ups
+   don't over-fit on tiny samples.
+3. Multiply by expected volume (4.1 PAs for a starting batter, 22 BFs
+   for a starting pitcher — both PropsConfig-tunable) to get λ.
+4. ``P(Over line) = 1 − Poisson_CDF(line, λ)``; Under = 1 − Over.
+5. ``confidence`` reflects how much per-player signal we had: scales
+   linearly from 0.30 (pure prior) to ~0.85 (heavy own-rate weight).
 
-The point of this skeleton is NOT to beat the market — it's to give the
-edge math a working numerator while the proper projection model
-(Statcast xwOBA + park + ump factors) is built. A pure mid-point prior
-will compute zero edge against the market average, so realistic edges
-only appear once the projection module is replaced.
-
-When the future model lands it should:
-
-* Replace `project_player_market_prob` with a Statcast-driven estimate.
-* Keep the same return shape (`ProjectedSide` for both Over and Under)
-  so the edge layer doesn't need changes.
-* Return `confidence` (∈ [0, 1]) callers can use to gate noisy
-  projections.
+Everything routes through the same `ProjectedSide` shape the edge
+module already consumes — no breaking changes to callers downstream.
 """
 
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Iterable, Optional, Sequence
+from typing import Iterable, Optional, Sequence, Union
 
+from .config import ProjectionKnobs
+from .data.statcast_loader import (
+    BatterRollingRates,
+    LEAGUE_BATTER_PRIOR_PER_PA,
+    LEAGUE_PITCHER_PRIOR_PER_BF,
+    PitcherRollingRates,
+    bayesian_blend,
+)
 from .markets import PropMarket
 from .odds_fetcher import PlayerPropLine
 
 
 # ---------------------------------------------------------------------------
-# Output shape
+# Output shape — unchanged from the Phase-4 skeleton so callers don't break.
 # ---------------------------------------------------------------------------
 
 
@@ -45,13 +47,17 @@ class ProjectedSide:
     market: PropMarket
     player_name: str
     line_value: float
-    side: str           # 'Over' / 'Under'
-    model_prob: float   # 0..1, calibrated probability the side hits
-    confidence: float   # 0..1, how much weight callers should put on it
+    side: str
+    model_prob: float
+    confidence: float
+    # Phase-Props-1 additions for audit / dashboard:
+    lam: float = 0.0           # the Poisson λ that drove model_prob
+    blend_n: int = 0           # PA / BF count blended (0 → pure prior)
+    blended_rate: float = 0.0  # the per-PA / per-BF rate used
 
 
 # ---------------------------------------------------------------------------
-# Helpers — Poisson math (no scipy import; we keep the engine extras-free)
+# Poisson math (closed-form CDF — keeps the engine extras-free)
 # ---------------------------------------------------------------------------
 
 
@@ -72,89 +78,161 @@ def _poisson_cdf(k: int, lam: float) -> float:
 
 
 def _prob_over_poisson(line: float, lam: float) -> float:
-    """P(X > line) for X ~ Poisson(lam). Handles half-integer lines
-    via floor() and integer lines via the strict-inequality CDF.
-
-    The most common prop lines are 0.5, 1.5, 2.5 — non-integer cases
-    where `line > line` strict-inequality reduces to `X >= ceil(line)`,
-    so 1 − CDF(floor(line)).
-    """
+    """P(X > line) for X ~ Poisson(lam)."""
     return 1.0 - _poisson_cdf(int(math.floor(line)), lam)
 
 
 # ---------------------------------------------------------------------------
-# Public projection API
+# Confidence scaling — pure prior → 0.30; full own-weight → 0.85
 # ---------------------------------------------------------------------------
 
 
-# Skeleton league-average rates. Each is the per-game expected count
-# for an "average" MLB player making a typical-volume start (4 PA for
-# a batter, ~5.7 IP for a pitcher in 2025–26 usage). These get replaced
-# with per-player Statcast estimates in a follow-up PR.
-_LEAGUE_RATE_PER_GAME: dict[str, float] = {
-    "HR":          0.13,   # ~13% of starters HR per game (league avg)
-    "Hits":        1.05,   # ~1 hit per starting batter per game
-    "Total_Bases": 1.55,   # singles + doubles + triples + 4×HR
-    "RBI":         0.55,
-    "K":           5.20,   # average starter Ks per outing in 2025-26
-}
+def _confidence_for_blend(n: int, prior_weight: float) -> float:
+    """Map sample-size + prior-weight to a [0.30, 0.85] confidence.
+
+    `n / (n + prior_weight)` is the own-rate weight; we lerp linearly
+    between 0.30 (zero own weight) and 0.85 (1.0 own weight).
+    """
+    if n <= 0:
+        return 0.30
+    own_weight = n / (n + max(1.0, prior_weight))
+    return 0.30 + 0.55 * float(own_weight)
+
+
+# ---------------------------------------------------------------------------
+# Per-player projection
+# ---------------------------------------------------------------------------
+
+
+PlayerRates = Union[BatterRollingRates, PitcherRollingRates, None]
+
+
+def _resolve_rate(
+    line: PlayerPropLine,
+    rates: PlayerRates,
+    knobs: ProjectionKnobs,
+) -> tuple[float, int, float]:
+    """Return (per_PA_or_BF_rate, n_observed, prior_weight) for `line`.
+
+    Falls back to the league prior when `rates` is None or the market
+    has no observed value yet.
+    """
+    market = line.market.canonical
+    if line.market.role == "batter":
+        prior = LEAGUE_BATTER_PRIOR_PER_PA.get(market, 0.0)
+        prior_w = knobs.prior_weight_pa
+        if isinstance(rates, BatterRollingRates):
+            obs = rates.get_rate(market, fallback=prior)
+            n = rates.n_pa
+            return bayesian_blend(obs, n, prior, prior_w), n, prior_w
+        return prior, 0, prior_w
+    # pitcher
+    prior = LEAGUE_PITCHER_PRIOR_PER_BF.get(market, 0.0)
+    prior_w = knobs.prior_weight_bf
+    if isinstance(rates, PitcherRollingRates):
+        obs = rates.get_rate(market, fallback=prior)
+        n = rates.n_bf
+        return bayesian_blend(obs, n, prior, prior_w), n, prior_w
+    return prior, 0, prior_w
 
 
 def project_player_market_prob(
     line: PlayerPropLine, *,
+    rates: PlayerRates = None,
+    knobs: Optional[ProjectionKnobs] = None,
+    expected_volume: Optional[float] = None,
     rate_override: Optional[float] = None,
 ) -> ProjectedSide:
-    """Return a baseline projection for one prop line.
+    """Project the side of `line` using the per-player rate (with
+    league-prior blend) × expected per-game volume.
 
     Parameters
     ----------
-    line : The PlayerPropLine to project.
-    rate_override : Override the league-average λ (e.g., a real
-        per-player rate from Statcast when that lands).
+    rates : Per-player rolling rates (BatterRollingRates or
+        PitcherRollingRates). When None the projection uses pure
+        league priors.
+    knobs : ProjectionKnobs override (defaults to a fresh ProjectionKnobs()).
+    expected_volume : Override PAs / BFs for the game. Defaults to
+        `knobs.expected_batter_pa` for batter markets and
+        `knobs.expected_pitcher_bf` for pitcher markets.
+    rate_override : Per-PA / per-BF rate override. When provided, skips
+        the blend layer entirely — used for backward-compat tests and
+        for callers with their own projection model.
     """
-    lam = (
-        rate_override if rate_override is not None
-        else _LEAGUE_RATE_PER_GAME.get(line.market.canonical, 0.0)
-    )
+    knobs = knobs or ProjectionKnobs()
+
+    if rate_override is not None:
+        # Backward-compat path: caller supplied a final rate.
+        per_unit = float(rate_override)
+        n_obs = 0
+        # Default volume by role.
+        if expected_volume is None:
+            expected_volume = (
+                knobs.expected_batter_pa if line.market.role == "batter"
+                else knobs.expected_pitcher_bf
+            )
+        lam = per_unit * float(expected_volume)
+        confidence = 0.30
+    else:
+        per_unit, n_obs, prior_w = _resolve_rate(line, rates, knobs)
+        if expected_volume is None:
+            expected_volume = (
+                knobs.expected_batter_pa if line.market.role == "batter"
+                else knobs.expected_pitcher_bf
+            )
+        lam = per_unit * float(expected_volume)
+        confidence = _confidence_for_blend(n_obs, prior_w)
+
     p_over = _prob_over_poisson(line.line_value, lam)
-    side_lower = line.side.strip().lower()
+    side_lower = (line.side or "").strip().lower()
     if side_lower in ("over", "yes"):
         prob = p_over
     elif side_lower in ("under", "no"):
         prob = 1.0 - p_over
     else:
-        # Unknown side label — defensively project as the over side and
-        # let the caller decide what to do.
         prob = p_over
 
-    # Skeleton confidence is flat 0.30 — these projections are league-
-    # priors with no per-player signal, so callers should treat the
-    # output as floor evidence, not a recommendation.
     return ProjectedSide(
         market=line.market,
         player_name=line.player_name,
         line_value=line.line_value,
         side=line.side,
         model_prob=float(prob),
-        confidence=0.30,
+        confidence=float(confidence),
+        lam=float(lam),
+        blend_n=int(n_obs),
+        blended_rate=float(per_unit),
     )
+
+
+# ---------------------------------------------------------------------------
+# Bulk projection
+# ---------------------------------------------------------------------------
 
 
 def project_all(
     lines: Iterable[PlayerPropLine],
     *,
+    rates_by_player: Optional[dict[str, PlayerRates]] = None,
+    knobs: Optional[ProjectionKnobs] = None,
     rate_overrides: Optional[dict] = None,
 ) -> list[ProjectedSide]:
-    """Project every line in `lines`. `rate_overrides` keys may be:
-        * (player_name, canonical_market) for a per-player override
-        * canonical_market for a market-wide override
-    Returns the projections in input order."""
+    """Project every line. `rates_by_player` keys on `player_name` and
+    yields the per-player Statcast rates; `rate_overrides` matches the
+    Phase-4 API for callers passing per-player flat rates by hand.
+
+    Returns the projections in input order so callers can `zip(lines, projections)`.
+    """
+    rates_by_player = rates_by_player or {}
     rate_overrides = rate_overrides or {}
     out: list[ProjectedSide] = []
     for line in lines:
-        rate = rate_overrides.get(
+        override = rate_overrides.get(
             (line.player_name, line.market.canonical),
             rate_overrides.get(line.market.canonical),
         )
-        out.append(project_player_market_prob(line, rate_override=rate))
+        rates = rates_by_player.get(line.player_name)
+        out.append(project_player_market_prob(
+            line, rates=rates, knobs=knobs, rate_override=override,
+        ))
     return out
