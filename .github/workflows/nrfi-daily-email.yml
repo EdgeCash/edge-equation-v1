@@ -82,6 +82,21 @@ jobs:
           # Poisson baseline when no trained bundle is on disk.
           pip install -e ".[nrfi]"
 
+      # Phase 3 ledger + Phase 4 closing-line snapshots persist in the
+      # DuckDB. Hydrate from the most recent artifact so the email's
+      # auto-settle pass sees yesterday's settled history and today's
+      # captured odds. Without this the YTD ledger renders empty and
+      # the live-odds path always falls back to defaults.
+      - name: Hydrate DuckDB from latest backfill artifact
+        if: env.SKIP_RUN != '1'
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: backfill-historical.yml
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
       - name: Build & send NRFI email
         if: env.SKIP_RUN != '1'
         run: |
@@ -103,3 +118,17 @@ jobs:
           path: data/failsafes
           if-no-files-found: ignore
           retention-days: 14
+
+      # Re-upload the populated DuckDB so today's settled picks + email
+      # context survive into tomorrow's run. Same `nrfi-duckdb-latest`
+      # name (overwrite=true) the weekly retrain + odds-snapshot
+      # workflows use — they share one artifact handoff.
+      - name: Re-upload populated DuckDB (latest)
+        if: always() && env.SKIP_RUN != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/nrfi.duckdb
+          if-no-files-found: warn
+          retention-days: 30
+          overwrite: true
