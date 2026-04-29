@@ -75,6 +75,7 @@ from .evaluation.backtest import reconstruct_features_for_date
 from .integration.engine_bridge import NRFIEngineBridge
 from .ledger import render_ledger_section
 from .output import build_output
+from .output.drivers import format_driver_notes
 
 log = get_logger(__name__, "INFO")
 
@@ -366,6 +367,10 @@ def _to_card_pick(
         market_type=out.market_type,
         side_probability=out.nrfi_prob,
     )
+    readable_drivers = format_driver_notes(
+        bridge_output.shap_drivers,
+        max_drivers=4,
+    )
     rendered = f"{out.game_id} · {out.market_type} {out.nrfi_pct:.1f}%"
 
     return {
@@ -386,8 +391,8 @@ def _to_card_pick(
         "grade": out.grade,
         "tier": tier_clf.tier.value,
         "tier_basis": tier_clf.basis,
-        "drivers": out.driver_text,
-        "why": _why_note(out.driver_text, out.lambda_total, out.mc_band_pp),
+        "drivers": readable_drivers,
+        "why": _why_note(readable_drivers, out.lambda_total, out.mc_band_pp),
         "rendered": rendered,
     }
 
