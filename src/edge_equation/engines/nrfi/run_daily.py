@@ -14,13 +14,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
 from .config import get_default_config
-from .data.odds import init_odds_tables, lookup_closing_odds
+from .data.odds import capture_closing_lines, init_odds_tables, lookup_closing_odds
 from .data.scrapers_etl import daily_etl
 from .data.storage import NRFIStore
 from .evaluation.backtest import reconstruct_features_for_date
@@ -42,6 +43,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="Disable Monte Carlo refinement")
     parser.add_argument("--no-shap", action="store_true",
                         help="Disable SHAP explanations")
+    parser.add_argument("--no-live-odds", action="store_true",
+                        help="Skip today's best-effort Odds API pulls")
     parser.add_argument("--output-json", default="nrfi_output.json",
                         help="Where to drop the per-game JSON")
     args = parser.parse_args(argv)
@@ -59,6 +62,10 @@ def main(argv: list[str] | None = None) -> int:
     # Pull schedule + lineups + ump.
     n = daily_etl(args.date, store, config=cfg)
     log.info("Hydrated %d games for %s", n, args.date)
+
+    odds_status = LiveOddsStatus()
+    if not args.no_live_odds:
+        odds_status = _pull_live_odds(store, args.date, config=cfg)
 
     # Build features for every game on the slate.
     feats_per_game = reconstruct_features_for_date(args.date, store=store, config=cfg)
@@ -107,6 +114,7 @@ def main(argv: list[str] | None = None) -> int:
                 game_id=str(pk),
                 blended_p=p,
                 lambda_total=float(f.get("lambda_total", 1.0)),
+                market_american_odds=lookup_closing_odds(store, int(pk), "NRFI"),
                 engine="poisson_baseline",
                 model_version="poisson_baseline_only",
             )
@@ -143,16 +151,20 @@ def main(argv: list[str] | None = None) -> int:
 
     print(render_ledger_section(store, season=int(args.date[:4])) or
           f"YTD LEDGER ({args.date[:4]}): no settled picks yet")
-    _print_top_board(rows, args.date, baseline_fallback=bundle is None)
+    _print_top_board(
+        rows, args.date,
+        baseline_fallback=bundle is None,
+        odds_status=odds_status,
+    )
     return 0
 
 
 def _row_sort_strength(row: dict) -> float:
-    """Rank by edge when available, otherwise distance from coin-flip."""
+    """Rank by edge when available, otherwise highest NRFI probability."""
     edge = row.get("edge")
     if edge is not None:
         return float(edge)
-    return abs(float(row.get("nrfi_prob", 0.5)) - 0.5)
+    return float(row.get("nrfi_prob", 0.0))
 
 
 def _implied_prob(american_odds: float) -> float:
@@ -175,14 +187,91 @@ def _decode_driver_text(row: dict) -> str:
     return ""
 
 
+class LiveOddsStatus:
+    """Small status object for daily report transparency."""
+
+    def __init__(
+        self,
+        *,
+        nrfi_snapshots: int = 0,
+        props_games: int = 0,
+        odds_api_available: bool = False,
+        message: str = "",
+    ):
+        self.nrfi_snapshots = nrfi_snapshots
+        self.props_games = props_games
+        self.odds_api_available = odds_api_available
+        self.message = message
+
+
+def _pull_live_odds(store: NRFIStore, game_date: str, *, config) -> LiveOddsStatus:
+    """Best-effort live market pull for today's daily run.
+
+    NRFI/YRFI 0.5 lines are persisted into DuckDB for edge/Kelly and later
+    ledger settlement. Player props are fetched as a smoke-check/count only
+    until the props engine owns its model/output layer.
+    """
+    if not os.environ.get("THE_ODDS_API_KEY"):
+        return LiveOddsStatus(message="Odds API key unavailable")
+
+    nrfi_snapshots = capture_closing_lines(store, game_date, config=config)
+    props_games = _pull_player_prop_odds_count()
+    return LiveOddsStatus(
+        nrfi_snapshots=nrfi_snapshots,
+        props_games=props_games,
+        odds_api_available=True,
+        message="live pull complete",
+    )
+
+
+def _pull_player_prop_odds_count() -> int:
+    """Return count of MLB games with prop odds available from The Odds API."""
+    try:
+        from edge_equation.engines.props_prizepicks.source.odds_api import (
+            MLB_PROPS_MARKETS,
+            SPORT_KEY_MLB,
+        )
+        import httpx
+
+        api_key = os.environ["THE_ODDS_API_KEY"]
+        url = f"https://api.the-odds-api.com/v4/sports/{SPORT_KEY_MLB}/odds"
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.get(url, params={
+                "apiKey": api_key,
+                "regions": "us",
+                "markets": ",".join(MLB_PROPS_MARKETS),
+                "oddsFormat": "american",
+                "dateFormat": "iso",
+            })
+            resp.raise_for_status()
+            payload = resp.json()
+        return len(payload) if isinstance(payload, list) else 0
+    except Exception as exc:
+        log.warning("player prop odds pull skipped (%s): %s", type(exc).__name__, exc)
+        return 0
+
+
 def _print_top_board(
-    rows: list[dict], game_date: str, *, baseline_fallback: bool = False,
+    rows: list[dict],
+    game_date: str,
+    *,
+    baseline_fallback: bool = False,
+    odds_status: LiveOddsStatus | None = None,
 ) -> None:
     """Print a compact production board: Top 6 by edge-strength."""
     ranked = sorted(rows, key=_row_sort_strength, reverse=True)[:6]
     print(f"\n=== NRFI Elite Board {game_date} - Top 6 by edge ===")
     if baseline_fallback:
         print("DISCLAIMER: trained calibrated bundle unavailable; using Poisson baseline.")
+    if odds_status is not None:
+        if odds_status.odds_api_available:
+            print(
+                "Odds API: "
+                f"{odds_status.nrfi_snapshots} NRFI/YRFI snapshots, "
+                f"{odds_status.props_games} prop games"
+            )
+        else:
+            print(f"Odds API: unavailable ({odds_status.message})")
     for idx, r in enumerate(ranked, start=1):
         prob = r.get("probability_display") or f"{float(r['nrfi_pct']):.1f}% NRFI"
         mc = (
@@ -190,14 +279,16 @@ def _print_top_board(
             if r.get("mc_band_pp") is not None else "MC --"
         )
         edge = (
-            f"{float(r['edge_pp']):+.1f}pp"
+            f"edge {float(r['edge_pp']):+.1f}pp"
             if r.get("edge_pp") is not None else "edge n/a"
         )
         drivers = _decode_driver_text(r) or "model drivers pending"
+        tier = str(r.get("tier", "NO_PLAY"))
         band = str(r.get("color_band", ""))
+        tier_color = f"{tier} ({band})" if band else tier
         print(
             f"{idx:>2}. game_pk={int(r['game_pk']):>10}  {prob:<11} "
-            f"{str(r.get('tier', 'NO_PLAY')):<8} {band:<11} "
+            f"{tier_color:<24} "
             f"lambda={float(r['lambda_total']):.2f}  {mc:<8} {edge:<10} "
             f"Kelly={r.get('kelly_suggestion') or 'Market unavailable'}"
         )

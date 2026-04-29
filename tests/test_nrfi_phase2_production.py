@@ -158,6 +158,56 @@ def test_email_market_inputs_use_captured_nrfi_odds(monkeypatch):
     assert american_odds == [-120.0, -110.0]
 
 
+def test_daily_sort_prefers_edge_then_highest_nrfi_probability():
+    from edge_equation.engines.nrfi.run_daily import _row_sort_strength
+
+    assert _row_sort_strength({"edge": 0.08, "nrfi_prob": 0.55}) == 0.08
+    # Without odds/edge, Top 6 should be highest NRFI probability, not distance
+    # from 50%. This keeps YRFI-leaning 43% games off the NRFI board.
+    assert _row_sort_strength({"edge": None, "nrfi_prob": 0.59}) > \
+        _row_sort_strength({"edge": None, "nrfi_prob": 0.43})
+
+
+def test_live_odds_status_reports_missing_key(monkeypatch):
+    from edge_equation.engines.nrfi.run_daily import _pull_live_odds
+
+    monkeypatch.delenv("THE_ODDS_API_KEY", raising=False)
+    status = _pull_live_odds(object(), "2026-04-29", config=object())
+
+    assert status.odds_api_available is False
+    assert "key unavailable" in status.message
+
+
+def test_top_board_renders_tier_color_and_odds_status(capsys):
+    from edge_equation.engines.nrfi.run_daily import LiveOddsStatus, _print_top_board
+
+    _print_top_board(
+        [{
+            "game_pk": 1,
+            "probability_display": "59.0% NRFI",
+            "nrfi_prob": 0.59,
+            "tier": "MODERATE",
+            "color_band": "Light Green",
+            "lambda_total": 0.42,
+            "mc_band_pp": 2.4,
+            "edge_pp": 5.1,
+            "kelly_suggestion": "0.35u",
+            "driver_text": "+8 from wind blowing in",
+        }],
+        "2026-04-29",
+        odds_status=LiveOddsStatus(
+            nrfi_snapshots=4,
+            props_games=12,
+            odds_api_available=True,
+        ),
+    )
+    out = capsys.readouterr().out
+    assert "Odds API: 4 NRFI/YRFI snapshots, 12 prop games" in out
+    assert "MODERATE (Light Green)" in out
+    assert "edge +5.1pp" in out
+    assert "Kelly=0.35u" in out
+
+
 def test_human_driver_notes_are_readable_and_capped():
     from edge_equation.engines.nrfi.output.drivers import format_driver_notes
 
@@ -183,3 +233,24 @@ def test_undersized_manifest_shrinks_model_weight(tmp_path):
 
     assert profile.blend_weight == pytest.approx(0.10)
     assert profile.use_poisson_only_baseline is True
+
+
+def test_daily_sort_prefers_highest_nrfi_without_market_edge():
+    from edge_equation.engines.nrfi.run_daily import _row_sort_strength
+
+    assert _row_sort_strength({"nrfi_prob": 0.59, "edge": None}) > \
+        _row_sort_strength({"nrfi_prob": 0.41, "edge": None})
+
+
+def test_live_odds_pull_uses_capture_and_props_count(monkeypatch):
+    from edge_equation.engines.nrfi import run_daily
+
+    monkeypatch.setenv("THE_ODDS_API_KEY", "TEST")
+    monkeypatch.setattr(run_daily, "capture_closing_lines", lambda *a, **kw: 4)
+    monkeypatch.setattr(run_daily, "_pull_player_prop_odds_count", lambda: 9)
+
+    status = run_daily._pull_live_odds(object(), "2026-04-29", config=object())
+
+    assert status.odds_api_available is True
+    assert status.nrfi_snapshots == 4
+    assert status.props_games == 9
