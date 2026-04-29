@@ -1,10 +1,8 @@
-name: PrizePicks Fetcher (hourly)
+name: Legacy PrizePicks Fetcher (manual only)
 
-# Pulls the PrizePicks projections board hourly and commits a fresh
-# CSV to data/prizepicks/latest.csv plus a timestamped snapshot to
-# data/prizepicks/snapshots/. The user opens the latest.csv URL in
-# Safari on iPhone, downloads the file, opens it in Numbers, and
-# pastes into the workbook's `_raw` sheet.
+# Legacy backfill workflow. Live MLB props should now come from The Odds API
+# through edge_equation.engines.props_prizepicks.source. This scraper remains
+# available for historical CSV snapshots only and is not scheduled.
 #
 # Server-side replacement for the iOS Shortcut (which kept fighting
 # us on magic-variable wiring). Reuses the same User-Agent that the
@@ -16,10 +14,6 @@ name: PrizePicks Fetcher (hourly)
 # accuracy rates without any extra tooling.
 
 on:
-  schedule:
-    # Top of every hour. The CT-hour guard below scopes actual fetches
-    # to MLB-relevant windows (10am-11pm CT) so off-hours runs are no-ops.
-    - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       max_pages:

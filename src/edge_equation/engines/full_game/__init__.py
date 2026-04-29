@@ -22,5 +22,5 @@ at -150, etc.). The NRFI raw-probability ladder does not generalise
 here — see ``edge_equation.engines.nrfi.utils.colors`` for the symmetric
 ladder and the audit thread for why.
 
-Track work under PR series claude/full-game-* after props ships.
+Track work under the full-game PR series after props ships.
 """

@@ -3,7 +3,7 @@ import json
 import pytest
 import httpx
 
-from edge_equation.ingestion.odds_api_client import (
+from edge_equation.engines.core.data.odds_api_client import (
     TheOddsApiClient,
     API_KEY_ENV_VAR,
     DEFAULT_ENDPOINT,
@@ -40,6 +40,10 @@ def test_cache_key_deterministic_regardless_of_market_order():
     k2 = TheOddsApiClient.cache_key("baseball_mlb", ["totals", "h2h"])
     assert k1 == k2
     assert k1 == "theoddsapi:baseball_mlb:h2h,totals:us:american"
+
+
+def test_legacy_ingestion_client_reexports_shared_core_client():
+    assert LegacyOddsApiClient is TheOddsApiClient
 
 
 def test_cache_key_differentiates_regions_and_format():
@@ -182,3 +186,13 @@ def test_clear_cache_scoped_to_sport(conn):
     n = TheOddsApiClient.clear_cache(conn, sport_key="baseball_mlb")
     assert n == 1
     assert OddsCache.get(conn, "theoddsapi:icehockey_nhl:h2h:us:american", now=NOW) == {"v": 2}
+
+
+def test_legacy_ingestion_client_path_reexports_shared_core():
+    from edge_equation.ingestion.odds_api_client import (
+        API_KEY_ENV_VAR as legacy_env,
+        TheOddsApiClient as LegacyClient,
+    )
+
+    assert LegacyClient is TheOddsApiClient
+    assert legacy_env == API_KEY_ENV_VAR
