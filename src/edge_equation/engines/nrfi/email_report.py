@@ -156,6 +156,22 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         log.warning("parlay block skipped (%s): %s",
                       type(e).__name__, e)
 
+    # Props integration (Props-3): build today's props card and append
+    # the polished top-N-by-edge block + props YTD ledger to the email
+    # body. Best-effort — any failure (Odds API down, pybaseball not
+    # installed, props DuckDB missing) returns empty strings and the
+    # NRFI email proceeds untouched.
+    props_top_text = ""
+    props_ledger_text = ""
+    try:
+        from edge_equation.engines.props_prizepicks.daily import build_props_card
+        props_card = build_props_card(target_date)
+        props_top_text = props_card.top_board_text
+        props_ledger_text = props_card.ledger_text
+    except Exception as e:
+        log.warning("props daily card skipped (%s): %s",
+                      type(e).__name__, e)
+
     subject_date = target_date
     return {
         "card_type": CARD_TYPE,
@@ -169,6 +185,8 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         "ledger_text": ledger_text,
         "parlay_text": parlay_text,
         "parlay_ledger_text": parlay_ledger_text,
+        "props_top_text": props_top_text,
+        "props_ledger_text": props_ledger_text,
     }
 
 
@@ -578,6 +596,22 @@ def render_body(card: dict) -> str:
     if parlay_ledger_text:
         lines.append("")
         lines.append(parlay_ledger_text)
+        lines.append("")
+
+    # 7. Props block (Props-3). Top picks by edge + per-tier YTD ledger.
+    # Lives below the NRFI parlay section so the operator sees first-
+    # inning conviction first, then cross-market edges, then the props
+    # YTD record.
+    props_top_text = card.get("props_top_text", "")
+    if props_top_text:
+        lines.append("")
+        lines.append(props_top_text)
+        lines.append("")
+
+    props_ledger_text = card.get("props_ledger_text", "")
+    if props_ledger_text:
+        lines.append("")
+        lines.append(props_ledger_text)
         lines.append("")
 
     lines.append(card.get("tagline", "")
