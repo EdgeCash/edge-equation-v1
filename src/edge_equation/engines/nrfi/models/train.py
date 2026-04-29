@@ -18,7 +18,7 @@ import argparse
 import json
 import sys
 from dataclasses import asdict, dataclass, field
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -26,6 +26,7 @@ from edge_equation.utils.logging import get_logger
 
 from ..calibration import BinSummary, reliability_summary
 from ..config import NRFIConfig, get_default_config
+from ..data.storage import NRFIStore
 from ..evaluation.metrics import brier_score, log_loss_score
 from ..training.walkforward import WalkForwardReport, walkforward_train
 
@@ -38,6 +39,16 @@ DEFAULT_CHUNK_DAYS = 7
 DEFAULT_MIN_TRAIN_ROWS = 200
 DEFAULT_CALIBRATION_METHOD = "isotonic"
 MANIFEST_NAME = "elite_nrfi_v1_training_manifest.json"
+
+
+@dataclass(frozen=True)
+class CorpusBounds:
+    """Available training corpus bounds discovered from DuckDB."""
+
+    min_date: str
+    max_date: str
+    train_rows: int
+    start_date: str
 
 
 @dataclass(frozen=True)
@@ -149,6 +160,74 @@ def train_production_model(
     return report
 
 
+def train_full_available_corpus(
+    *,
+    min_train_rows: int = DEFAULT_MIN_TRAIN_ROWS,
+    chunk_days: int = DEFAULT_CHUNK_DAYS,
+    window_months: int = DEFAULT_WINDOW_MONTHS,
+    calibration_method: str = DEFAULT_CALIBRATION_METHOD,
+    config: Optional[NRFIConfig] = None,
+    save_bundle: bool = True,
+    quiet: bool = False,
+) -> ProductionTrainingReport:
+    """Train on every feature/actual row currently available in DuckDB.
+
+    The first walk-forward prediction date is chosen as the earliest date with
+    at least ``min_train_rows`` prior trainable rows. This prevents the common
+    "small slice" mistake where early chunks all skip or calibrate on tiny
+    samples even though the database contains a larger corpus.
+    """
+
+    cfg = (config or get_default_config()).resolve_paths()
+    store = NRFIStore(cfg.duckdb_path)
+    df = store.query_df(
+        """
+        SELECT g.game_date, COUNT(*) AS n
+        FROM features f
+        JOIN actuals a USING(game_pk)
+        JOIN games g USING(game_pk)
+        WHERE g.game_date BETWEEN '2025-01-01' AND '2026-12-31'
+        GROUP BY g.game_date
+        ORDER BY g.game_date
+        """
+    )
+    if df is None or df.empty:
+        raise RuntimeError("No trainable feature/actual rows found in DuckDB")
+
+    cumulative = 0
+    start_date = None
+    for _, row in df.iterrows():
+        if cumulative >= min_train_rows:
+            start_date = str(row.game_date)[:10]
+            break
+        cumulative += int(row.n)
+    if start_date is None:
+        raise RuntimeError(
+            f"Only {cumulative} trainable rows available; need at least "
+            f"{min_train_rows} before first walk-forward chunk"
+        )
+    end_date = str(df.iloc[-1].game_date)[:10]
+    if not quiet:
+        total = int(df["n"].sum())
+        print(
+            f"Full corpus: {total} trainable games, "
+            f"date window {str(df.iloc[0].game_date)[:10]}..{end_date}, "
+            f"walk-forward starts {start_date}"
+        )
+
+    return train_production_model(
+        start_date=start_date,
+        end_date=end_date,
+        window_months=window_months,
+        chunk_days=chunk_days,
+        min_train_rows=min_train_rows,
+        calibration_method=calibration_method,
+        config=cfg,
+        save_bundle=save_bundle,
+        quiet=quiet,
+    )
+
+
 def _reliability_from_jsonl(path: Optional[str]) -> list[ReliabilitySlice]:
     """Build 2025/2026 reliability slices from walk-forward predictions."""
 
@@ -224,20 +303,28 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         choices=("isotonic", "platt"),
         default=DEFAULT_CALIBRATION_METHOD,
     )
+    parser.add_argument(
+        "--full-corpus",
+        action="store_true",
+        help="Discover and train on the full feature/actual corpus in DuckDB.",
+    )
     parser.add_argument("--no-save-bundle", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args(list(argv) if argv is not None else None)
 
-    report = train_production_model(
-        start_date=args.start_date,
-        end_date=args.end_date,
-        window_months=args.window_months,
-        chunk_days=args.chunk_days,
-        min_train_rows=args.min_train_rows,
-        calibration_method=args.calibration_method,
-        save_bundle=not args.no_save_bundle,
-        quiet=args.quiet,
-    )
+    train_fn = train_full_available_corpus if args.full_corpus else train_production_model
+    kwargs = {
+        "window_months": args.window_months,
+        "chunk_days": args.chunk_days,
+        "min_train_rows": args.min_train_rows,
+        "calibration_method": args.calibration_method,
+        "save_bundle": not args.no_save_bundle,
+        "quiet": args.quiet,
+    }
+    if not args.full_corpus:
+        kwargs["start_date"] = args.start_date
+        kwargs["end_date"] = args.end_date
+    report = train_fn(**kwargs)
     print(report.summary())
     return 0 if report.walkforward.n_chunks_failed == 0 else 1
 

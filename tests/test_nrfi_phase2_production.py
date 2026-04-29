@@ -50,6 +50,7 @@ def test_training_manifest_serialises_policy(tmp_path):
     assert payload["chunk_days"] == 7
     assert payload["calibration_method"] == "isotonic"
     assert payload["walkforward"]["n_predictions"] == 10
+    assert payload["artifact_version"] == "elite_nrfi_v1_20260429_wf10"
 
 
 def test_ledger_render_labels_yrfi_lean_independently():
