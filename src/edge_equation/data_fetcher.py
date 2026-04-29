@@ -53,7 +53,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from edge_equation.ingestion.odds_api_client import (
+from edge_equation.engines.core.data.odds_api_client import (
     DEFAULT_TTL_SECONDS,
     TheOddsApiClient,
 )

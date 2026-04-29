@@ -1,13 +1,15 @@
 """Sport / market specific prediction engines.
 
 Each engine owns its own feature builder, model bundle, calibration,
-and output adapters. Shared primitives — math, data fetching, posting,
-publishing — live one level up under ``src/edge_equation/`` and are
-imported by every engine.
+output adapters, and source boundary. Shared primitives — data, caching,
+utilities, math, posting, publishing, and backtesting — live under
+``edge_equation.engines.core`` with backward-compatible top-level imports
+kept for shipped scripts.
 
 Engines live as subpackages here::
 
     src/edge_equation/engines/
+    ├── core/              # Shared data/cache/math/posting/publishing facades
     ├── nrfi/              # MLB first-inning NRFI/YRFI (flagship; production)
     ├── props_prizepicks/  # MLB player props (data via The Odds API; in dev)
     └── full_game/         # MLB ML / Total / F5 / Run Line (in dev)
@@ -21,15 +23,16 @@ Adding a new engine
        ├── config.py             # Engine-specific tuning constants
        ├── features/             # Engine-specific feature builders
        ├── models/               # Engine-specific model wrappers
+       ├── calibration/          # Reliability / calibration adapters
        ├── output/               # Canonical output payload + adapters
-       └── integration/          # Bridge to the shared core (single import surface)
+       └── source/               # Engine-owned market/data source boundary
 
 2. Register the engine source via ``src/edge_equation/ingestion/source_factory.py``.
 3. Wire posting/email rendering through ``src/edge_equation/posting/``.
 4. Plug into the slate runner (``src/edge_equation/engine/slate_runner.py``).
 
 The NRFI engine is the canonical reference implementation — copy its
-patterns, not its scaffolding. Engine-local utilities (caching, logging,
-rate limiting) should be hoisted up into ``src/edge_equation/utils/``
-so the next two engines don't duplicate them.
+patterns, not its scaffolding. Engine-local utilities that become shared
+should be hoisted into ``edge_equation.engines.core`` so props and full-game
+engines do not duplicate them.
 """

@@ -7,7 +7,7 @@ from edge_equation.ingestion.odds_api_source import (
     ODDS_API_SPORT_MAP,
     MARKET_KEY_MAP,
 )
-from edge_equation.ingestion.odds_api_client import TheOddsApiClient
+from edge_equation.engines.core.data.odds_api_client import TheOddsApiClient
 from edge_equation.persistence.db import Database
 from edge_equation.persistence.odds_cache import OddsCache
 
