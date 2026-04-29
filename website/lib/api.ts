@@ -7,6 +7,7 @@
 import type {
   HitRateReport,
   MeResponse,
+  NrfiDashboard,
   SlateDetail,
   SlateSummary,
 } from "./types";
@@ -84,6 +85,12 @@ export const api = {
       throw new Error(`API ${resp.status} on /auth/me`);
     }
     return resp.json() as Promise<MeResponse>;
+  },
+
+  // Phase 5 — single-shot dashboard payload (board + ledgers + parlays).
+  async nrfiDashboard(date?: string): Promise<NrfiDashboard> {
+    const suffix = date ? `?date=${encodeURIComponent(date)}` : "";
+    return getJson<NrfiDashboard>(`/nrfi/dashboard${suffix}`);
   },
 };
 
