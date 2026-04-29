@@ -160,7 +160,7 @@ def test_build_report_includes_sanity_and_histogram(monkeypatch):
         ib, "_tier_histogram_for_today",
         lambda cfg: (
             [
-                ib.TierHistogramRow(tier="LOCK", band="≥70%", count=2),
+                ib.TierHistogramRow(tier="ELITE", band="≥70%", count=2),
                 ib.TierHistogramRow(tier="STRONG", band="64-69%", count=4),
             ],
             ("2026-04-29", "2026-04-29"),
@@ -173,7 +173,7 @@ def test_build_report_includes_sanity_and_histogram(monkeypatch):
     assert report.sanity_passed is True
     assert "ml beats baseline" in report.sanity_summary
     assert report.n_predictions_in_window == 12
-    assert any(r.tier == "LOCK" and r.count == 2 for r in report.tier_histogram)
+    assert any(r.tier == "ELITE" and r.count == 2 for r in report.tier_histogram)
     assert report.notes == []
 
 
@@ -193,7 +193,7 @@ def test_render_report_contains_all_sections():
         sanity_summary="brier-delta -0.0101 vs baseline",
         sanity_passed=True,
         tier_histogram=[
-            ib.TierHistogramRow(tier="LOCK", band="≥70%", count=2),
+            ib.TierHistogramRow(tier="ELITE", band="≥70%", count=2),
             ib.TierHistogramRow(tier="STRONG", band="64-69%", count=5),
         ],
         probability_window=("2026-04-29", "2026-04-29"),
@@ -207,7 +207,7 @@ def test_render_report_contains_all_sections():
     assert "SANITY" in text
     assert "PASS" in text
     assert "TIER HISTOGRAM" in text
-    assert "LOCK" in text
+    assert "ELITE" in text
     assert "NOTES" in text
     assert "foo" in text
 

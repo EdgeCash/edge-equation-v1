@@ -243,7 +243,7 @@ def _to_card_pick(bridge_output, engine_label: str,
         engine=engine_label,
     )
 
-    # Tier classification — drives the [LOCK]/[STRONG]/[MODERATE]/[LEAN]
+    # Tier classification — drives the [ELITE]/[STRONG]/[MODERATE]/[LEAN]
     # tag that prefixes each pick line in the email + dashboard.
     from edge_equation.engines.tiering import classify_tier
     tier_clf = classify_tier(
@@ -344,10 +344,14 @@ def _polished_pick_line(pick: dict) -> str:
 
     Layout::
 
-        BOS @ NYY                                        [STRONG  ]
-        78.4% NRFI · Light Green · λ 1.20  MC ±3.2pp  edge +5.1pp  stake 0.50u
+        BOS @ NYY · NRFI                                 [ELITE   ]
+        78.4% Conviction · Electric Blue · λ 1.20  MC ±3.2pp  edge +5.1pp  stake 0.50u
         Why: home offense soft (+4.2), umpire pitcher-friendly (+2.1),
               cool air boost (+1.5)
+
+    Side-aware color: Strong YRFI rows render the band as **Red** to
+    match the "red-hot opportunity" framing. Every other tier/market
+    falls through to the standard ladder.
 
     Robust to missing fields — every optional metric (MC, edge, Kelly,
     drivers) drops out cleanly when not present.
@@ -356,15 +360,27 @@ def _polished_pick_line(pick: dict) -> str:
     tier = pick.get("tier", "")
     market = pick.get("market_type", "NRFI")
     pct = pick.get("pct", 0.0)
-    band = pick.get("color_band", "")
     lam = pick.get("lambda_total")
 
-    # Top line: matchup + right-justified tier tag.
-    tier_tag = f"[{tier:<8}]" if tier else ""
-    head = f"{matchup:<48}{tier_tag}".rstrip()
+    # Side-aware band label — Strong YRFI gets Red.
+    try:
+        from edge_equation.engines.tiering import (
+            Tier, color_band_label_for_pick,
+        )
+        tier_obj = Tier(tier) if tier else None
+        band = color_band_label_for_pick(tier_obj, market) if tier_obj else ""
+    except (ValueError, ImportError):
+        band = pick.get("color_band", "")
 
-    # Headline metric line.
-    metric_parts = [f"{pct:.1f}% {market}"]
+    # Top line: matchup + market token + right-justified tier tag.
+    headline = f"{matchup} · {market}" if market else matchup
+    tier_tag = f"[{tier:<8}]" if tier else ""
+    head = f"{headline:<48}{tier_tag}".rstrip()
+
+    # Headline metric line — branding mandates "% Conviction" rather
+    # than "% NRFI / % YRFI" so the brand voice stays analytical
+    # ("we have 78.4% conviction") instead of result-flavored.
+    metric_parts = [f"{pct:.1f}% Conviction"]
     if band:
         metric_parts.append(band)
     if isinstance(lam, (int, float)):
@@ -402,7 +418,7 @@ def _select_top_picks_by_edge(picks: list[dict], *, n: int = 8) -> list[dict]:
     if not picks:
         return []
     # Group by game_id and keep the higher-tier side per game.
-    tier_rank = {"LOCK": 4, "STRONG": 3, "MODERATE": 2,
+    tier_rank = {"ELITE": 4, "STRONG": 3, "MODERATE": 2,
                    "LEAN": 1, "NO_PLAY": 0}
     by_game: dict[str, dict] = {}
     for p in picks:
@@ -463,7 +479,7 @@ def _build_parlay_block(
         side_p = float(o.fair_prob)
         clf = classify_tier(market_type=o.market_type,
                               side_probability=side_p)
-        if clf.tier not in (Tier.LOCK, Tier.STRONG):
+        if clf.tier not in (Tier.ELITE, Tier.STRONG):
             continue
         # Phase 4 swap-in lives elsewhere — for now use the engine's
         # flat default odds. The settlement pass uses captured odds
@@ -538,21 +554,32 @@ def _footer_text(engine: str) -> str:
 def render_body(card: dict) -> str:
     """Render the full plain-text email body from a card dict.
 
-    Layout (production-elite ordering, NRFI-elite push):
-      1. Header
-      2. YTD per-tier ledger (always rendered, even when empty so the
-         operator can confirm the table exists and tiers are wired)
-      3. TOP BOARD — top 8 picks by edge with polished one-liner format
-      4. Per-side NRFI / YRFI boards (full slate, classic format)
+    Layout (production-elite ordering, post-rebrand):
+      1. Header + Conviction key (legend explaining color tokens)
+      2. YTD per-tier ledger (always rendered)
+      3. TOP BOARD — top 8 picks by edge with polished one-liner
+      4. Per-side NRFI / YRFI boards (full slate)
       5. Parlay candidates (Phase 6)
       6. Parlay ledger (Phase 6)
-      7. Footer
+      7. Props block + props ledger
+      8. Full-game block + full-game ledger
+      9. Footer (premium disclaimer when card_type=premium)
     """
+    from edge_equation.engines.tiering import (
+        render_conviction_key, render_premium_disclaimer,
+    )
+
     lines = [
         f"Edge Equation — {card.get('headline', 'NRFI/YRFI Daily')}",
         card.get("subhead", "Facts. Not Feelings."),
         "",
     ]
+
+    # 1b. Conviction key — operator + forwarded reader can decode the
+    # color tokens at a glance. Stays at the top so the rest of the
+    # body can reference the language without re-explaining.
+    lines.append(render_conviction_key())
+    lines.append("")
 
     # 2. YTD per-tier ledger — top of page so the operator sees
     # conviction history before today's picks. Always rendered, even
@@ -649,6 +676,15 @@ def render_body(card: dict) -> str:
 
     lines.append(card.get("tagline", "")
                   or _footer_text(card.get("engine", "unknown")))
+
+    # Premium disclaimer — surfaced when the operator has flagged the
+    # card as the premium tier. Free-tier emails skip this block; the
+    # `Facts. Not Feelings.` subhead at the top already carries the
+    # voice for the public daily.
+    if card.get("card_type") == "premium" or card.get("premium"):
+        lines.append("")
+        lines.append(render_premium_disclaimer())
+
     return "\n".join(lines)
 
 

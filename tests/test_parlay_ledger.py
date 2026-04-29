@@ -72,7 +72,7 @@ class _FakeStore:
 # ---------------------------------------------------------------------------
 
 
-def _leg(market="NRFI", prob=0.85, odds=-115, tier=Tier.LOCK,
+def _leg(market="NRFI", prob=0.85, odds=-115, tier=Tier.ELITE,
           game="g1", label="leg"):
     return ParlayLeg(
         market_type=market, side="Under 0.5",
@@ -120,7 +120,7 @@ def test_record_parlay_writes_legs_as_json_and_returns_id():
     legs_back = json.loads(row["legs_json"])
     assert len(legs_back) == 2
     assert legs_back[0]["market_type"] == "NRFI"
-    assert legs_back[0]["tier"] == "LOCK"
+    assert legs_back[0]["tier"] == "ELITE"
     assert row["stake_units"] == pytest.approx(0.5)
     assert row["return_units"] is None       # not yet settled
     assert row["settled_at"] is None

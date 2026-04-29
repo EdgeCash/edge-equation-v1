@@ -62,7 +62,7 @@ def test_select_top_picks_keeps_one_row_per_game():
     """Both NRFI and YRFI rows of the same game must collapse to a
     single row (the higher-tier side)."""
     picks = [
-        _pick(game_id="g1", market="NRFI", tier="LOCK",   pct=80.0),
+        _pick(game_id="g1", market="NRFI", tier="ELITE",   pct=80.0),
         _pick(game_id="g1", market="YRFI", tier="NO_PLAY", pct=20.0),
         _pick(game_id="g2", market="NRFI", tier="STRONG", pct=68.0),
         _pick(game_id="g2", market="YRFI", tier="NO_PLAY", pct=32.0),
@@ -71,7 +71,7 @@ def test_select_top_picks_keeps_one_row_per_game():
     assert len(top) == 2
     by_gid = {p["game_id"]: p for p in top}
     # Higher-tier side wins per game.
-    assert by_gid["g1"]["tier"] == "LOCK"
+    assert by_gid["g1"]["tier"] == "ELITE"
     assert by_gid["g2"]["tier"] == "STRONG"
 
 
@@ -81,7 +81,7 @@ def test_select_top_picks_sorts_by_tier_then_edge_then_pct():
     picks = [
         _pick(game_id="g1", tier="STRONG", pct=68.0, edge_pp_raw=2.0),
         _pick(game_id="g2", tier="STRONG", pct=68.0, edge_pp_raw=5.5),
-        _pick(game_id="g3", tier="LOCK",   pct=72.0, edge_pp_raw=1.0),
+        _pick(game_id="g3", tier="ELITE",   pct=72.0, edge_pp_raw=1.0),
     ]
     top = er._select_top_picks_by_edge(picks, n=8)
     assert [p["game_id"] for p in top] == ["g3", "g2", "g1"]
@@ -98,7 +98,7 @@ def test_select_top_picks_handles_missing_edge():
     picks = [
         _pick(game_id="g1", tier="STRONG", pct=68.0, edge_pp_raw=None),
         _pick(game_id="g2", tier="STRONG", pct=72.0, edge_pp_raw=None),
-        _pick(game_id="g3", tier="LOCK",   pct=70.0, edge_pp_raw=None),
+        _pick(game_id="g3", tier="ELITE",   pct=70.0, edge_pp_raw=None),
     ]
     top = er._select_top_picks_by_edge(picks, n=8)
     assert top[0]["game_id"] == "g3"   # LOCK beats both STRONGs
@@ -117,13 +117,15 @@ def test_select_top_picks_empty_returns_empty():
 
 
 def test_polished_pick_line_includes_tier_pct_color_and_lambda():
-    pick = _pick(game_id="BOS @ NYY", tier="LOCK", pct=78.4)
+    pick = _pick(game_id="BOS @ NYY", tier="ELITE", pct=78.4)
     pick["lambda_total"] = 1.20
     line = er._polished_pick_line(pick)
     assert "BOS @ NYY" in line
-    assert "[LOCK" in line
-    assert "78.4% NRFI" in line
-    assert "Light Green" in line
+    assert "[ELITE" in line
+    # Branding rebrand: row reads "% Conviction" rather than "% NRFI".
+    assert "78.4% Conviction" in line
+    # ELITE tier renders as Electric Blue under the new color system.
+    assert "Electric Blue" in line
     assert "λ 1.20" in line
 
 
@@ -212,7 +214,7 @@ def test_render_body_renders_real_ytd_ledger_when_present():
 
 def test_render_body_emits_top_board_above_per_side_boards():
     picks = [
-        _pick(game_id="BOS @ NYY", tier="LOCK", pct=78.4,
+        _pick(game_id="BOS @ NYY", tier="ELITE", pct=78.4,
                 edge_pp_raw=6.0),
         _pick(game_id="BOS @ NYY", market="YRFI", tier="NO_PLAY",
                 pct=21.6),

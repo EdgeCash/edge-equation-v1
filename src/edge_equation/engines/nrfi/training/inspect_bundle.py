@@ -162,7 +162,7 @@ def _tier_histogram_for_today(cfg: NRFIConfig) -> tuple[
     list[TierHistogramRow], Optional[tuple[str, str]], int,
 ]:
     """Bucket today's predictions by the higher-tier side per game so
-    the operator can confirm "are LOCK / STRONG tiers actually getting
+    the operator can confirm "are ELITE / STRONG tiers actually getting
     generated today?" before sending the email."""
     try:
         from datetime import date as _date
@@ -193,7 +193,7 @@ def _tier_histogram_for_today(cfg: NRFIConfig) -> tuple[
         counts[winning.tier.value] += 1
 
     band_labels = {
-        Tier.LOCK.value:     "≥70%",
+        Tier.ELITE.value:     "≥70%",
         Tier.STRONG.value:   "64-69%",
         Tier.MODERATE.value: "58-63%",
         Tier.LEAN.value:     "55-57%",
@@ -202,7 +202,7 @@ def _tier_histogram_for_today(cfg: NRFIConfig) -> tuple[
     rows = [
         TierHistogramRow(tier=t.value, band=band_labels[t.value],
                             count=counts.get(t.value, 0))
-        for t in (Tier.LOCK, Tier.STRONG, Tier.MODERATE,
+        for t in (Tier.ELITE, Tier.STRONG, Tier.MODERATE,
                     Tier.LEAN, Tier.NO_PLAY)
     ]
     return rows, (today, today), int(len(df))
@@ -210,7 +210,7 @@ def _tier_histogram_for_today(cfg: NRFIConfig) -> tuple[
 
 def _tier_rank(tier) -> int:
     from edge_equation.engines.tiering import Tier
-    return {Tier.LOCK: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
+    return {Tier.ELITE: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
             Tier.LEAN: 1, Tier.NO_PLAY: 0}[tier]
 
 

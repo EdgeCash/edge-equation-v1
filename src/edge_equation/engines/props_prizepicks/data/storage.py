@@ -24,7 +24,7 @@ engine joins (parlay correlation) stay simple.
         american_odds  DOUBLE      market line we modelled against
         book           VARCHAR
         confidence     DOUBLE      0..1, projection's self-confidence
-        tier           VARCHAR     'LOCK' / 'STRONG' / 'MODERATE' / 'LEAN' / 'NO_PLAY'
+        tier           VARCHAR     'ELITE' / 'STRONG' / 'MODERATE' / 'LEAN' / 'NO_PLAY'
         feature_blob   VARCHAR     JSON dict of per-player rates (audit trail)
         created_at     TIMESTAMP
         PRIMARY KEY (event_date, market_type, player_name, line_value, side)

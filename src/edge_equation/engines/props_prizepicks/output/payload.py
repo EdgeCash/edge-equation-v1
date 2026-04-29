@@ -30,16 +30,19 @@ from ..edge import PropEdgePick
 
 
 # ---------------------------------------------------------------------------
-# Tier → color band labels (matches NRFI's `Light Green / Yellow / Orange / Red`
-# vocabulary so the email TOP BOARD reads identically across engines).
+# Tier → color band labels — shared with NRFI / Full-Game vocabulary
+# (Electric Blue / Deep Green / Light Green / Yellow / Orange).
+# Props don't have NRFI-style "Strong YRFI = Red" treatment because the
+# Over/Under dichotomy is symmetric (Over a HR line and Under a HR line
+# both feel the same to the operator). Side-aware Red is NRFI/YRFI-only.
 # ---------------------------------------------------------------------------
 
 TIER_COLOR_BAND: dict[Tier, str] = {
-    Tier.LOCK:     "Deep Green",
-    Tier.STRONG:   "Light Green",
-    Tier.MODERATE: "Yellow",
-    Tier.LEAN:     "Orange",
-    Tier.NO_PLAY:  "Deep Red",
+    Tier.ELITE:    "Electric Blue",
+    Tier.STRONG:   "Deep Green",
+    Tier.MODERATE: "Light Green",
+    Tier.LEAN:     "Yellow",
+    Tier.NO_PLAY:  "Orange",
 }
 
 
@@ -138,7 +141,7 @@ def build_prop_output(
     * Color band + hex from the engine-wide TIER_COLOR_HEX (one
       visual brand across NRFI + props).
     * Kelly stake using the shared `kelly_stake` helper, scaled by
-      the tier's recommended multiplier (LOCK 0.75x, STRONG 0.375x,
+      the tier's recommended multiplier (ELITE 0.75x, STRONG 0.375x,
       MODERATE 0.175x, LEAN 0.0x).
     """
     tier_obj = pick.tier
@@ -146,7 +149,7 @@ def build_prop_output(
     hex_color = color_hex_for_tier(tier_obj)
 
     # Kelly stake — shared math; scaled by the tier multiplier so a
-    # LOCK pick at 0.5u baseline becomes 0.5×0.75 = 0.375u, etc.
+    # ELITE pick at 0.5u baseline becomes 0.5×0.75 = 0.375u, etc.
     rec = kelly_stake(
         model_prob=pick.model_prob,
         market_prob=pick.market_prob_devigged,
@@ -202,13 +205,13 @@ def to_email_card(out: PropOutput) -> str:
     Layout::
 
         Aaron Judge · Home Runs Over 0.5                     [STRONG  ]
-        24.3% · Light Green · λ 0.28  conf 72%  edge +5.1pp  stake 0.50u
+        24.3% Conviction · Deep Green · λ 0.28  conf 72%  edge +5.1pp  stake 0.50u
         odds +250  (DraftKings)
     """
     matchup = f"{out.player_name} · {out.market_label} {out.side} {out.line_value:g}"
     head = f"{matchup:<48}[{out.tier:<8}]".rstrip()
     metric_parts = [
-        f"{out.model_pct:.1f}%",
+        f"{out.model_pct:.1f}% Conviction",
         out.color_band,
         f"λ {out.lam:.2f}",
     ]

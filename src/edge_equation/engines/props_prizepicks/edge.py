@@ -13,7 +13,7 @@ Pipeline
 2. Project each side with `projection.project_all`.
 3. For each (line, projection) pair, compute the edge:
      edge = model_prob − vig_adjusted_market_prob
-4. Classify the tier off `edge` (LOCK ≥ 8pp, STRONG 5–8pp, ...).
+4. Classify the tier off `edge` (ELITE ≥ 8pp, STRONG 5–8pp, ...).
 5. Filter out non-qualifying sides.
 
 Vig handling
@@ -152,7 +152,7 @@ def build_edge_picks(
         )
     devig = build_devig_table(lines)
     picks: list[PropEdgePick] = []
-    rank = {Tier.LOCK: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
+    rank = {Tier.ELITE: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
               Tier.LEAN: 1, Tier.NO_PLAY: 0}
     floor = rank[min_tier]
     for line, proj in zip(lines, projections):

@@ -3,7 +3,7 @@
 Mirrors `nrfi/ledger.py` for visual + behavioural consistency:
 
 * Idempotent settlement on `(game_pk, market_type, player_name)`.
-* Per-tier W/L + units rollup (LOCK / STRONG / MODERATE / LEAN), plus
+* Per-tier W/L + units rollup (ELITE / STRONG / MODERATE / LEAN), plus
   cross-tier `'ALL'` rollups for the headline summary.
 * Independent ledger from NRFI's — props are tracked separately so
   per-tier ROI numbers don't get diluted across markets with different
@@ -21,7 +21,7 @@ that's been settled. Idempotent — settlement is safe to re-run::
     season         INTEGER
     line_value     DOUBLE
     side           VARCHAR        'Over' / 'Under'
-    tier           VARCHAR        'LOCK' / 'STRONG' / 'MODERATE' / 'LEAN'
+    tier           VARCHAR        'ELITE' / 'STRONG' / 'MODERATE' / 'LEAN'
     predicted_p    DOUBLE
     american_odds  DOUBLE
     actual_value   DOUBLE         realised count
@@ -371,7 +371,7 @@ def get_tier_ledger(store: PropsStore, season: int):
     if df is None or df.empty:
         return df
     tier_order = {t.value: i for i, t in enumerate(
-        [Tier.LOCK, Tier.STRONG, Tier.MODERATE, Tier.LEAN]
+        [Tier.ELITE, Tier.STRONG, Tier.MODERATE, Tier.LEAN]
     )}
     tier_order["ALL"] = 99
     df["_tier_rank"] = df["tier"].map(lambda t: tier_order.get(t, 100))

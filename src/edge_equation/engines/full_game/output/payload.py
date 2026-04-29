@@ -16,7 +16,10 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Optional, Sequence
 
 from edge_equation.engines.tiering import (
-    Tier, color_hex as tier_color_hex, kelly_multiplier,
+    Tier,
+    color_hex_for_pick,
+    color_band_label_for_pick,
+    kelly_multiplier,
 )
 from edge_equation.utils.kelly import kelly_stake
 
@@ -24,24 +27,32 @@ from ..edge import FullGameEdgePick
 
 
 # ---------------------------------------------------------------------------
-# Tier → color band labels (matches NRFI / Props vocabulary).
+# Tier → color band labels (shared with NRFI / Props vocabulary). For
+# side-aware rendering (Strong YRFI → Red), callers should hit the
+# engines.tiering helpers `color_hex_for_pick(tier, market)` and
+# `color_band_label_for_pick(tier, market)` directly. The map below is
+# the default no-side fallback.
 # ---------------------------------------------------------------------------
 
 TIER_COLOR_BAND: dict[Tier, str] = {
-    Tier.LOCK:     "Deep Green",
-    Tier.STRONG:   "Light Green",
-    Tier.MODERATE: "Yellow",
-    Tier.LEAN:     "Orange",
-    Tier.NO_PLAY:  "Deep Red",
+    Tier.ELITE:    "Electric Blue",
+    Tier.STRONG:   "Deep Green",
+    Tier.MODERATE: "Light Green",
+    Tier.LEAN:     "Yellow",
+    Tier.NO_PLAY:  "Orange",
 }
 
 
 def color_band_for_tier(tier: Tier) -> str:
+    """Default no-side band label for `tier`."""
     return TIER_COLOR_BAND[tier]
 
 
 def color_hex_for_tier(tier: Tier) -> str:
-    return tier_color_hex(tier)
+    """Default no-side hex for `tier`. Side-aware callers should hit
+    `color_hex_for_pick(tier, market)` instead."""
+    from edge_equation.engines.tiering import TIER_COLOR_HEX
+    return TIER_COLOR_HEX[tier]
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +221,7 @@ def to_email_card(out: FullGameOutput) -> str:
     Layout::
 
         NYY @ BOS · Total Over 8.5                          [STRONG  ]
-        61.3% · Light Green · λ 9.54  conf 72%  edge +5.5pp  stake 0.50u
+        61.3% Conviction · Deep Green · λ 9.54  conf 72%  edge +5.5pp  stake 0.50u
         odds -110  (draftkings)
           Why: + offense matchup, − BOS ace last 5
     """
@@ -218,7 +229,7 @@ def to_email_card(out: FullGameOutput) -> str:
     head = f"{headline:<48}[{out.tier:<8}]".rstrip()
 
     metric_parts = [
-        f"{out.model_pct:.1f}%",
+        f"{out.model_pct:.1f}% Conviction",
         out.color_band,
         f"λ {out.lam_used:.2f}",
     ]

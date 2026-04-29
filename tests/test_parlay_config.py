@@ -39,12 +39,12 @@ def test_env_override_max_legs(monkeypatch):
 
 def test_env_override_min_tier_uppercases(monkeypatch):
     """Tier strings should be tolerated case-insensitively."""
-    monkeypatch.setenv(ENV_MIN_TIER, "lock")
-    assert load_from_env().min_tier == Tier.LOCK
+    monkeypatch.setenv(ENV_MIN_TIER, "elite")
+    assert load_from_env().min_tier == Tier.ELITE
 
 
 def test_env_override_min_tier_invalid_falls_back_to_default(monkeypatch):
-    monkeypatch.setenv(ENV_MIN_TIER, "ULTRALOCK")
+    monkeypatch.setenv(ENV_MIN_TIER, "ULTRAELITE")
     assert load_from_env().min_tier == Tier.STRONG
 
 
