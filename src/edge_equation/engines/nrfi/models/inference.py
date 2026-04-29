@@ -14,6 +14,7 @@ from typing import Any, Mapping, Optional, Sequence
 import numpy as np
 import pandas as pd
 
+from edge_equation.engines.tiering import classify_tier
 from ..config import NRFIConfig, get_default_config
 from ..utils.colors import gradient_hex, nrfi_band
 from edge_equation.utils.kelly import StakeRecommendation, kelly_stake
@@ -41,6 +42,16 @@ class Prediction:
     market_prob: Optional[float] = None
     edge: Optional[float] = None
     kelly_units: Optional[float] = None
+    mc_band_pp: Optional[float] = None
+    tier: str = "NO_PLAY"
+    tier_basis: str = "raw_probability"
+    tier_value: float = 0.0
+    tier_band: str = "<55%"
+    probability_display: str = "0.0% NRFI"
+    edge_pp: Optional[float] = None
+    kelly_suggestion: str = "No bet"
+    driver_text: str = ""
+    sort_edge: float = 0.0
     model_version: str = MODEL_VERSION
 
     def as_row(self) -> dict[str, Any]:
@@ -136,11 +147,16 @@ class NRFIInferenceEngine:
 
         out: list[Prediction] = []
         for i, gpk in enumerate(game_pks):
-            band = nrfi_band(blended[i] * 100.0)
+            side_probability = float(blended[i])
+            band = nrfi_band(side_probability * 100.0)
+            tier_class = classify_tier(
+                market_type="NRFI",
+                side_probability=side_probability,
+            )
             stake: Optional[StakeRecommendation] = None
             if market_probs[i] is not None:
                 stake = kelly_stake(
-                    model_prob=float(blended[i]),
+                    model_prob=side_probability,
                     market_prob=float(market_probs[i]),
                     american_odds=float(american_odds[i]),
                     fraction=self.cfg.betting.kelly_fraction,
@@ -148,21 +164,32 @@ class NRFIInferenceEngine:
                     vig_buffer=self.cfg.betting.vig_buffer,
                     max_stake_units=self.cfg.betting.max_stake_units,
                 )
+            edge = stake.edge if stake else None
+            kelly_units = stake.stake_units if stake else None
             out.append(Prediction(
                 game_pk=int(gpk),
-                nrfi_prob=float(blended[i]),
-                nrfi_pct=round(float(blended[i]) * 100.0, 1),
+                nrfi_prob=side_probability,
+                nrfi_pct=round(side_probability * 100.0, 1),
                 lambda_total=float(lam[i]),
                 color_band=band.label,
-                color_hex=gradient_hex(blended[i] * 100.0),
+                color_hex=gradient_hex(side_probability * 100.0),
                 signal=band.signal,
                 poisson_p_nrfi=float(poisson_p[i]),
                 ml_p_nrfi=float(ml_p[i]),
-                blended_p_nrfi=float(blended[i]),
+                blended_p_nrfi=side_probability,
                 shap_drivers=shap_top[i],
                 market_prob=market_probs[i],
-                edge=stake.edge if stake else None,
-                kelly_units=stake.stake_units if stake else None,
+                edge=edge,
+                kelly_units=kelly_units,
+                tier=tier_class.tier.value,
+                tier_basis=tier_class.basis,
+                tier_value=round(tier_class.value, 4),
+                tier_band=_tier_band_label(tier_class.tier.value),
+                probability_display=f"{side_probability * 100.0:.1f}% NRFI",
+                edge_pp=round(edge * 100.0, 2) if edge is not None else None,
+                kelly_suggestion=_kelly_suggestion(kelly_units),
+                driver_text=_driver_text(shap_top[i], side_probability),
+                sort_edge=edge if edge is not None else abs(side_probability - 0.5),
             ))
         return out
 
@@ -179,3 +206,41 @@ class NRFIInferenceEngine:
             res = simulate_first_inning(fd, self.cfg.monte_carlo)
             pred.mc_low = res.low
             pred.mc_high = res.high
+            pred.mc_band_pp = _mc_band_pp(res.low, res.high)
+
+
+def _driver_text(
+    shap_drivers: Sequence[tuple[str, float]],
+    side_probability: float,
+) -> str:
+    """Human-readable SHAP summary with rough probability-point deltas."""
+    out: list[str] = []
+    denom = max(1e-3, side_probability * (1.0 - side_probability))
+    for name, value in list(shap_drivers)[:4]:
+        delta_pct = float(value) / denom * 100.0
+        sign = "+" if delta_pct >= 0 else "-"
+        out.append(f"{sign}{abs(delta_pct):.1f} {name}")
+    return ", ".join(out)
+
+
+def _mc_band_pp(low: Optional[float], high: Optional[float]) -> Optional[float]:
+    if low is None or high is None:
+        return None
+    return round((float(high) - float(low)) * 50.0, 1)
+
+
+def _tier_band_label(tier: str) -> str:
+    return {
+        "LOCK": "70-100%",
+        "STRONG": "64-70%",
+        "MODERATE": "58-64%",
+        "LEAN": "55-58%",
+    }.get(tier, "<55%")
+
+
+def _kelly_suggestion(kelly_units: Optional[float]) -> str:
+    if kelly_units is None:
+        return "Market unavailable"
+    if kelly_units <= 0:
+        return "No bet"
+    return f"{kelly_units:.2f}u"

@@ -436,6 +436,7 @@ def get_tier_ledger(store: NRFIStore, season: int):
 
     Empty DataFrame when nothing has settled yet for the season.
     """
+    init_ledger_tables(store)
     df = store.query_df(
         """
         SELECT season, market_type, tier,
@@ -470,11 +471,11 @@ def render_ledger_section(store: NRFIStore, season: int) -> str:
     if df is None or df.empty:
         return ""
 
-    lines = [f"YTD LEDGER ({season})", "─" * 60]
-    fmt = "  {market:<6} {tier:<9} {record:>10}  {units:>+8.2f}u  {roi:>+6.1f}%"
+    lines = [f"YTD LEDGER ({season})", "─" * 72]
+    fmt = "  {market:<6} {tier:<11} {record:>10}  {units:>+8.2f}u  {roi:>+6.1f}%"
     for _, row in df.iterrows():
         market = str(row.market_type)
-        tier = str(row.tier)
+        tier = _display_tier_label(market, str(row.tier))
         wins = int(row.wins)
         losses = int(row.losses)
         units = float(row.units_won)
@@ -486,6 +487,41 @@ def render_ledger_section(store: NRFIStore, season: int) -> str:
             units=units, roi=roi,
         ))
     return "\n".join(lines)
+
+
+def _display_tier_label(market_type: str, tier: str) -> str:
+    """Human label for independent ledger rows.
+
+    The storage key remains ``(market_type, tier)`` for backward compatibility.
+    Displaying ``YRFI_LEAN`` makes it explicit that YRFI leans are tracked as
+    their own live bucket, not merged with NRFI leans.
+    """
+    if market_type == "YRFI" and tier == "LEAN":
+        return "YRFI_LEAN"
+    return tier
+
+
+def backfill_tier_ledger(
+    store: NRFIStore,
+    *,
+    season: int,
+    cutoff_date: Optional[str] = None,
+    config: Optional[NRFIConfig] = None,
+    pull_actuals: bool = True,
+) -> SettlementResult:
+    """Historical backfill entry point for past predictions.
+
+    Settlement itself is idempotent via ``nrfi_pick_settled``'s primary key, so
+    a backfill can be rerun after new actuals/closing lines arrive without
+    double-counting prior picks.
+    """
+    return settle_predictions(
+        store,
+        season=season,
+        cutoff_date=cutoff_date,
+        config=config,
+        pull_actuals=pull_actuals,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -509,6 +545,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     p_show = sub.add_parser("show", help="Print the YTD ledger")
     p_show.add_argument("--season", type=int, default=date.today().year)
 
+    p_backfill = sub.add_parser(
+        "backfill",
+        help="Idempotently backfill the per-tier YTD ledger from stored predictions",
+    )
+    p_backfill.add_argument("--season", type=int, default=date.today().year)
+    p_backfill.add_argument("--cutoff-date", default=None)
+    p_backfill.add_argument("--no-pull-actuals", action="store_true",
+                            help="Skip actuals refresh; use existing DB rows")
+
     args = parser.parse_args(list(argv) if argv is not None else None)
     cfg = get_default_config().resolve_paths()
     store = NRFIStore(cfg.duckdb_path)
@@ -523,6 +568,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(result.summary())
         return 0
     if args.cmd == "show":
+        print(render_ledger_section(store, season=args.season) or
+              f"(no settled picks for {args.season} yet)")
+        return 0
+    if args.cmd == "backfill":
+        result = backfill_tier_ledger(
+            store,
+            season=args.season,
+            cutoff_date=args.cutoff_date,
+            pull_actuals=not args.no_pull_actuals,
+        )
+        print(result.summary())
+        print()
         print(render_ledger_section(store, season=args.season) or
               f"(no settled picks for {args.season} yet)")
         return 0

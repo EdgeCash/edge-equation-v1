@@ -110,13 +110,23 @@ _SCHEMA: tuple[str, ...] = (
         nrfi_pct       DOUBLE,    -- 0-100
         lambda_total   DOUBLE,    -- expected first-inning runs
         color_band     VARCHAR,
+        color_hex      VARCHAR,
         signal         VARCHAR,
         mc_low         DOUBLE,
         mc_high        DOUBLE,
+        mc_band_pp     DOUBLE,
         shap_drivers   VARCHAR,   -- JSON list of (feature, contribution)
+        driver_text    VARCHAR,   -- JSON list of display-ready drivers
         market_prob    DOUBLE,
         edge           DOUBLE,
+        edge_pp        DOUBLE,
         kelly_units    DOUBLE,
+        kelly_suggestion VARCHAR,
+        tier           VARCHAR,
+        tier_basis     VARCHAR,
+        tier_value     DOUBLE,
+        tier_band      VARCHAR,
+        probability_display VARCHAR,
         created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (game_pk, model_version)
     )
@@ -156,6 +166,30 @@ class NRFIStore:
     def _init_schema(self) -> None:
         for stmt in _SCHEMA:
             self._conn.execute(stmt)
+        self._migrate_prediction_columns()
+
+    def _migrate_prediction_columns(self) -> None:
+        """Additive migrations for existing NRFI DuckDB files.
+
+        DuckDB's ``CREATE TABLE IF NOT EXISTS`` will not update an existing
+        table, so enriched production output must register new nullable columns
+        explicitly.  Every statement is idempotent to keep local/CI runs safe.
+        """
+        for col, typ in (
+            ("color_hex", "VARCHAR"),
+            ("mc_band_pp", "DOUBLE"),
+            ("driver_text", "VARCHAR"),
+            ("edge_pp", "DOUBLE"),
+            ("kelly_suggestion", "VARCHAR"),
+            ("tier", "VARCHAR"),
+            ("tier_basis", "VARCHAR"),
+            ("tier_value", "DOUBLE"),
+            ("tier_band", "VARCHAR"),
+            ("probability_display", "VARCHAR"),
+        ):
+            self._conn.execute(
+                f"ALTER TABLE predictions ADD COLUMN IF NOT EXISTS {col} {typ}"
+            )
 
     @contextlib.contextmanager
     def cursor(self) -> Iterator[Any]:

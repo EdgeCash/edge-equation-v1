@@ -17,11 +17,11 @@ Kelly stake, the SHAP top-N, and the MC band consistently.
 from __future__ import annotations
 
 import json
-import math
 from dataclasses import asdict, dataclass, field
 from typing import Any, Mapping, Optional, Sequence
 
 from ..utils.colors import gradient_hex, nrfi_band
+from edge_equation.engines.tiering import Tier, classify_tier
 from edge_equation.utils.kelly import implied_probability, kelly_stake
 
 
@@ -42,6 +42,10 @@ class NRFIOutput:
     color_band: str = "Light Green"
     color_hex: str = "#7cb342"
     signal: str = "LEAN_NRFI"
+    tier: str = "LEAN"
+    tier_basis: str = "raw_probability"
+    tier_value: float = 0.55
+    tier_band: str = "55-58%"
 
     # Confidence
     mc_low: Optional[float] = None
@@ -55,7 +59,9 @@ class NRFIOutput:
     # Market & stake
     market_prob: Optional[float] = None
     edge_pp: Optional[float] = None      # signed pp vs market
+    edge: Optional[float] = None         # decimal edge for sorting/analytics
     kelly_units: Optional[float] = None  # 0 if no bet
+    kelly_suggestion: str = "No bet"
 
     # Audit trail
     grade: str = "C"
@@ -109,6 +115,20 @@ def build_output(
 
     band = nrfi_band(p_for_side * 100.0)
     hex_color = gradient_hex(p_for_side * 100.0)
+    tier_class = classify_tier(
+        market_type=market_type,
+        side_probability=p_for_side,
+    )
+    if tier_class.tier == Tier.LOCK:
+        tier_band = "70-100%"
+    elif tier_class.tier == Tier.STRONG:
+        tier_band = "64-70%"
+    elif tier_class.tier == Tier.MODERATE:
+        tier_band = "58-64%"
+    elif tier_class.tier == Tier.LEAN:
+        tier_band = "55-58%"
+    else:
+        tier_band = "<55%"
 
     # Confidence band display — symmetric pp around the point estimate.
     mc_band_pp: Optional[float] = None
@@ -132,8 +152,10 @@ def build_output(
         driver_text.append(f"{sign}{abs(delta_pct):.1f} {name}")
 
     # Stake recommendation. Only computed when we have a market.
+    edge: Optional[float] = None
     edge_pp: Optional[float] = None
     kelly_units: Optional[float] = None
+    kelly_suggestion = "No bet"
     if market_prob is None and market_american_odds is not None:
         market_prob = implied_probability(float(market_american_odds))
     if market_prob is not None:
@@ -147,8 +169,12 @@ def build_output(
             vig_buffer=vig_buffer,
             max_stake_units=max_stake_units,
         )
-        edge_pp = round(rec.edge * 100.0, 2)
+        edge = float(rec.edge)
+        edge_pp = round(edge * 100.0, 2)
         kelly_units = round(rec.stake_units, 2)
+        kelly_suggestion = (
+            f"{kelly_units:.2f}u" if kelly_units > 0 else "Pass"
+        )
 
     return NRFIOutput(
         game_id=str(game_id),
@@ -159,11 +185,17 @@ def build_output(
         color_band=band.label,
         color_hex=hex_color,
         signal=band.signal,
+        tier=tier_class.tier.value,
+        tier_basis=tier_class.basis,
+        tier_value=round(tier_class.value, 4),
+        tier_band=tier_band,
         mc_low=mc_low, mc_high=mc_high, mc_band_pp=mc_band_pp,
         shap_drivers=drivers, driver_text=driver_text,
         market_prob=float(market_prob) if market_prob is not None else None,
+        edge=edge,
         edge_pp=edge_pp,
         kelly_units=kelly_units,
+        kelly_suggestion=kelly_suggestion,
         grade=grade,
         realization=int(realization),
         engine=engine,
@@ -194,7 +226,8 @@ def to_email_card(out: NRFIOutput) -> str:
     emojis, no hashtags in body, single-line summary plus drivers.
     """
     lines = [
-        f"{out.headline():<14} [{out.color_band:>11}]  λ={out.lambda_total:.2f}  game={out.game_id}",
+        f"{out.headline():<14} [{out.tier:<8} {out.color_band:>11}]  "
+        f"λ={out.lambda_total:.2f}  game={out.game_id}",
     ]
     if out.mc_band_pp is not None:
         lines[0] += f"  MC ±{out.mc_band_pp:.1f}pp"
@@ -217,12 +250,15 @@ def to_dashboard_row(out: NRFIOutput) -> dict[str, Any]:
     return {
         "Game": out.game_id,
         "NRFI %": f"{out.nrfi_pct:.1f}%",
+        "Display": out.headline(),
+        "Tier": out.tier,
+        "Tier Band": out.tier_band,
         "Band": out.color_band,
         "Color": out.color_hex,
         "λ": f"{out.lambda_total:.2f}",
         "MC ±": f"±{out.mc_band_pp:.1f}pp" if out.mc_band_pp is not None else "—",
         "Edge": f"{out.edge_pp:+.1f}pp" if out.edge_pp is not None else "—",
-        "Stake": f"{out.kelly_units:.2f}u" if (out.kelly_units or 0) > 0 else "—",
+        "Kelly": out.kelly_suggestion,
         "Drivers": " · ".join(out.driver_text[:3]),
         "Grade": out.grade,
         "Engine": out.engine,

@@ -15,6 +15,6 @@ When this engine is built it must:
   market_p), not raw probability. NRFI's raw-probability ladder is
   market-symmetric and only applies to ~50/50 markets like NRFI/YRFI.
 
-Track work under PR series claude/props-* once Phase 2 (NRFI training)
-ships.
+This package now owns the standard engine subpackages:
+``features/``, ``models/``, ``calibration/``, ``output/``, and ``source/``.
 """

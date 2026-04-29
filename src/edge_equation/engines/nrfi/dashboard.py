@@ -2,7 +2,7 @@
 
 Run with:
 
-    streamlit run nrfi/dashboard.py
+    streamlit run src/edge_equation/engines/nrfi/dashboard.py
 
 Falls back to a plain CLI table if Streamlit is missing.
 """
@@ -14,6 +14,7 @@ from datetime import date
 
 from .config import get_default_config
 from .data.storage import NRFIStore
+from .ledger import render_ledger_section
 from .utils.colors import gradient_hex
 
 
@@ -41,22 +42,29 @@ def _render_streamlit() -> None:
     df = store.predictions_for_date(target.isoformat())
     if df.empty:
         st.warning("No predictions stored for this date — run "
-                    "`python -m nrfi.run_daily` first.")
+                    "`python -m edge_equation.engines.nrfi.run_daily` first.")
         return
 
-    df = df.sort_values("nrfi_prob", ascending=False)
+    df = _prepare_board(df).head(6)
     df["color"] = df["nrfi_pct"].apply(gradient_hex)
 
     def style_row(row):
         return [f"background-color: {row.color}; color: black"
                 for _ in row.index]
 
-    show_cols = ["away_team", "home_team", "nrfi_pct", "lambda_total",
-                  "color_band", "signal", "mc_low", "mc_high",
-                  "edge", "kelly_units"]
+    df["why"] = df.apply(_why_note, axis=1)
+    show_cols = ["away_team", "home_team", "probability_display", "tier",
+                  "tier_band", "lambda_total", "mc_band_pp", "edge_pp",
+                  "kelly_suggestion", "why", "color_band", "signal"]
     show_cols = [c for c in show_cols if c in df.columns]
+    st.subheader("Top 6 by edge")
     st.dataframe(df[show_cols + ["color"]].style.apply(style_row, axis=1),
                   use_container_width=True, hide_index=True)
+
+    ledger_text = render_ledger_section(store, season=target.year)
+    if ledger_text:
+        st.subheader("Per-tier YTD ledger")
+        st.code(ledger_text)
 
     with st.expander("SHAP top drivers per pick"):
         for _, row in df.iterrows():
@@ -67,7 +75,8 @@ def _render_streamlit() -> None:
                 pairs = json.loads(shap)
             except Exception:
                 pairs = []
-            st.markdown(f"**{row.away_team} @ {row.home_team}** — NRFI {row.nrfi_pct:.1f}%")
+            display = row.get("probability_display") or f"NRFI {row.nrfi_pct:.1f}%"
+            st.markdown(f"**{row.away_team} @ {row.home_team}** — {display}")
             for name, val in pairs:
                 arrow = "↑" if val > 0 else "↓"
                 st.write(f"  {arrow} `{name}`  ({val:+.4f})")
@@ -78,10 +87,57 @@ def _render_cli() -> None:
     store = NRFIStore(cfg.duckdb_path)
     df = store.predictions_for_date(date.today().isoformat())
     if df.empty:
-        print("No predictions for today — run `python -m nrfi.run_daily` first.")
+        print("No predictions for today — run "
+              "`python -m edge_equation.engines.nrfi.run_daily` first.")
         return
-    df = df.sort_values("nrfi_prob", ascending=False)
-    print(df.to_string(index=False))
+    df = _prepare_board(df).head(6)
+    cols = [
+        "away_team", "home_team", "probability_display", "tier",
+        "lambda_total", "mc_band_pp", "edge_pp", "kelly_suggestion",
+        "driver_text",
+    ]
+    cols = [c for c in cols if c in df.columns]
+    print("NRFI Elite Board — Top 6 by edge")
+    print(df[cols].to_string(index=False))
+    ledger_text = render_ledger_section(store, season=date.today().year)
+    if ledger_text:
+        print("\n" + ledger_text)
+
+
+def _prepare_board(df):
+    """Sort by model edge when present, otherwise by distance from 50%."""
+    if "edge" in df.columns:
+        fallback = (df["nrfi_prob"].astype(float) - 0.5).abs()
+        df["_sort_edge"] = df["edge"].fillna(fallback)
+    else:
+        df["_sort_edge"] = (df["nrfi_prob"].astype(float) - 0.5).abs()
+    return df.sort_values("_sort_edge", ascending=False)
+
+
+def _why_note(row) -> str:
+    """Short dashboard explanation mirroring the daily report."""
+    drivers = _driver_text_list(row.get("driver_text"))
+    lead = ", ".join(drivers[:2]) if drivers else "model edge"
+    mc = ""
+    if row.get("mc_band_pp") is not None:
+        try:
+            mc = f", MC +/-{float(row.mc_band_pp):.1f}pp"
+        except Exception:
+            mc = ""
+    return f"{lead}; lambda={float(row.lambda_total):.2f}{mc}"
+
+
+def _driver_text_list(raw) -> list[str]:
+    if isinstance(raw, list):
+        return [str(x) for x in raw]
+    if isinstance(raw, str) and raw:
+        try:
+            val = json.loads(raw)
+            if isinstance(val, list):
+                return [str(x) for x in val]
+        except Exception:
+            return [raw]
+    return []
 
 
 def main() -> int:
