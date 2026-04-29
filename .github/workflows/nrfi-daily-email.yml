@@ -102,13 +102,23 @@ jobs:
           path: data/nrfi_cache/
           if_no_artifact_found: warn
 
+      - name: Hydrate DuckDB from latest odds snapshot artifact
+        if: env.SKIP_RUN != '1'
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: nrfi-daily-odds-snapshot.yml
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
       - name: Build & send NRFI email
         if: env.SKIP_RUN != '1'
         run: |
           DRY_RUN_ARG=""
           DATE_ARG=""
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            DRY_RUN_ARG="--dry-run"
+            DRY_RUN_ARG="--dry-run --no-settle"
           fi
           if [ -n "${{ github.event.inputs.target_date }}" ]; then
             DATE_ARG="--date ${{ github.event.inputs.target_date }}"

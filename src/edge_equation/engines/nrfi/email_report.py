@@ -86,7 +86,13 @@ SUBJECT_PREFIX = "Edge Equation — NRFI/YRFI Daily"
 # Card construction
 # ---------------------------------------------------------------------------
 
-def build_card(target_date: str, *, run_etl: bool = True) -> dict:
+def build_card(
+    target_date: str,
+    *,
+    run_etl: bool = True,
+    run_settlement: bool = True,
+    pull_live_odds: bool = True,
+) -> dict:
     """Build the EmailPublisher-compatible card dict for `target_date`.
 
     Returns a dict with `card_type`, `headline`, `subhead`, `tagline`,
@@ -103,6 +109,13 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
             daily_etl(target_date, store, config=cfg)
         except Exception as e:
             log.warning("daily_etl failed (%s) — proceeding with cached games", e)
+    if pull_live_odds:
+        try:
+            from .data.odds import capture_closing_lines
+            capture_closing_lines(store, target_date, config=cfg)
+        except Exception as e:
+            log.warning("live odds capture skipped (%s): %s",
+                        type(e).__name__, e)
 
     # Build features for every game on the slate, then run the engine.
     # Live daily run → forecast weather (the archive endpoint lags ~5
@@ -120,7 +133,7 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
 
     picks: list[dict] = []
     if feats_per_game:
-        market_probs, american_odds = _market_inputs_for_games(
+        market_probs, american_odds, market_probs_by_side, american_odds_by_side = _market_inputs_for_games(
             store,
             [pk for pk, _ in feats_per_game],
         )
@@ -130,11 +143,23 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
             game_ids=[str(pk) for pk, _ in feats_per_game],
             market_probs=market_probs,
             american_odds=american_odds,
+            yrfi_market_probs=[
+                market_probs_by_side.get((str(pk), "YRFI"))
+                for pk, _ in feats_per_game
+            ],
+            yrfi_american_odds=[
+                american_odds_by_side.get((str(pk), "YRFI"), -105.0)
+                for pk, _ in feats_per_game
+            ],
         )
         # Rebuild canonical NRFIOutput so we get all the email-friendly
         # fields (mc_band_pp, driver_text, etc.).
         for o in outputs:
-            picks.append(_to_card_pick(o, engine_label, label_map))
+            picks.append(_to_card_pick(
+                o, engine_label, label_map,
+                market_prob=market_probs_by_side.get((str(o.game_id), o.market_type)),
+                american_odds=american_odds_by_side.get((str(o.game_id), o.market_type)),
+            ))
 
     picks = _top_first_inning_board(picks, limit=10)
 
@@ -145,8 +170,9 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
     try:
         from .ledger import settle_predictions
         season = int(target_date[:4])
-        settle_predictions(store, season=season, cutoff_date=target_date,
-                            config=cfg, pull_actuals=True)
+        if run_settlement:
+            settle_predictions(store, season=season, cutoff_date=target_date,
+                                config=cfg, pull_actuals=True)
         ledger_text = render_ledger_section(store, season=season)
     except Exception as e:
         log.warning("ledger settlement skipped (%s): %s",
@@ -246,23 +272,42 @@ def _annotate_conviction(picks: list[dict]) -> None:
 
 def _market_inputs_for_games(
     store: NRFIStore, game_pks: list[int],
-) -> tuple[list[float | None], list[float]]:
-    """Return NRFI market implied probabilities + American odds.
+) -> tuple[
+    list[float | None],
+    list[float],
+    dict[tuple[str, str], float | None],
+    dict[tuple[str, str], float | None],
+]:
+    """Return market inputs for bridge prediction and side-specific display.
 
-    The engine can make probability forecasts without odds.  Kelly and edge
-    require a market snapshot, so we pass ``None`` when no The Odds API capture
-    exists and let downstream render "Market unavailable" honestly.
+    The bridge consumes NRFI-side market probabilities for its paired game
+    forecasts. The final email rows use side-specific NRFI/YRFI odds so Kelly
+    for a YRFI recommendation is based on the posted Over 0.5 price, not
+    ``1 - NRFI implied``.
     """
     market_probs: list[float | None] = []
     american_odds: list[float] = []
+    probs_by_side: dict[tuple[str, str], float | None] = {}
+    odds_by_side: dict[tuple[str, str], float | None] = {}
     for game_pk in game_pks:
-        try:
-            odds = lookup_closing_odds(store, int(game_pk), "NRFI")
-        except Exception:
-            odds = None
-        market_probs.append(_implied_prob(odds) if odds is not None else None)
-        american_odds.append(float(odds) if odds is not None else -110.0)
-    return market_probs, american_odds
+        gkey = str(game_pk)
+        nrfi_odds = _lookup_side_odds_safe(store, int(game_pk), "NRFI")
+        yrfi_odds = _lookup_side_odds_safe(store, int(game_pk), "YRFI")
+        market_probs.append(_implied_prob(nrfi_odds) if nrfi_odds is not None else None)
+        american_odds.append(float(nrfi_odds) if nrfi_odds is not None else -110.0)
+        for side, odds in (("NRFI", nrfi_odds), ("YRFI", yrfi_odds)):
+            odds_by_side[(gkey, side)] = float(odds) if odds is not None else None
+            probs_by_side[(gkey, side)] = (
+                _implied_prob(odds) if odds is not None else None
+            )
+    return market_probs, american_odds, probs_by_side, odds_by_side
+
+
+def _lookup_side_odds_safe(store: NRFIStore, game_pk: int, market_type: str) -> float | None:
+    try:
+        return lookup_closing_odds(store, int(game_pk), market_type)
+    except Exception:
+        return None
 
 
 def _implied_prob(american_odds: float) -> float:
@@ -271,8 +316,14 @@ def _implied_prob(american_odds: float) -> float:
     return 100.0 / (float(american_odds) + 100.0)
 
 
-def _to_card_pick(bridge_output, engine_label: str,
-                   label_map: dict[str, str] | None = None) -> dict:
+def _to_card_pick(
+    bridge_output,
+    engine_label: str,
+    label_map: dict[str, str] | None = None,
+    *,
+    market_prob: float | None = None,
+    american_odds: float | None = None,
+) -> dict:
     """Map an `NRFIBridgeOutput` to the dict shape expected by
     `EmailPublisher.build_body` + our richer custom renderer.
 
@@ -301,7 +352,8 @@ def _to_card_pick(bridge_output, engine_label: str,
         shap_drivers=bridge_output.shap_drivers,
         mc_low=bridge_output.mc_low,
         mc_high=bridge_output.mc_high,
-        market_prob=bridge_output.market_prob,
+        market_prob=market_prob if market_prob is not None else bridge_output.market_prob,
+        market_american_odds=american_odds,
         grade=bridge_output.grade,
         realization=bridge_output.realization,
         engine=engine_label,
@@ -623,9 +675,18 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                         help="Build the card and print to stdout; skip SMTP")
     parser.add_argument("--no-etl", action="store_true",
                         help="Skip the daily schedule fetch (use cached games)")
+    parser.add_argument("--no-settle", action="store_true",
+                        help="Skip settlement/actuals refresh; useful for previews")
+    parser.add_argument("--no-live-odds", action="store_true",
+                        help="Skip best-effort live odds capture")
     args = parser.parse_args(list(argv) if argv is not None else None)
 
-    card = build_card(args.date, run_etl=not args.no_etl)
+    card = build_card(
+        args.date,
+        run_etl=not args.no_etl,
+        run_settlement=not args.no_settle,
+        pull_live_odds=not args.no_live_odds,
+    )
     result = send_email(card, recipient=args.to, dry_run=args.dry_run)
 
     if result.get("success"):

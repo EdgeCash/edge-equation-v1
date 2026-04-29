@@ -97,9 +97,17 @@ def main(argv: list[str] | None = None) -> int:
             lookup_closing_odds(store, int(pk), "NRFI")
             for pk in game_pks
         ]
+        yrfi_american_odds = [
+            lookup_closing_odds(store, int(pk), "YRFI")
+            for pk in game_pks
+        ]
         market_probs = [
             _implied_prob(odds) if odds is not None else None
             for odds in american_odds
+        ]
+        yrfi_market_probs = [
+            _implied_prob(odds) if odds is not None else None
+            for odds in yrfi_american_odds
         ]
         preds = engine.predict_many(
             feature_dicts,
@@ -112,9 +120,17 @@ def main(argv: list[str] | None = None) -> int:
         )
         engine.attach_monte_carlo(preds, feature_dicts)
         rows = [p.as_row() for p in preds]
+        _annotate_conviction(rows)
+        side_rows = _side_rows_from_predictions(
+            preds,
+            yrfi_market_probs=yrfi_market_probs,
+            yrfi_american_odds=yrfi_american_odds,
+            config=cfg,
+        )
     else:
         # Deterministic fallback — Poisson baseline only.
         rows = []
+        side_rows = []
         for pk, f in feats_per_game:
             p = float(f.get("poisson_p_nrfi", 0.55))
             out = build_output(
@@ -150,9 +166,9 @@ def main(argv: list[str] | None = None) -> int:
                 "probability_display": out.headline(),
                 "model_version": out.model_version,
             })
+            side_rows.extend(_baseline_side_rows(pk, out, store, cfg))
 
     if rows:
-        _annotate_conviction(rows)
         store.upsert("predictions", rows)
         Path(args.output_json).write_text(json.dumps(rows, indent=2, default=str))
         log.info("Wrote %d predictions → %s", len(rows), args.output_json)
@@ -160,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
     print(render_ledger_section(store, season=int(args.date[:4])) or
           f"YTD LEDGER ({args.date[:4]}): no settled picks yet")
     _print_top_board(
-        rows, args.date,
+        side_rows or rows, args.date,
         baseline_fallback=bundle is None,
         odds_status=odds_status,
     )
@@ -196,6 +212,12 @@ def _row_sort_strength(row: dict) -> float:
     edge = row.get("edge")
     if edge is not None:
         return float(edge)
+    return _side_probability(row)
+
+
+def _side_probability(row: dict) -> float:
+    if "side_probability" in row:
+        return float(row.get("side_probability") or 0.0)
     return float(row.get("nrfi_prob", 0.0))
 
 
@@ -217,6 +239,120 @@ def _decode_driver_text(row: dict) -> str:
         except Exception:
             return raw
     return ""
+
+
+def _side_rows_from_predictions(
+    predictions,
+    *,
+    yrfi_market_probs: list[float | None],
+    yrfi_american_odds: list[float | None],
+    config,
+) -> list[dict]:
+    """Build display-only NRFI + YRFI rows from canonical predictions."""
+
+    rows: list[dict] = []
+    for idx, pred in enumerate(predictions):
+        nrfi = pred.as_row()
+        nrfi["market_type"] = "NRFI"
+        nrfi["side_probability"] = pred.nrfi_prob
+        rows.append(nrfi)
+
+        yrfi_p = 1.0 - float(pred.nrfi_prob)
+        odds = yrfi_american_odds[idx] if idx < len(yrfi_american_odds) else None
+        market_prob = yrfi_market_probs[idx] if idx < len(yrfi_market_probs) else None
+        out = build_output(
+            game_id=str(pred.game_pk),
+            blended_p=float(pred.nrfi_prob),
+            lambda_total=float(pred.lambda_total),
+            market_type="YRFI",
+            shap_drivers=pred.shap_drivers,
+            mc_low=pred.mc_low,
+            mc_high=pred.mc_high,
+            market_prob=market_prob,
+            market_american_odds=odds,
+            engine="ml",
+            model_version=pred.model_version,
+            kelly_fraction=config.betting.kelly_fraction,
+            min_edge=config.betting.min_edge_to_bet,
+            vig_buffer=config.betting.vig_buffer,
+            max_stake_units=config.betting.max_stake_units,
+        )
+        rows.append({
+            "game_pk": pred.game_pk,
+            "market_type": "YRFI",
+            "nrfi_prob": out.nrfi_prob,
+            "nrfi_pct": out.nrfi_pct,
+            "side_probability": yrfi_p,
+            "lambda_total": out.lambda_total,
+            "color_band": out.color_band,
+            "color_hex": out.color_hex,
+            "signal": out.signal,
+            "mc_low": out.mc_low,
+            "mc_high": out.mc_high,
+            "mc_band_pp": out.mc_band_pp,
+            "shap_drivers": json.dumps(out.shap_drivers),
+            "driver_text": json.dumps(out.driver_text),
+            "market_prob": out.market_prob,
+            "edge": out.edge,
+            "edge_pp": out.edge_pp,
+            "kelly_units": out.kelly_units,
+            "kelly_suggestion": out.kelly_suggestion,
+            "tier": out.tier,
+            "tier_basis": out.tier_basis,
+            "tier_value": out.tier_value,
+            "tier_band": out.tier_band,
+            "probability_display": out.headline(),
+            "model_version": out.model_version,
+        })
+    return rows
+
+
+def _baseline_side_rows(game_pk: int, out, store: NRFIStore, config) -> list[dict]:
+    nrfi_row = {
+        "game_pk": game_pk,
+        "market_type": "NRFI",
+        "nrfi_prob": out.nrfi_prob,
+        "nrfi_pct": out.nrfi_pct,
+        "lambda_total": out.lambda_total,
+        "color_band": out.color_band,
+        "mc_band_pp": out.mc_band_pp,
+        "edge": out.edge,
+        "edge_pp": out.edge_pp,
+        "kelly_units": out.kelly_units,
+        "kelly_suggestion": out.kelly_suggestion,
+        "tier": out.tier,
+        "driver_text": json.dumps(out.driver_text),
+    }
+    yrfi_odds = lookup_closing_odds(store, int(game_pk), "YRFI")
+    yrfi = build_output(
+        game_id=str(game_pk),
+        blended_p=out.nrfi_prob,
+        lambda_total=out.lambda_total,
+        market_type="YRFI",
+        market_american_odds=yrfi_odds,
+        engine="poisson_baseline",
+        model_version=out.model_version,
+        kelly_fraction=config.betting.kelly_fraction,
+        min_edge=config.betting.min_edge_to_bet,
+        vig_buffer=config.betting.vig_buffer,
+        max_stake_units=config.betting.max_stake_units,
+    )
+    yrfi_row = {
+        "game_pk": game_pk,
+        "market_type": "YRFI",
+        "nrfi_prob": yrfi.nrfi_prob,
+        "nrfi_pct": yrfi.nrfi_pct,
+        "lambda_total": yrfi.lambda_total,
+        "color_band": yrfi.color_band,
+        "mc_band_pp": yrfi.mc_band_pp,
+        "edge": yrfi.edge,
+        "edge_pp": yrfi.edge_pp,
+        "kelly_units": yrfi.kelly_units,
+        "kelly_suggestion": yrfi.kelly_suggestion,
+        "tier": yrfi.tier,
+        "driver_text": json.dumps(yrfi.driver_text),
+    }
+    return [nrfi_row, yrfi_row]
 
 
 class LiveOddsStatus:

@@ -165,7 +165,7 @@ def test_email_market_inputs_use_captured_nrfi_odds(monkeypatch):
         lambda store, game_pk, market_type: -120.0 if game_pk == 1 else None,
     )
 
-    market_probs, american_odds = email_report._market_inputs_for_games(
+    market_probs, american_odds, probs_by_side, odds_by_side = email_report._market_inputs_for_games(
         object(),
         [1, 2],
     )
@@ -173,6 +173,8 @@ def test_email_market_inputs_use_captured_nrfi_odds(monkeypatch):
     assert market_probs[0] == pytest.approx(120 / 220)
     assert market_probs[1] is None
     assert american_odds == [-120.0, -110.0]
+    assert probs_by_side[("1", "NRFI")] == pytest.approx(120 / 220)
+    assert odds_by_side[("1", "NRFI")] == -120.0
 
 
 def test_full_corpus_training_selects_start_after_min_rows(monkeypatch, tmp_path):

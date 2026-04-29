@@ -162,7 +162,11 @@ def build_output(
         odds = market_american_odds if market_american_odds is not None else -110.0
         rec = kelly_stake(
             model_prob=p_for_side,
-            market_prob=float(market_prob) if market_type == "NRFI" else (1.0 - float(market_prob)),
+            # market_prob is always the posted probability for the displayed
+            # side. NRFI callers pass NRFI Under 0.5; YRFI callers pass YRFI
+            # Over 0.5. Older code inverted YRFI here, which broke Kelly when
+            # real side-specific prices were available.
+            market_prob=float(market_prob),
             american_odds=float(odds),
             fraction=kelly_fraction,
             min_edge=min_edge,

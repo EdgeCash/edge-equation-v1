@@ -46,6 +46,7 @@ class NRFIBridgeOutput:
     edge: Optional[Decimal] = None
     kelly: Optional[Decimal] = None
     market_prob: Optional[float] = None
+    american_odds: Optional[float] = None
     mc_low: Optional[float] = None
     mc_high: Optional[float] = None
     shap_drivers: list[tuple[str, float]] = field(default_factory=list)
@@ -151,6 +152,8 @@ class NRFIEngineBridge:
         game_ids: Sequence[str],
         market_probs: Optional[Sequence[Optional[float]]] = None,
         american_odds: Optional[Sequence[float]] = None,
+        yrfi_market_probs: Optional[Sequence[Optional[float]]] = None,
+        yrfi_american_odds: Optional[Sequence[float]] = None,
         pitcher_bf_each: Optional[Sequence[float]] = None,
     ) -> list[NRFIBridgeOutput]:
         """Run the full pipeline and return bridge outputs.
@@ -191,6 +194,13 @@ class NRFIEngineBridge:
             mc_bands = [(None, None) for _ in raw_probs]
 
         market_probs = list(market_probs) if market_probs is not None else [None] * len(raw_probs)
+        american_odds = list(american_odds) if american_odds is not None else [-110.0] * len(raw_probs)
+        yrfi_market_probs = (
+            list(yrfi_market_probs) if yrfi_market_probs is not None else [None] * len(raw_probs)
+        )
+        yrfi_american_odds = (
+            list(yrfi_american_odds) if yrfi_american_odds is not None else [-105.0] * len(raw_probs)
+        )
         bf_each = list(pitcher_bf_each) if pitcher_bf_each is not None else [0.0] * len(raw_probs)
 
         # ------------------------------------------------------------------
@@ -224,6 +234,7 @@ class NRFIEngineBridge:
                 realization=grade.realization,
                 edge=grade.edge if mp is not None else None,
                 market_prob=mp,
+                american_odds=american_odds[i] if i < len(american_odds) else None,
                 mc_low=mc_low, mc_high=mc_high,
                 shap_drivers=shap_lists[i],
                 metadata={"engine": "ml" if self._engine else "poisson_baseline"},
@@ -233,7 +244,7 @@ class NRFIEngineBridge:
             # use the same blended estimate so the market_implied edge
             # is symmetric).
             yrfi_p = 1.0 - blended
-            mp_y = (1.0 - mp) if mp is not None else None
+            mp_y = yrfi_market_probs[i] if i < len(yrfi_market_probs) else None
             grade_y = grade_for_blended(
                 yrfi_p,
                 market_implied_p=mp_y if mp_y is not None else 0.524,
@@ -253,6 +264,7 @@ class NRFIEngineBridge:
                 realization=grade_y.realization,
                 edge=grade_y.edge if mp_y is not None else None,
                 market_prob=mp_y,
+                american_odds=yrfi_american_odds[i] if i < len(yrfi_american_odds) else None,
                 mc_low=(1 - mc_high) if mc_high is not None else None,
                 mc_high=(1 - mc_low) if mc_low is not None else None,
                 shap_drivers=[(n, -v) for n, v in shap_lists[i]],
