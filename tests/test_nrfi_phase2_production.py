@@ -53,6 +53,22 @@ def test_training_manifest_serialises_policy(tmp_path):
     assert payload["artifact_version"] == "elite_nrfi_v1_20260429_wf10"
 
 
+def test_full_corpus_date_selection_uses_prior_rows():
+    from edge_equation.engines.nrfi.models.train import _select_full_corpus_window
+
+    rows = [
+        ("2025-04-01", 50),
+        ("2025-04-02", 75),
+        ("2025-04-03", 80),
+    ]
+
+    assert _select_full_corpus_window(rows, min_train_rows=100) == (
+        "2025-04-03",
+        "2025-04-03",
+        205,
+    )
+
+
 def test_ledger_render_labels_yrfi_lean_independently():
     from edge_equation.engines.nrfi.ledger import render_ledger_section
     import pandas as pd
@@ -157,6 +173,48 @@ def test_email_market_inputs_use_captured_nrfi_odds(monkeypatch):
     assert market_probs[0] == pytest.approx(120 / 220)
     assert market_probs[1] is None
     assert american_odds == [-120.0, -110.0]
+
+
+def test_full_corpus_training_selects_start_after_min_rows(monkeypatch, tmp_path):
+    from edge_equation.engines.nrfi.models import train as train_mod
+    import pandas as pd
+
+    class _Store:
+        def __init__(self, path):
+            pass
+
+        def query_df(self, sql):
+            return pd.DataFrame([
+                {"game_date": "2025-04-01", "n": 100},
+                {"game_date": "2025-04-02", "n": 75},
+                {"game_date": "2025-04-03", "n": 50},
+                {"game_date": "2025-04-04", "n": 25},
+            ])
+
+    class _Cfg:
+        duckdb_path = tmp_path / "nrfi.duckdb"
+
+        def resolve_paths(self):
+            return self
+
+    captured = {}
+
+    def _fake_train(**kwargs):
+        captured.update(kwargs)
+        return "report"
+
+    monkeypatch.setattr(train_mod, "NRFIStore", _Store)
+    monkeypatch.setattr(train_mod, "train_production_model", _fake_train)
+
+    out = train_mod.train_full_available_corpus(
+        min_train_rows=175,
+        config=_Cfg(),
+        quiet=True,
+    )
+
+    assert out == "report"
+    assert captured["start_date"] == "2025-04-03"
+    assert captured["end_date"] == "2025-04-04"
 
 
 def test_daily_sort_prefers_edge_then_highest_nrfi_probability():

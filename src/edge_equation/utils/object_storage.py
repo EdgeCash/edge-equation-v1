@@ -145,10 +145,26 @@ class R2Client:
             return False
 
     def list_keys(self, prefix: str) -> list[str]:
-        """List object keys with the given prefix (no pagination since
-        bundle counts are O(weeks-of-history), not millions)."""
-        resp = self._s3.list_objects_v2(Bucket=self.bucket, Prefix=prefix)
-        return [obj["Key"] for obj in resp.get("Contents", []) or []]
+        """List object keys with the given prefix.
+
+        R2 follows the S3 ``list_objects_v2`` pagination contract.  Bundle
+        directories are tiny, but corpus syncs may contain many parquet shards,
+        so this method must paginate instead of assuming one response is enough.
+        """
+        keys: list[str] = []
+        token = None
+        while True:
+            kwargs = {"Bucket": self.bucket, "Prefix": prefix}
+            if token:
+                kwargs["ContinuationToken"] = token
+            resp = self._s3.list_objects_v2(**kwargs)
+            keys.extend(obj["Key"] for obj in resp.get("Contents", []) or [])
+            if not resp.get("IsTruncated"):
+                break
+            token = resp.get("NextContinuationToken")
+            if not token:
+                break
+        return keys
 
     def delete_key(self, key: str) -> None:
         log.info("R2 delete: s3://%s/%s", self.bucket, key)

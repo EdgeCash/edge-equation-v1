@@ -194,21 +194,12 @@ def train_full_available_corpus(
     if df is None or df.empty:
         raise RuntimeError("No trainable feature/actual rows found in DuckDB")
 
-    cumulative = 0
-    start_date = None
-    for _, row in df.iterrows():
-        if cumulative >= min_train_rows:
-            start_date = str(row.game_date)[:10]
-            break
-        cumulative += int(row.n)
-    if start_date is None:
-        raise RuntimeError(
-            f"Only {cumulative} trainable rows available; need at least "
-            f"{min_train_rows} before first walk-forward chunk"
-        )
-    end_date = str(df.iloc[-1].game_date)[:10]
+    rows = [(str(row.game_date)[:10], int(row.n)) for _, row in df.iterrows()]
+    start_date, end_date, total = _select_full_corpus_window(
+        rows,
+        min_train_rows=min_train_rows,
+    )
     if not quiet:
-        total = int(df["n"].sum())
         print(
             f"Full corpus: {total} trainable games, "
             f"date window {str(df.iloc[0].game_date)[:10]}..{end_date}, "
@@ -226,6 +217,35 @@ def train_full_available_corpus(
         save_bundle=save_bundle,
         quiet=quiet,
     )
+
+
+def _select_full_corpus_window(
+    rows: list[tuple[str, int]],
+    *,
+    min_train_rows: int,
+) -> tuple[str, str, int]:
+    """Return (first_prediction_date, last_date, total_rows).
+
+    ``rows`` must be ordered by date and contain per-day trainable row counts.
+    The selected start date is the first date with at least ``min_train_rows``
+    prior rows, preserving walk-forward causality.
+    """
+    if not rows:
+        raise RuntimeError("No trainable feature/actual rows found in DuckDB")
+    cumulative = 0
+    start_date = None
+    for day, n_rows in rows:
+        if cumulative >= min_train_rows:
+            start_date = day
+            break
+        cumulative += int(n_rows)
+    total = sum(int(n) for _, n in rows)
+    if start_date is None:
+        raise RuntimeError(
+            f"Only {total} trainable rows available; need at least "
+            f"{min_train_rows} before first walk-forward chunk"
+        )
+    return start_date, rows[-1][0], total
 
 
 def _reliability_from_jsonl(path: Optional[str]) -> list[ReliabilitySlice]:
