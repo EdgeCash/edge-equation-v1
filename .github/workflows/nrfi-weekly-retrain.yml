@@ -101,6 +101,15 @@ jobs:
             --chunk-days 7 \
             --calibration-method isotonic
 
+      - name: Settle past-week tier ledger
+        # Phase 3 — pull actuals for the past two weeks (handles late
+        # postponements / rain-delay finishes) and update the per-tier
+        # YTD ledger. Idempotent — already-settled (game_pk, market_type)
+        # pairs are skipped.
+        continue-on-error: true
+        run: |
+          python -m edge_equation.engines.nrfi.ledger settle --season 2026
+
       - name: Run sanity report (writes gate marker on pass)
         continue-on-error: true
         run: |

@@ -127,6 +127,20 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         -float(p.get("pct", 0.0)),
     ))
 
+    # Settle yesterday's slate before rendering today's so the YTD
+    # ledger reflects last night's results. Best-effort — a network
+    # blip on actuals shouldn't block the daily email.
+    ledger_text = ""
+    try:
+        from .ledger import render_ledger_section, settle_predictions
+        season = int(target_date[:4])
+        settle_predictions(store, season=season, cutoff_date=target_date,
+                            config=cfg, pull_actuals=True)
+        ledger_text = render_ledger_section(store, season=season)
+    except Exception as e:
+        log.warning("ledger settlement skipped (%s): %s",
+                     type(e).__name__, e)
+
     subject_date = target_date
     return {
         "card_type": CARD_TYPE,
@@ -137,6 +151,7 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         "engine": engine_label,
         "target_date": subject_date,
         "picks": picks,
+        "ledger_text": ledger_text,
     }
 
 
@@ -175,7 +190,22 @@ def _to_card_pick(bridge_output, engine_label: str,
         realization=bridge_output.realization,
         engine=engine_label,
     )
+
+    # Tier classification — drives the [LOCK]/[STRONG]/[MODERATE]/[LEAN]
+    # tag that prefixes each pick line in the email + dashboard.
+    from edge_equation.engines.tiering import classify_tier
+    tier_clf = classify_tier(
+        market_type=out.market_type,
+        side_probability=out.nrfi_prob,
+    )
+
     pretty = to_email_card(out)
+    if tier_clf.tier.is_qualifying:
+        # Prepend the tier tag so the operator sees conviction at a glance.
+        pretty_lines = pretty.split("\n", 1)
+        pretty_lines[0] = f"[{tier_clf.tier.value:<8}] {pretty_lines[0]}"
+        pretty = "\n".join(pretty_lines)
+
     return {
         "game_id": out.game_id,
         "market_type": out.market_type,
@@ -190,6 +220,8 @@ def _to_card_pick(bridge_output, engine_label: str,
         "edge": (f"{out.edge_pp:+.1f}pp" if out.edge_pp is not None else None),
         "kelly": (f"{out.kelly_units:.2f}u" if (out.kelly_units or 0) > 0 else None),
         "grade": out.grade,
+        "tier": tier_clf.tier.value,
+        "tier_basis": tier_clf.basis,
         "drivers": out.driver_text,
         "rendered": pretty,
     }
@@ -265,6 +297,15 @@ def render_body(card: dict) -> str:
                 rendered = p.get("rendered") or _render_fallback(p)
                 lines.append(rendered)
                 lines.append("")
+
+    # YTD per-tier ledger — appended below the day's picks so the
+    # operator's eye lands on conviction history while reading the new
+    # board. Skipped silently when no picks have settled yet.
+    ledger_text = card.get("ledger_text", "")
+    if ledger_text:
+        lines.append("")
+        lines.append(ledger_text)
+        lines.append("")
 
     lines.append(card.get("tagline", "")
                   or _footer_text(card.get("engine", "unknown")))
