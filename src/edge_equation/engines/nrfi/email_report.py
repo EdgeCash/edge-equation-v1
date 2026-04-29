@@ -141,6 +141,21 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         log.warning("ledger settlement skipped (%s): %s",
                      type(e).__name__, e)
 
+    # Phase 6 integration: feed today's qualifying picks into the
+    # parlay builder. Best-effort — failure here must never block the
+    # daily email. Auto-record is intentionally OFF; the operator
+    # records the 0-2 tickets they actually place via the CLI.
+    parlay_text = ""
+    parlay_ledger_text = ""
+    try:
+        parlay_text, parlay_ledger_text = _build_parlay_block(
+            outputs if feats_per_game else [],
+            label_map, store,
+        )
+    except Exception as e:
+        log.warning("parlay block skipped (%s): %s",
+                      type(e).__name__, e)
+
     subject_date = target_date
     return {
         "card_type": CARD_TYPE,
@@ -152,6 +167,8 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         "target_date": subject_date,
         "picks": picks,
         "ledger_text": ledger_text,
+        "parlay_text": parlay_text,
+        "parlay_ledger_text": parlay_ledger_text,
     }
 
 
@@ -225,6 +242,68 @@ def _to_card_pick(bridge_output, engine_label: str,
         "drivers": out.driver_text,
         "rendered": pretty,
     }
+
+
+def _build_parlay_block(
+    bridge_outputs: list, label_map: dict[str, str], store,
+) -> tuple[str, str]:
+    """Convert bridge outputs into parlay legs + render top candidates.
+
+    Returns (candidates_text, ledger_text). Both empty strings when no
+    candidate qualifies (the typical day) or no tickets have been
+    recorded yet. Caller swallows exceptions, so any error here just
+    yields ("", "").
+    """
+    from edge_equation.engines.parlay import (
+        ParlayConfig, ParlayLeg, build_parlay_candidates,
+        init_parlay_tables, render_candidate,
+        render_ledger_section as parlay_render_ledger,
+    )
+    from edge_equation.engines.tiering import Tier, classify_tier
+
+    cfg = ParlayConfig()
+    legs: list[ParlayLeg] = []
+    for o in bridge_outputs:
+        # The bridge stores `fair_prob` as the side's own probability
+        # (NRFI prob for an NRFI row, YRFI prob for a YRFI row), so
+        # we can hand it straight to classify_tier as side_probability.
+        side_p = float(o.fair_prob)
+        clf = classify_tier(market_type=o.market_type,
+                              side_probability=side_p)
+        if clf.tier not in (Tier.LOCK, Tier.STRONG):
+            continue
+        # Phase 4 swap-in lives elsewhere — for now use the engine's
+        # flat default odds. The settlement pass uses captured odds
+        # when present, so the units math stays honest at settle time
+        # even if the email-displayed odds are the default.
+        odds = -120.0 if o.market_type == "NRFI" else -105.0
+        label = label_map.get(str(o.game_id), str(o.game_id))
+        legs.append(ParlayLeg(
+            market_type=o.market_type,
+            side="Under 0.5" if o.market_type == "NRFI" else "Over 0.5",
+            side_probability=side_p,
+            american_odds=odds,
+            tier=clf.tier,
+            game_id=str(o.game_id),
+            label=f"{label} {o.market_type}",
+        ))
+
+    candidates = build_parlay_candidates(legs, config=cfg)
+    candidates_text = ""
+    if candidates:
+        # Top 2 — Special Drops are by definition rare.
+        rendered = "\n\n".join(render_candidate(c) for c in candidates[:2])
+        header = "PARLAY CANDIDATES (Special Drops)\n" + ("─" * 60)
+        candidates_text = header + "\n" + rendered
+
+    ledger_text = ""
+    try:
+        init_parlay_tables(store)
+        ledger_text = parlay_render_ledger(store)
+    except Exception as e:
+        log.debug("parlay ledger render skipped (%s): %s",
+                    type(e).__name__, e)
+    return candidates_text, ledger_text
 
 
 def _build_game_label_map(store, target_date: str) -> dict[str, str]:
@@ -305,6 +384,22 @@ def render_body(card: dict) -> str:
     if ledger_text:
         lines.append("")
         lines.append(ledger_text)
+        lines.append("")
+
+    # Parlay candidates ("Special Drops") — typically 0 on a normal
+    # slate, 1-2 when the model lines up multiple LOCK-tier games.
+    parlay_text = card.get("parlay_text", "")
+    if parlay_text:
+        lines.append("")
+        lines.append(parlay_text)
+        lines.append("")
+
+    # Parlay ledger — only renders once the operator has recorded a
+    # ticket via the CLI. Empty until then.
+    parlay_ledger_text = card.get("parlay_ledger_text", "")
+    if parlay_ledger_text:
+        lines.append("")
+        lines.append(parlay_ledger_text)
         lines.append("")
 
     lines.append(card.get("tagline", "")
