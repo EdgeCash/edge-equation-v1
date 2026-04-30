@@ -1,9 +1,12 @@
 import type { GetServerSideProps } from "next";
 
 import CardShell from "@/components/CardShell";
+import ConvictionBadge from "@/components/ConvictionBadge";
+import ConvictionKey from "@/components/ConvictionKey";
 import Layout from "@/components/Layout";
 import StatTile from "@/components/StatTile";
 import { api } from "@/lib/api";
+import { tierFromNrfi } from "@/lib/conviction";
 import type {
   NrfiBoardRow,
   NrfiDashboard,
@@ -36,32 +39,21 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
 
 // ---------------------------------------------------------------------------
-// Tier badge — colors mirror the Python TIER_COLOR_HEX so the dashboard
-// stays visually identical to the daily email + Discord card.
+// Tier badge — bridges the NRFI engine's tier names (LOCK / STRONG / ...) into
+// the V4 conviction system, with the colour switching by market: STRONG_NRFI
+// is Deep Green, STRONG_YRFI is Red.
 // ---------------------------------------------------------------------------
 
-const TIER_BG: Record<NrfiTier, string> = {
-  LOCK:     "bg-emerald-700 text-white",
-  STRONG:   "bg-lime-500 text-ink-950",
-  MODERATE: "bg-amber-400 text-ink-950",
-  LEAN:     "bg-orange-500 text-white",
-  NO_PLAY:  "bg-rose-700 text-white",
-};
-
-
-function TierBadge({ tier }: { tier: NrfiTier | undefined }) {
+function NrfiTierBadge({
+  tier,
+  market,
+}: {
+  tier: NrfiTier | undefined;
+  market: "NRFI" | "YRFI";
+}) {
   if (!tier) return null;
-  const cls = TIER_BG[tier] ?? "bg-edge-line text-edge-text";
-  return (
-    <span
-      className={
-        "inline-block px-2 py-0.5 font-mono text-[10px] uppercase " +
-        "tracking-[0.18em] rounded-sm " + cls
-      }
-    >
-      {tier}
-    </span>
-  );
+  const conv = tierFromNrfi(tier, market);
+  return <ConvictionBadge tier={conv} />;
 }
 
 
@@ -85,13 +77,13 @@ function BoardRow({ row }: { row: NrfiBoardRow }) {
         {matchup}
       </div>
       <div className="col-span-6 sm:col-span-3 flex items-center gap-2">
-        <TierBadge tier={row.nrfi_tier} />
+        <NrfiTierBadge tier={row.nrfi_tier} market="NRFI" />
         <span className="font-mono tabular-nums text-edge-textDim text-sm">
           NRFI {nrfiPct}
         </span>
       </div>
       <div className="col-span-6 sm:col-span-3 flex items-center gap-2">
-        <TierBadge tier={row.yrfi_tier} />
+        <NrfiTierBadge tier={row.yrfi_tier} market="YRFI" />
         <span className="font-mono tabular-nums text-edge-textDim text-sm">
           YRFI {yrfiPct}
         </span>
@@ -148,19 +140,23 @@ function ParlayCard({ candidate, idx }: { candidate: ParlayCandidate; idx: numbe
         </div>
       </div>
       <div className="space-y-1">
-        {candidate.legs.map((leg, i) => (
-          <div key={i} className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <TierBadge tier={leg.tier} />
-              <span className="font-mono text-sm text-edge-text">
-                {leg.label}
-              </span>
+        {candidate.legs.map((leg, i) => {
+          const market: "NRFI" | "YRFI" =
+            leg.market_type.toUpperCase() === "YRFI" ? "YRFI" : "NRFI";
+          return (
+            <div key={i} className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <NrfiTierBadge tier={leg.tier} market={market} />
+                <span className="font-mono text-sm text-edge-text">
+                  {leg.label}
+                </span>
+              </div>
+              <div className="font-mono tabular-nums text-[11px] text-edge-textDim">
+                {(leg.side_probability * 100).toFixed(1)}%  ·  {leg.american_odds > 0 ? "+" : ""}{leg.american_odds}
+              </div>
             </div>
-            <div className="font-mono tabular-nums text-[11px] text-edge-textDim">
-              {(leg.side_probability * 100).toFixed(1)}%  ·  {leg.american_odds > 0 ? "+" : ""}{leg.american_odds}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] font-mono tabular-nums">
         <div>
@@ -203,17 +199,22 @@ export default function NrfiDashboardPage({ data, error }: Props) {
       title="NRFI Dashboard"
       description="Today's first-inning board, per-tier YTD ledger, and Special Drop parlay candidates."
     >
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-4">
+      <div className="eyebrow mb-4">
         NRFI / YRFI · Live
       </div>
-      <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-none">
-        NRFI Dashboard
+      <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-[0.95]">
+        First-Inning <span className="italic text-edge-accent">Board</span>
       </h1>
-      <p className="mt-4 text-edge-textDim max-w-prose">
-        Today&apos;s first-inning board with tier-tagged conviction, the
-        per-tier YTD ledger from Phase 3, and the qualifying
-        cross-market Special Drop candidates from the parlay engine.
+      <p className="mt-4 text-edge-textDim max-w-prose leading-relaxed">
+        Today&apos;s first-inning board with V4 conviction tiers, the per-tier
+        YTD ledger, and the qualifying cross-market Special Drop candidates
+        from the parlay engine. Deep Green flags strong NRFI reads;
+        Red flags strong YRFI reads.
       </p>
+
+      <div className="mt-6">
+        <ConvictionKey variant="compact" />
+      </div>
 
       {error && (
         <div className="mt-10 border border-edge-line rounded-sm p-6 bg-ink-900/80">
