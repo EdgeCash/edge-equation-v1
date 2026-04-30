@@ -320,7 +320,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     parser.add_argument("--min-train-rows", type=int, default=DEFAULT_MIN_TRAIN_ROWS)
     parser.add_argument(
         "--calibration-method",
-        choices=("isotonic", "platt"),
+        choices=("isotonic", "platt", "hybrid"),
         default=DEFAULT_CALIBRATION_METHOD,
     )
     parser.add_argument(
