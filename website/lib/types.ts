@@ -82,3 +82,78 @@ export interface MeResponse {
   subscription: SubscriptionRecord | null;
   has_active_subscription: boolean;
 }
+
+
+// ---------------------------------------------------------------------------
+// Phase 5 — NRFI dashboard payload (mirrors api.routers.nrfi.get_nrfi_dashboard)
+// ---------------------------------------------------------------------------
+
+export type NrfiTier = "LOCK" | "STRONG" | "MODERATE" | "LEAN" | "NO_PLAY";
+
+export interface NrfiBoardRow {
+  game_pk: number;
+  home_team?: string;
+  away_team?: string;
+  first_pitch_ts?: string;
+  nrfi_pct?: number;
+  lambda_total?: number;
+  color_band?: string;
+  signal?: string;
+  mc_low?: number;
+  mc_high?: number;
+  edge?: number;
+  kelly_units?: number;
+  shap_drivers?: string;
+  nrfi_tier?: NrfiTier;
+  yrfi_tier?: NrfiTier;
+}
+
+export interface NrfiTierLedgerRow {
+  season: number;
+  market_type: "NRFI" | "YRFI" | "ALL";
+  tier: NrfiTier | "ALL";
+  n_settled: number;
+  wins: number;
+  losses: number;
+  units_won: number;
+  last_updated?: string;
+}
+
+export interface ParlayCandidateLeg {
+  market_type: string;
+  side: string;
+  side_probability: number;
+  american_odds: number;
+  tier: NrfiTier;
+  label: string;
+}
+
+export interface ParlayCandidate {
+  n_legs: number;
+  joint_prob_independent: number;
+  joint_prob_corr: number;
+  combined_decimal_odds: number;
+  combined_american_odds: number;
+  implied_prob: number;
+  edge_pp: number;
+  ev_units: number;
+  stake_units: number;
+  legs: ParlayCandidateLeg[];
+}
+
+export interface ParlayLedgerSummary {
+  recorded: number;
+  settled: number;
+  pending: number;
+  units_returned: number;
+  total_stake: number;
+  roi_pct: number;
+}
+
+export interface NrfiDashboard {
+  date: string;
+  board: NrfiBoardRow[];
+  ytd_ledger: NrfiTierLedgerRow[];
+  parlay_candidates: ParlayCandidate[];
+  parlay_ledger: ParlayLedgerSummary;
+}

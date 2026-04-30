@@ -160,10 +160,10 @@ def test_build_parlay_block_renders_ledger_when_tickets_exist():
     legs = [
         ParlayLeg(market_type="NRFI", side="Under 0.5",
                     side_probability=0.85, american_odds=-120,
-                    tier=Tier.LOCK, game_id="g1", label="BOS @ NYY NRFI"),
+                    tier=Tier.ELITE, game_id="g1", label="BOS @ NYY NRFI"),
         ParlayLeg(market_type="NRFI", side="Under 0.5",
                     side_probability=0.84, american_odds=-115,
-                    tier=Tier.LOCK, game_id="g2", label="LAD @ SF NRFI"),
+                    tier=Tier.ELITE, game_id="g2", label="LAD @ SF NRFI"),
     ]
     cand = build_parlay_candidates(legs)[0]
     record_parlay(store, cand, parlay_id="opening-week-001")
@@ -199,7 +199,7 @@ def _minimal_card(**overrides):
         "engine": "ml",
         "picks": [{
             "market_type": "NRFI",
-            "rendered": "[LOCK] BOS @ NYY NRFI 85% λ=0.42",
+            "rendered": "[ELITE] BOS @ NYY NRFI 85% λ=0.42",
             "game_id": "BOS @ NYY",
             "pct": 85.0,
         }],

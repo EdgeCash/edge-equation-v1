@@ -264,6 +264,7 @@ def _mc_band_pp(low: Optional[float], high: Optional[float]) -> Optional[float]:
 
 def _tier_band_label(tier: str) -> str:
     return {
+        "ELITE": "70-100%",
         "LOCK": "70-100%",
         "STRONG": "64-70%",
         "MODERATE": "58-64%",

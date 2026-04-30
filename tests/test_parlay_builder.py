@@ -167,7 +167,7 @@ def test_qualify_parlay_rejects_lean_or_moderate_legs():
 
 def test_qualify_parlay_accepts_lock_and_strong_combinations():
     cfg = ParlayConfig()
-    legs = [_leg(tier=Tier.LOCK, game="g1"),
+    legs = [_leg(tier=Tier.ELITE, game="g1"),
               _leg(tier=Tier.STRONG, game="g2")]
     assert qualify_parlay(legs, joint_prob_corr=0.75, ev_units=0.30,
                             config=cfg) is True
@@ -210,9 +210,9 @@ def test_builder_returns_candidate_for_two_lock_nrfis():
     and large EV. Classic Special Drop."""
     legs = [
         _leg(market="NRFI", prob=0.85, odds=-115,
-              tier=Tier.LOCK, game="g1", label="g1 NRFI"),
+              tier=Tier.ELITE, game="g1", label="g1 NRFI"),
         _leg(market="NRFI", prob=0.84, odds=-110,
-              tier=Tier.LOCK, game="g2", label="g2 NRFI"),
+              tier=Tier.ELITE, game="g2", label="g2 NRFI"),
     ]
     cands = build_parlay_candidates(legs)
     assert len(cands) == 1
@@ -235,8 +235,8 @@ def test_builder_filters_legs_below_min_tier():
 def test_builder_excludes_mutually_exclusive_pairs():
     """NRFI + YRFI on the same game must never appear in a candidate."""
     legs = [
-        _leg(market="NRFI", prob=0.85, tier=Tier.LOCK, game="g1"),
-        _leg(market="YRFI", prob=0.84, tier=Tier.LOCK, game="g1"),
+        _leg(market="NRFI", prob=0.85, tier=Tier.ELITE, game="g1"),
+        _leg(market="YRFI", prob=0.84, tier=Tier.ELITE, game="g1"),
     ]
     cands = build_parlay_candidates(legs)
     assert cands == []
@@ -259,11 +259,11 @@ def test_builder_sorts_by_ev_descending():
     """Two qualifying combos — the higher-EV one comes first."""
     legs = [
         _leg(market="NRFI", prob=0.95, odds=-110,
-              tier=Tier.LOCK, game="g1"),
+              tier=Tier.ELITE, game="g1"),
         _leg(market="NRFI", prob=0.90, odds=-110,
-              tier=Tier.LOCK, game="g2"),
+              tier=Tier.ELITE, game="g2"),
         _leg(market="NRFI", prob=0.85, odds=-110,
-              tier=Tier.LOCK, game="g3"),
+              tier=Tier.ELITE, game="g3"),
     ]
     cands = build_parlay_candidates(legs)
     assert len(cands) >= 2
@@ -276,7 +276,7 @@ def test_builder_respects_max_legs_config():
     cfg = ParlayConfig(max_legs=2)
     legs = [
         _leg(market="NRFI", prob=0.92, odds=-115,
-              tier=Tier.LOCK, game=f"g{i}")
+              tier=Tier.ELITE, game=f"g{i}")
         for i in range(4)
     ]
     cands = build_parlay_candidates(legs, config=cfg)
@@ -289,7 +289,7 @@ def test_builder_emits_n_choose_k_combos_when_all_qualify():
     cfg = ParlayConfig(max_legs=3)
     legs = [
         _leg(market="NRFI", prob=0.90, odds=-110,
-              tier=Tier.LOCK, game=f"g{i}")
+              tier=Tier.ELITE, game=f"g{i}")
         for i in range(4)
     ]
     cands = build_parlay_candidates(legs, config=cfg)
@@ -306,16 +306,16 @@ def test_builder_emits_n_choose_k_combos_when_all_qualify():
 def test_render_candidate_includes_legs_tier_and_ev():
     legs = [
         _leg(market="NRFI", side="Under 0.5",
-              prob=0.85, odds=-115, tier=Tier.LOCK,
+              prob=0.85, odds=-115, tier=Tier.ELITE,
               game="g1", label="Yankees @ Red Sox NRFI"),
         _leg(market="NRFI", side="Under 0.5",
-              prob=0.84, odds=-110, tier=Tier.LOCK,
+              prob=0.84, odds=-110, tier=Tier.ELITE,
               game="g2", label="Dodgers @ Giants NRFI"),
     ]
     cand = build_parlay_candidates(legs)[0]
     text = render_candidate(cand)
     assert "PARLAY (2 legs)" in text
-    assert "LOCK" in text
+    assert "ELITE" in text
     assert "Yankees @ Red Sox NRFI" in text
     assert "Dodgers @ Giants NRFI" in text
     assert "joint prob" in text

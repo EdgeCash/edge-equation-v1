@@ -144,6 +144,18 @@ class R2Client:
         except Exception:
             return False
 
+    def last_modified(self, key: str):
+        """Return the LastModified timestamp for `key`, or None when the
+        key doesn't exist or the head call fails. Useful for the bundle
+        inspection CLI to surface "this bundle was uploaded N days ago"
+        without parsing the date out of the filename.
+        """
+        try:
+            resp = self._s3.head_object(Bucket=self.bucket, Key=key)
+        except Exception:
+            return None
+        return resp.get("LastModified")
+
     def list_keys(self, prefix: str) -> list[str]:
         """List object keys with the given prefix.
 

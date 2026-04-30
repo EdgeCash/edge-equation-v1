@@ -15,7 +15,7 @@ already counted. Idempotent — settlement is safe to re-run.
     game_pk        BIGINT
     market_type    VARCHAR    'NRFI' or 'YRFI'
     season         INTEGER
-    tier           VARCHAR    'LOCK' / 'STRONG' / 'MODERATE' / 'LEAN'
+    tier           VARCHAR    'ELITE' / 'STRONG' / 'MODERATE' / 'LEAN'
     predicted_p    DOUBLE     calibrated model prob for the side staked
     american_odds  DOUBLE     odds we'd have gotten (default -120/-105)
     actual_hit     BOOLEAN    did the predicted side hit?
@@ -196,8 +196,8 @@ def _stake_side_for_game(nrfi_prob: float) -> tuple[str, float, float]:
     nrfi_tier = classify_tier(market_type="NRFI", side_probability=nrfi_prob).tier
     yrfi_tier = classify_tier(market_type="YRFI", side_probability=yrfi_prob).tier
 
-    # Tier ordering for selection — LOCK > STRONG > MODERATE > LEAN > NO_PLAY.
-    rank = {Tier.LOCK: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
+    # Tier ordering for selection — ELITE > STRONG > MODERATE > LEAN > NO_PLAY.
+    rank = {Tier.ELITE: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
             Tier.LEAN: 1, Tier.NO_PLAY: 0}
     if rank[nrfi_tier] >= rank[yrfi_tier]:
         return "NRFI", nrfi_prob, DEFAULT_NRFI_ODDS
@@ -432,7 +432,7 @@ def _refresh_tier_ledger(store: NRFIStore, *, season: int) -> None:
 
 
 def get_tier_ledger(store: NRFIStore, season: int):
-    """Return the ledger as a DataFrame ordered by tier (LOCK first).
+    """Return the ledger as a DataFrame ordered by tier (ELITE first).
 
     Empty DataFrame when nothing has settled yet for the season.
     """
@@ -449,7 +449,7 @@ def get_tier_ledger(store: NRFIStore, season: int):
     if df is None or df.empty:
         return df
     tier_order = {t.value: i for i, t in enumerate(
-        [Tier.LOCK, Tier.STRONG, Tier.MODERATE, Tier.LEAN]
+        [Tier.ELITE, Tier.STRONG, Tier.MODERATE, Tier.LEAN]
     )}
     tier_order["ALL"] = 99
     df["_tier_rank"] = df["tier"].map(lambda t: tier_order.get(t, 100))

@@ -1,26 +1,137 @@
-"""MLB full-game engine — placeholder for Phase 5.
+"""MLB full-game engine — Phase 5.
 
-Status: skeleton only. No code yet.
+Mirrors the elite NRFI / Props pattern:
 
-Markets covered when this engine is built:
+* `config.py`         — `FullGameConfig` + tunable knobs.
+* `markets.py`        — canonical → Odds API mapping for ML, Run_Line,
+                          Total, F5_Total, F5_ML, Team_Total.
+* `odds_fetcher.py`   — standard + alternate market fetchers + payload
+                          normalization to typed `FullGameLine` rows.
+* `projection.py`     — per-team Bayesian-blended Poisson + Skellam
+                          for spread / moneyline. One projector handles
+                          all six markets via dispatch on canonical name.
+* `edge.py`           — vig-adjusted edge computation + tier
+                          classification (uses the engine-wide
+                          `tiering.classify_tier` edge ladder).
+* `data/storage.py`   — `FullGameStore` + DDL.
+* `data/team_rates.py` — `TeamRollingRates`, `bayesian_blend`,
+                            `compute_team_rates_from_actuals`.
 
-* Moneyline (full game)
-* Total runs (full game)
-* Run line / spread
-* First-five-innings ML
-* First-five-innings total
-* Team totals (per team, full game and F5)
+What's NOT wired yet (FG-2 / FG-3):
 
-Reuses the deterministic-core math primitives already shipped in
-``src/edge_equation/math/``: Bradley-Terry for win probability,
-Poisson + Dixon-Coles correlation for totals, Pythagorean expectation
-for season-strength features, exponential decay for recency weighting,
-isotonic regression for calibration, and KellyAdaptive for stake sizing.
-
-Tier classification is **edge-based** for non-50/50 markets (favorites
-at -150, etc.). The NRFI raw-probability ladder does not generalise
-here — see ``edge_equation.engines.nrfi.utils.colors`` for the symmetric
-ladder and the audit thread for why.
-
-Track work under the full-game PR series after props ships.
+* `output/payload.py`     — `FullGameOutput` mirroring NRFIOutput/PropOutput.
+* `ledger.py`             — per-tier YTD ledger.
+* `daily.py`              — daily orchestrator.
+* `run_daily.py` integration.
 """
+
+from __future__ import annotations
+
+from .config import (
+    APIConfig,
+    FullGameConfig,
+    ProjectionKnobs,
+    get_default_config,
+)
+from .data.storage import FullGameStore
+from .data.team_rates import (
+    LEAGUE_RUNS_ALLOWED_PER_GAME,
+    LEAGUE_RUNS_PER_GAME,
+    TeamRollingRates,
+    bayesian_blend,
+    compute_team_rates_from_actuals,
+    default_team_rates_table,
+)
+from .edge import (
+    FullGameEdgePick,
+    build_devig_table,
+    build_edge_picks,
+    compute_edge_pp,
+)
+from .ledger import (
+    SettlementResult,
+    get_tier_ledger,
+    init_ledger_tables,
+    render_ledger_section,
+    settle_predictions,
+)
+from .markets import (
+    ALL_MARKETS_PARAM,
+    MLB_FULL_GAME_MARKETS,
+    STANDARD_MARKETS_PARAM,
+    FullGameMarket,
+    all_markets,
+    market_for_odds_api_key,
+)
+from .odds_fetcher import (
+    FullGameLine,
+    fetch_all_full_game_lines,
+    fetch_event_full_game_props,
+    fetch_event_list,
+    normalize_event_payload,
+)
+from .output import (
+    FullGameOutput,
+    build_full_game_output,
+    color_band_for_tier,
+    color_hex_for_tier,
+    to_api_dict,
+    to_email_card,
+)
+from .projection import (
+    ProjectedFullGameSide,
+    project_all,
+    project_full_game_market,
+)
+
+
+__all__ = [
+    # config
+    "APIConfig",
+    "FullGameConfig",
+    "ProjectionKnobs",
+    "get_default_config",
+    # data
+    "FullGameStore",
+    "LEAGUE_RUNS_ALLOWED_PER_GAME",
+    "LEAGUE_RUNS_PER_GAME",
+    "TeamRollingRates",
+    "bayesian_blend",
+    "compute_team_rates_from_actuals",
+    "default_team_rates_table",
+    # markets
+    "ALL_MARKETS_PARAM",
+    "MLB_FULL_GAME_MARKETS",
+    "STANDARD_MARKETS_PARAM",
+    "FullGameMarket",
+    "all_markets",
+    "market_for_odds_api_key",
+    # odds_fetcher
+    "FullGameLine",
+    "fetch_all_full_game_lines",
+    "fetch_event_full_game_props",
+    "fetch_event_list",
+    "normalize_event_payload",
+    # projection
+    "ProjectedFullGameSide",
+    "project_all",
+    "project_full_game_market",
+    # edge
+    "FullGameEdgePick",
+    "build_devig_table",
+    "build_edge_picks",
+    "compute_edge_pp",
+    # output
+    "FullGameOutput",
+    "build_full_game_output",
+    "color_band_for_tier",
+    "color_hex_for_tier",
+    "to_api_dict",
+    "to_email_card",
+    # ledger
+    "SettlementResult",
+    "get_tier_ledger",
+    "init_ledger_tables",
+    "render_ledger_section",
+    "settle_predictions",
+]

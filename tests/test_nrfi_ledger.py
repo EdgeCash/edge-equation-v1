@@ -94,14 +94,14 @@ def test_settlement_result_summary_contains_counts():
         n_picks_settled=5,
         n_picks_no_actual=2,
     )
-    r.by_tier[Tier.LOCK] = 2
+    r.by_tier[Tier.ELITE] = 2
     r.by_tier[Tier.STRONG] = 3
     summary = r.summary()
     assert "picks examined" in summary
     assert "10" in summary
     assert "newly settled" in summary
     assert "5" in summary
-    assert "LOCK" in summary
+    assert "ELITE" in summary
     assert "STRONG" in summary
     # Tiers with zero counts should not be rendered.
     assert "MODERATE" not in summary
@@ -216,7 +216,7 @@ def test_settle_predictions_classifies_and_writes_new_rows(monkeypatch):
 
     assert result.n_picks_examined == 3
     assert result.n_picks_settled == 2
-    assert result.by_tier[Tier.LOCK] == 1
+    assert result.by_tier[Tier.ELITE] == 1
     assert result.by_tier[Tier.STRONG] == 1
     # NO_PLAY game is unsettled but counted as "no actual" residual.
     assert result.n_picks_no_actual == 1
@@ -227,7 +227,7 @@ def test_settle_predictions_classifies_and_writes_new_rows(monkeypatch):
     rows = settled_writes[0][1]
     assert len(rows) == 2
     by_pk = {r["game_pk"]: r for r in rows}
-    assert by_pk[1001]["tier"] == "LOCK"
+    assert by_pk[1001]["tier"] == "ELITE"
     assert by_pk[1001]["market_type"] == "NRFI"
     assert by_pk[1001]["actual_hit"] is True
     assert by_pk[1001]["units_delta"] == pytest.approx(100.0 / 120.0)
@@ -253,7 +253,7 @@ def test_settle_predictions_yrfi_side_when_nrfi_is_low():
     )
 
     assert result.n_picks_settled == 1
-    assert result.by_tier[Tier.LOCK] == 1
+    assert result.by_tier[Tier.ELITE] == 1
     rows = [u for u in store.upserts if u[0] == "nrfi_pick_settled"][0][1]
     assert rows[0]["market_type"] == "YRFI"
     assert rows[0]["actual_hit"] is True
@@ -320,11 +320,11 @@ def test_settle_predictions_empty_predictions_returns_zero():
 def test_refresh_tier_ledger_writes_per_tier_market_and_rollups():
     store = _FakeStore()
     per_tier = pd.DataFrame([
-        {"season": 2026, "market_type": "NRFI", "tier": "LOCK",
+        {"season": 2026, "market_type": "NRFI", "tier": "ELITE",
          "n_settled": 4, "wins": 3, "losses": 1, "units_won": 1.5},
         {"season": 2026, "market_type": "NRFI", "tier": "STRONG",
          "n_settled": 6, "wins": 3, "losses": 3, "units_won": -0.5},
-        {"season": 2026, "market_type": "YRFI", "tier": "LOCK",
+        {"season": 2026, "market_type": "YRFI", "tier": "ELITE",
          "n_settled": 2, "wins": 2, "losses": 0, "units_won": 1.9},
     ])
     per_market = pd.DataFrame([
@@ -389,7 +389,7 @@ def test_get_tier_ledger_orders_nrfi_first_then_lock_first():
     rows = _ledger_df([
         (2026, "YRFI", "STRONG", 3, 2, 1, 0.5, None),
         (2026, "NRFI", "STRONG", 5, 3, 2, 0.4, None),
-        (2026, "NRFI", "LOCK",   4, 4, 0, 3.3, None),
+        (2026, "NRFI", "ELITE",   4, 4, 0, 3.3, None),
         (2026, "NRFI", "ALL",    9, 7, 2, 3.7, None),
     ])
     store.queue_query("FROM nrfi_tier_ledger", rows)
@@ -401,7 +401,7 @@ def test_get_tier_ledger_orders_nrfi_first_then_lock_first():
     tiers = list(df["tier"])
     assert markets[:3] == ["NRFI", "NRFI", "NRFI"]
     assert markets[3] == "YRFI"
-    assert tiers[:3] == ["LOCK", "STRONG", "ALL"]
+    assert tiers[:3] == ["ELITE", "STRONG", "ALL"]
 
 
 def test_get_tier_ledger_empty_returns_empty():
@@ -420,7 +420,7 @@ def test_render_ledger_section_empty_returns_empty_string():
 def test_render_ledger_section_formats_records_and_units():
     store = _FakeStore()
     rows = _ledger_df([
-        (2026, "NRFI", "LOCK",   4, 4, 0, 3.33, None),
+        (2026, "NRFI", "ELITE",   4, 4, 0, 3.33, None),
         (2026, "NRFI", "STRONG", 5, 3, 2, 0.50, None),
     ])
     store.queue_query("FROM nrfi_tier_ledger", rows)
@@ -429,7 +429,7 @@ def test_render_ledger_section_formats_records_and_units():
 
     assert "YTD LEDGER (2026)" in text
     assert "NRFI" in text
-    assert "LOCK" in text
+    assert "ELITE" in text
     assert "4-0" in text          # wins-losses for the LOCK row
     assert "3-2" in text          # wins-losses for the STRONG row
     assert "+3.33u" in text       # signed units format

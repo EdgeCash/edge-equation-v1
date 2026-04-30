@@ -119,7 +119,7 @@ def build_output(
         market_type=market_type,
         side_probability=p_for_side,
     )
-    if tier_class.tier == Tier.LOCK:
+    if tier_class.tier == Tier.ELITE:
         tier_band = "70-100%"
     elif tier_class.tier == Tier.STRONG:
         tier_band = "64-70%"

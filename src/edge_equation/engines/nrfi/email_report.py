@@ -360,7 +360,7 @@ def _to_card_pick(
         engine=engine_label,
     )
 
-    # Tier classification — drives the [LOCK]/[STRONG]/[MODERATE]/[LEAN]
+    # Tier classification — drives the [ELITE]/[STRONG]/[MODERATE]/[LEAN]
     # tag that prefixes each pick line in the email + dashboard.
     from edge_equation.engines.tiering import classify_tier
     tier_clf = classify_tier(
@@ -430,7 +430,7 @@ def _build_parlay_block(
         side_p = float(o.fair_prob)
         clf = classify_tier(market_type=o.market_type,
                               side_probability=side_p)
-        if clf.tier not in (Tier.LOCK, Tier.STRONG):
+        if clf.tier not in (Tier.ELITE, Tier.STRONG):
             continue
         # Phase 4 swap-in lives elsewhere — for now use the engine's
         # flat default odds. The settlement pass uses captured odds
@@ -540,7 +540,7 @@ def render_body(card: dict) -> str:
         lines.append("")
 
     # Parlay candidates ("Special Drops") — typically 0 on a normal
-    # slate, 1-2 when the model lines up multiple LOCK-tier games.
+    # slate, 1-2 when the model lines up multiple elite-tier games.
     parlay_text = card.get("parlay_text", "")
     if parlay_text:
         lines.append("")
