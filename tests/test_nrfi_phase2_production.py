@@ -126,8 +126,8 @@ def test_shared_core_parlay_facade_builds_candidates():
     from edge_equation.engines.tiering import Tier
 
     legs = [
-        ParlayLeg("NRFI", "Under 0.5", 0.85, -115, Tier.LOCK, game_id="g1"),
-        ParlayLeg("NRFI", "Under 0.5", 0.84, -110, Tier.LOCK, game_id="g2"),
+        ParlayLeg("NRFI", "Under 0.5", 0.85, -115, Tier.ELITE, game_id="g1"),
+        ParlayLeg("NRFI", "Under 0.5", 0.84, -110, Tier.ELITE, game_id="g2"),
     ]
     candidates = build_parlay_candidates(legs)
     assert candidates

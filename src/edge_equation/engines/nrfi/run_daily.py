@@ -36,6 +36,7 @@ from .ledger import render_ledger_section
 from .models.inference import NRFIInferenceEngine
 from .models.model_training import MODEL_VERSION, TrainedBundle
 from .output import build_output
+from .output.drivers import format_driver_notes
 from edge_equation.utils.logging import get_logger
 
 log = get_logger(__name__, "INFO")
@@ -230,15 +231,26 @@ def _implied_prob(american_odds: float) -> float:
 def _decode_driver_text(row: dict) -> str:
     raw = row.get("driver_text") or ""
     if isinstance(raw, list):
-        return ", ".join(str(x) for x in raw[:3])
+        return _clean_driver_display(raw)
     if isinstance(raw, str) and raw:
         try:
             val = json.loads(raw)
             if isinstance(val, list):
-                return ", ".join(str(x) for x in val[:3])
+                return _clean_driver_display(val)
         except Exception:
             return raw
     return ""
+
+
+def _clean_driver_display(values: list) -> str:
+    """Prefer readable driver notes; fall back to compact raw strings."""
+    readable = [
+        str(v) for v in values
+        if " from " in str(v) and "_" not in str(v)
+    ]
+    if readable:
+        return ", ".join(readable[:4])
+    return ", ".join(str(v) for v in values[:3])
 
 
 def _side_rows_from_predictions(
@@ -291,7 +303,12 @@ def _side_rows_from_predictions(
             "mc_high": out.mc_high,
             "mc_band_pp": out.mc_band_pp,
             "shap_drivers": json.dumps(out.shap_drivers),
-            "driver_text": json.dumps(out.driver_text),
+            "driver_text": json.dumps(
+                format_driver_notes(
+                    [(name, -value) for name, value in pred.shap_drivers],
+                    max_drivers=4,
+                )
+            ),
             "market_prob": out.market_prob,
             "edge": out.edge,
             "edge_pp": out.edge_pp,
@@ -442,10 +459,10 @@ def _print_top_board(
         else:
             print(f"Odds API: unavailable ({odds_status.message})")
     for idx, r in enumerate(ranked, start=1):
-        side = "NRFI"
+        side = str(r.get("market_type", "NRFI"))
         label = f"game_pk={int(r['game_pk'])} {side}"
         band_label = str(r.get("conviction_color") or r.get("color_band") or "")
-        model_p = float(r.get("nrfi_prob", 0.0))
+        model_p = float(r.get("side_probability", r.get("nrfi_prob", 0.0)))
         mc = (
             f"+/-{float(r['mc_band_pp']):.1f}pp"
             if r.get("mc_band_pp") is not None else "MC --"
