@@ -6,13 +6,14 @@ import ConvictionBadge from "@/components/ConvictionBadge";
 import ConvictionKey from "@/components/ConvictionKey";
 import Layout from "@/components/Layout";
 import StatTile from "@/components/StatTile";
-import { api, formatAmericanOdds, formatDate, formatPercent } from "@/lib/api";
+import { formatAmericanOdds, formatDate, formatPercent } from "@/lib/api";
 import { tierFromGrade, type ConvictionTier } from "@/lib/conviction";
-import type { ArchivedPick, SlateDetail } from "@/lib/types";
+import { loadDailyView, type DailySlateView } from "@/lib/daily-feed";
+import type { ArchivedPick } from "@/lib/types";
 
 
 type Props = {
-  slate: SlateDetail | null;
+  view: DailySlateView | null;
   error: string | null;
 };
 
@@ -28,17 +29,8 @@ type Group = {
 
 
 export const getServerSideProps: GetServerSideProps<Props> = async () => {
-  try {
-    const slate = await api.latestSlate("daily_edge");
-    return { props: { slate, error: null } };
-  } catch (e: unknown) {
-    return {
-      props: {
-        slate: null,
-        error: e instanceof Error ? e.message : "unknown error",
-      },
-    };
-  }
+  const { view, error } = await loadDailyView();
+  return { props: { view, error } };
 };
 
 
@@ -84,14 +76,14 @@ const TIER_RANK: Record<ConvictionTier, number> = {
 };
 
 
-function bucket(slate: SlateDetail): Group[] {
+function bucket(picks: ArchivedPick[]): Group[] {
   const groups: Record<GroupKey, ArchivedPick[]> = {
     first_inning: [],
     props: [],
     full_game: [],
     other: [],
   };
-  for (const p of slate.picks) {
+  for (const p of picks) {
     groups[classify(p.market_type)].push(p);
   }
   for (const k of Object.keys(groups) as GroupKey[]) {
@@ -136,9 +128,9 @@ function bucket(slate: SlateDetail): Group[] {
 }
 
 
-function topEdge(slate: SlateDetail): string | null {
+function topEdge(picks: ArchivedPick[]): string | null {
   let best: number | null = null;
-  for (const p of slate.picks) {
+  for (const p of picks) {
     if (!p.edge) continue;
     const n = Number(p.edge);
     if (Number.isNaN(n)) continue;
@@ -148,8 +140,8 @@ function topEdge(slate: SlateDetail): string | null {
 }
 
 
-function eliteCount(slate: SlateDetail): number {
-  return slate.picks.filter((p) => tierFromGrade(p.grade) === "ELITE").length;
+function eliteCount(picks: ArchivedPick[]): number {
+  return picks.filter((p) => tierFromGrade(p.grade) === "ELITE").length;
 }
 
 
@@ -221,8 +213,10 @@ function TestingDisclaimer({ placement }: { placement: "top" | "bottom" }) {
 }
 
 
-export default function DailyEdge({ slate, error }: Props) {
-  const groups = slate ? bucket(slate) : [];
+export default function DailyEdge({ view, error }: Props) {
+  const groups = view ? bucket(view.picks) : [];
+  const sourceLabel =
+    view?.source === "feed" ? "run_daily.py · static feed" : "FastAPI archive · fallback";
 
   return (
     <Layout
@@ -241,21 +235,25 @@ export default function DailyEdge({ slate, error }: Props) {
 
       <TestingDisclaimer placement="top" />
 
-      {error && (
+      {error && !view && (
         <div className="mt-10 border border-edge-line rounded-sm p-6 bg-ink-900/80">
           <div className="text-edge-accent uppercase tracking-[0.22em] text-[10px] mb-2">
-            API Error
+            Data Error
           </div>
           <p className="text-edge-text font-mono text-sm">{error}</p>
+          <p className="mt-3 text-edge-textDim text-sm">
+            Daily Edge tried <code className="font-mono">/data/daily/latest.json</code>{" "}
+            and the FastAPI archive. Neither responded.
+          </p>
         </div>
       )}
 
-      {!error && !slate && (
+      {!view && !error && (
         <div className="mt-10">
           <CardShell
             eyebrow="Awaiting today’s slate"
-            headline="No daily_edge slate has been persisted yet."
-            subhead="Once run_daily.py runs, today's picks will appear here automatically."
+            headline="No daily_edge slate has been published yet."
+            subhead="Once run_daily.py writes public/data/daily/latest.json, today's picks will appear here automatically."
           >
             <p className="text-edge-textDim">
               Follow on{" "}
@@ -271,17 +269,17 @@ export default function DailyEdge({ slate, error }: Props) {
         </div>
       )}
 
-      {slate && (
+      {view && (
         <div className="mt-10 space-y-12">
           {/* Slate summary */}
           <CardShell
-            eyebrow={`Slate · ${formatDate(slate.generated_at)}`}
-            headline={`${slate.picks.length} pick${slate.picks.length === 1 ? "" : "s"} on the unified board`}
-            subhead={`Slate id: ${slate.slate_id}`}
+            eyebrow={`Slate · ${formatDate(view.generatedAt)}`}
+            headline={`${view.picks.length} pick${view.picks.length === 1 ? "" : "s"} on the unified board`}
+            subhead={`Source: ${sourceLabel}${view.date ? ` · ${view.date}` : ""}`}
           >
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatTile label="Top Edge" value={formatPercent(topEdge(slate))} />
-              <StatTile label="Electric Blue" value={String(eliteCount(slate))} />
+              <StatTile label="Top Edge" value={formatPercent(topEdge(view.picks))} />
+              <StatTile label="Electric Blue" value={String(eliteCount(view.picks))} />
               <StatTile
                 label="First Inning"
                 value={String(groups.find((g) => g.key === "first_inning")?.picks.length ?? 0)}
@@ -291,6 +289,11 @@ export default function DailyEdge({ slate, error }: Props) {
                 value={String(groups.find((g) => g.key === "props")?.picks.length ?? 0)}
               />
             </div>
+            {view.notes && (
+              <p className="mt-5 text-edge-textDim text-sm leading-relaxed border-t border-edge-line pt-4">
+                {view.notes}
+              </p>
+            )}
           </CardShell>
 
           {/* Grouped sections */}
