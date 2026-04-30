@@ -78,14 +78,33 @@ Same F-1 → F-5 phasing as NFL. F-1 (this PR) ships skeleton only.
 * Empty `features/`, `models/`, `calibration/`, `source/`,
   `output/` packages.
 
+### Phase F-1.5 (shipped) — data foundation
+
+* Resumable backfill orchestrator at
+  `engines/football_core/data/backfill_ncaaf.py`. Pulls games / plays
+  / lines from the College Football Data API (free tier; 1000
+  req/mo via `CFBD_API_KEY`) and per-game weather from Open-Meteo
+  archive. Optional Odds API historical lines behind
+  `--include-historical-odds` (paid tier).
+* Per-week play-by-play checkpointing — each `(season, week)` pull
+  is its own `plays_w<n>` checkpoint, so a partial-week failure only
+  retries that one week.
+* CFBD `/lines` always pulled (free) — sparse compared to The Odds
+  API but a good baseline.
+* Shares the football DuckDB schema with NFL (sport-discriminated
+  rows in the same tables).
+* Run a season: `python -m edge_equation.engines.football_core.data.backfill_ncaaf --season 2025`.
+
 ### Phase F-2 — data pipeline
 
-* `source/odds_fetcher.py` for `americanfootball_ncaaf`.
-* `source/schedule.py` (cfbfastR / sportsreference).
+* `source/odds_fetcher.py` for `americanfootball_ncaaf` (live).
+* `source/schedule.py` for current-week pulls (historical already in
+  DuckDB after F-1.5).
 * `source/recruit_ratings.py` annual composite ingest.
 * `source/transfer_portal.py` weekly tracker.
-* `source/storage.py` DuckDB tables.
-* `features/team_rates.py` with conference-tier-aware Bayesian prior.
+* `source/storage.py` thin reader over the F-1.5 DuckDB tables.
+* `features/team_rates.py` with conference-tier-aware Bayesian prior,
+  computed off the F-1.5 plays corpus.
 
 ### Phase F-3 — projection + edge
 
