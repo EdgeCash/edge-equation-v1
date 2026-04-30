@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import editorial + technical fonts */
+/* Editorial + technical fonts */
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap");
 
 @layer base {
@@ -14,8 +14,8 @@
     @apply bg-ink-950 text-edge-text font-body antialiased;
     font-feature-settings: "ss01", "cv11";
     background-image:
-      radial-gradient(1200px 600px at 10% -10%, rgba(215, 181, 114, 0.06), transparent 60%),
-      radial-gradient(800px 500px at 110% 10%, rgba(215, 181, 114, 0.03), transparent 60%);
+      radial-gradient(1100px 600px at 8% -10%, rgba(34, 211, 255, 0.08), transparent 60%),
+      radial-gradient(900px 500px at 110% 5%, rgba(34, 211, 255, 0.04), transparent 60%);
     background-attachment: fixed;
   }
 
@@ -36,5 +36,13 @@
 
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+
+  .eyebrow {
+    @apply font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent;
+  }
+
+  .eyebrow-dim {
+    @apply font-mono text-[10px] uppercase tracking-[0.28em] text-edge-textDim;
   }
 }

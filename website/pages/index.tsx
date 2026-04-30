@@ -1,66 +1,318 @@
 import Link from "next/link";
-import Layout from "@/components/Layout";
+import type { GetServerSideProps } from "next";
 
-export default function Home() {
+import Layout from "@/components/Layout";
+import ConvictionBadge from "@/components/ConvictionBadge";
+import ConvictionKey from "@/components/ConvictionKey";
+import { api, formatAmericanOdds, formatDate, formatPercent } from "@/lib/api";
+import {
+  CONVICTION,
+  tierFromGrade,
+  type ConvictionTier,
+} from "@/lib/conviction";
+import type { ArchivedPick, SlateDetail } from "@/lib/types";
+
+type TeaserPick = ArchivedPick & { _tier: ConvictionTier };
+
+type Props = {
+  generatedAt: string | null;
+  totalPicks: number;
+  teaser: TeaserPick[];
+};
+
+const TIER_RANK: Record<ConvictionTier, number> = {
+  ELITE: 0,
+  STRONG_NRFI: 1,
+  STRONG_YRFI: 1,
+  STRONG: 2,
+  MODERATE: 3,
+  LEAN: 4,
+  NO_PLAY: 5,
+};
+
+function buildTeaser(slate: SlateDetail): TeaserPick[] {
+  const enriched = slate.picks.map<TeaserPick>((p) => ({
+    ...p,
+    _tier: tierFromGrade(p.grade),
+  }));
+  enriched.sort((a, b) => {
+    const r = TIER_RANK[a._tier] - TIER_RANK[b._tier];
+    if (r !== 0) return r;
+    const ea = a.edge ? Number(a.edge) : -Infinity;
+    const eb = b.edge ? Number(b.edge) : -Infinity;
+    return eb - ea;
+  });
+  // Top 3-5: prefer 5 if there are at least 5 picks above LEAN, otherwise 3.
+  const above = enriched.filter((p) => TIER_RANK[p._tier] <= 2);
+  const count = above.length >= 5 ? 5 : above.length >= 3 ? above.length : Math.min(3, enriched.length);
+  return enriched.slice(0, count);
+}
+
+export const getServerSideProps: GetServerSideProps<Props> = async () => {
+  try {
+    const slate = await api.latestSlate("daily_edge");
+    if (!slate) {
+      return { props: { generatedAt: null, totalPicks: 0, teaser: [] } };
+    }
+    return {
+      props: {
+        generatedAt: slate.generated_at ?? null,
+        totalPicks: slate.picks.length,
+        teaser: buildTeaser(slate),
+      },
+    };
+  } catch {
+    return { props: { generatedAt: null, totalPicks: 0, teaser: [] } };
+  }
+};
+
+function TeaserPickCard({ pick }: { pick: TeaserPick }) {
+  const meta = CONVICTION[pick._tier];
+  const isElite = pick._tier === "ELITE";
+  const lineText = pick.line.number
+    ? `${pick.line.number} @ ${formatAmericanOdds(pick.line.odds)}`
+    : formatAmericanOdds(pick.line.odds);
+
+  return (
+    <div
+      className={[
+        "relative rounded-sm border bg-ink-900/70 backdrop-blur p-5 transition-colors",
+        meta.borderClass,
+        isElite ? "shadow-elite-glow" : "",
+      ].join(" ")}
+    >
+      {isElite && (
+        <div className="absolute -top-2 left-4 px-2 py-0.5 bg-ink-950 border border-conviction-elite text-conviction-elite font-mono text-[9px] uppercase tracking-[0.25em] rounded-sm">
+          Elite
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <ConvictionBadge tier={pick._tier} />
+        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textFaint">
+          {pick.sport} · {pick.market_type}
+        </span>
+      </div>
+      <div className="font-display text-xl tracking-tightest text-edge-text leading-snug">
+        {pick.selection}
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-edge-textFaint">Line</div>
+          <div className="mt-1 font-mono tabular-nums text-edge-text">{lineText}</div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-edge-textFaint">Fair</div>
+          <div className="mt-1 font-mono tabular-nums text-edge-text">
+            {formatPercent(pick.fair_prob, 1)}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-[0.2em] text-edge-textFaint">Edge</div>
+          <div className={"mt-1 font-mono tabular-nums " + (isElite ? "text-conviction-elite" : "text-edge-text")}>
+            {formatPercent(pick.edge, 1)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Home({ generatedAt, totalPicks, teaser }: Props) {
+  const hasTeaser = teaser.length > 0;
+
   return (
     <Layout>
-      <section className="pt-10 sm:pt-16">
-        <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-6">
-          Deterministic Sports Analytics · Est. 2026
+      {/* Hero */}
+      <section className="pt-6 sm:pt-12">
+        <div className="eyebrow mb-6">
+          Edge Equation · V4
         </div>
-        <h1 className="font-display font-light text-[clamp(3rem,8vw,6.5rem)] leading-[0.95] tracking-tightest">
-          Edge <span className="italic text-edge-accent">Equation</span>
+        <h1 className="font-display font-light text-[clamp(3rem,9vw,7rem)] leading-[0.92] tracking-tightest">
+          Facts.
+          <br />
+          <span className="italic text-edge-accent">Not Feelings.</span>
         </h1>
         <p className="mt-8 max-w-prose text-edge-textDim text-lg leading-relaxed">
-          A formula-driven engine that turns sport-specific inputs into fair
-          probabilities, graded edges, and sized positions — no hype, no
-          narrative. The same inputs always produce the same output.
+          We help people become better bettors by publishing the data — and the
+          reasoning — behind every call. The picks are free. Understanding the{" "}
+          <em className="text-edge-text not-italic">why</em> is the real edge.
         </p>
 
-        <div className="mt-12 flex flex-wrap items-center gap-6">
+        <div className="mt-10 flex flex-wrap items-center gap-5">
           <Link
             href="/daily-edge"
-            className="group inline-flex items-center gap-3 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.2em] hover:bg-edge-text transition-colors"
+            className="group inline-flex items-center gap-3 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.22em] hover:bg-edge-text transition-colors"
           >
-            View Today&apos;s Edge
+            See Today&apos;s Edge
             <span className="group-hover:translate-x-1 transition-transform">→</span>
           </Link>
           <Link
             href="/about"
-            className="font-mono text-xs uppercase tracking-[0.2em] text-edge-textDim hover:text-edge-text transition-colors border-b border-transparent hover:border-edge-accent pb-1"
+            className="font-mono text-xs uppercase tracking-[0.22em] text-edge-textDim hover:text-edge-accent transition-colors border-b border-transparent hover:border-edge-accent pb-1"
           >
-            How It Works
+            Read Our Story
           </Link>
         </div>
       </section>
 
-      {/* Three-column principle grid */}
-      <section className="mt-32 grid grid-cols-1 md:grid-cols-3 gap-px bg-edge-line">
+      {/* Daily Electric Blue teaser */}
+      <section className="mt-20">
+        <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
+          <div>
+            <div className="eyebrow mb-2">
+              Today&apos;s Highest Conviction
+            </div>
+            <h2 className="font-display text-3xl sm:text-4xl tracking-tightest leading-tight">
+              The Electric Blue board
+            </h2>
+          </div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textFaint">
+            {generatedAt ? `Slate · ${formatDate(generatedAt)}` : "Awaiting today’s slate"}
+            {totalPicks > 0 && ` · ${totalPicks} total picks`}
+          </div>
+        </div>
+
+        {hasTeaser ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {teaser.map((p) => (
+              <TeaserPickCard key={`${p.pick_id}`} pick={p} />
+            ))}
+          </div>
+        ) : (
+          <div className="border border-edge-line rounded-sm p-8 bg-ink-900/60">
+            <p className="text-edge-textDim max-w-prose">
+              No slate has been published yet today. The full archive and
+              historical hit rates by conviction tier are still available — see{" "}
+              <Link href="/grade-history" className="text-edge-accent border-b border-edge-accent/40 hover:border-edge-accent">
+                grade history
+              </Link>
+              .
+            </p>
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-wrap items-center gap-4">
+          <Link
+            href="/daily-edge"
+            className="font-mono text-xs uppercase tracking-[0.22em] text-edge-accent border-b border-edge-accent/40 hover:border-edge-accent pb-1"
+          >
+            See the full slate →
+          </Link>
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textFaint">
+            Free. Always.
+          </span>
+        </div>
+      </section>
+
+      {/* Conviction Key */}
+      <section className="mt-24">
+        <div className="grid gap-8 md:grid-cols-[1fr_1.4fr] items-start">
+          <div>
+            <div className="eyebrow mb-3">The System</div>
+            <h2 className="font-display text-3xl sm:text-4xl tracking-tightest leading-tight">
+              One color. One conviction.
+            </h2>
+            <p className="mt-4 text-edge-textDim leading-relaxed max-w-prose">
+              Every pick we publish is tagged with a single tier. Electric Blue
+              is reserved for our highest-conviction calls. Deep Green and Red
+              flag strong directional reads. Amber is a lean, Slate is a pass.
+              The colors don&apos;t change. The standards don&apos;t change.
+            </p>
+            <Link
+              href="/learn"
+              className="mt-6 inline-block font-mono text-xs uppercase tracking-[0.22em] text-edge-textDim hover:text-edge-accent border-b border-transparent hover:border-edge-accent pb-1"
+            >
+              Learn how to read the board →
+            </Link>
+          </div>
+          <ConvictionKey />
+        </div>
+      </section>
+
+      {/* Our Story blurb */}
+      <section className="mt-24">
+        <div className="border border-edge-line rounded-sm bg-ink-900/60 p-8 sm:p-12">
+          <div className="grid gap-8 md:grid-cols-[180px_1fr] items-start">
+            <div className="eyebrow-dim">
+              Our Story · V1 → V4
+            </div>
+            <div>
+              <h2 className="font-display text-3xl sm:text-4xl tracking-tightest leading-tight max-w-prose">
+                Built as a tool for one bettor. Opened up because the{" "}
+                <span className="italic text-edge-accent">process</span> mattered more than the picks.
+              </h2>
+              <p className="mt-5 text-edge-textDim leading-relaxed max-w-prose">
+                Edge Equation started as a personal model — a way to keep
+                ourselves honest about what we actually believed versus what we
+                felt. Three iterations later, we realized the numbers were the
+                least interesting part. The process — the reasoning, the
+                discipline, the willingness to say{" "}
+                <em className="text-edge-text not-italic">no play</em> — was
+                what actually moved the needle. V4 is what happens when we make
+                that process public.
+              </p>
+              <Link
+                href="/about"
+                className="mt-6 inline-block font-mono text-xs uppercase tracking-[0.22em] text-edge-accent border-b border-edge-accent/40 hover:border-edge-accent pb-1"
+              >
+                Read the full story →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Value prop strip */}
+      <section className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-px bg-edge-line">
         {[
           {
             num: "01",
-            title: "Deterministic",
-            body: "Fixed seeds, Decimal math, 28-digit precision. No wobble between runs.",
+            title: "Free Daily Edge",
+            body:
+              "The Electric Blue board, every day. No paywall. No upsell to see today’s call.",
+            href: "/daily-edge",
+            cta: "Today’s board",
           },
           {
             num: "02",
-            title: "Transparent",
-            body: "Every pick carries fair probability, edge, grade, and Kelly. Show your work.",
+            title: "Show The Why",
+            body:
+              "Each pick comes with the inputs that drove it. Our job is to make the reasoning legible.",
+            href: "/engine",
+            cta: "How the engine thinks",
           },
           {
             num: "03",
-            title: "Disciplined",
-            body: "Half-Kelly, capped at 25%. Clamps on impact and multipliers. Facts. Not Feelings.",
+            title: "Learn The Craft",
+            body:
+              "Bankroll, Kelly, variance, line shopping. The fundamentals nobody on Twitter posts.",
+            href: "/learn",
+            cta: "Start learning",
           },
         ].map((p) => (
-          <div key={p.num} className="bg-ink-950 p-8">
+          <div key={p.num} className="bg-ink-950 p-8 flex flex-col">
             <div className="font-mono text-[10px] tracking-[0.3em] text-edge-accent">
               {p.num}
             </div>
             <h3 className="mt-4 font-display text-2xl tracking-tightest">{p.title}</h3>
-            <p className="mt-3 text-edge-textDim">{p.body}</p>
+            <p className="mt-3 text-edge-textDim flex-1">{p.body}</p>
+            <Link
+              href={p.href}
+              className="mt-5 font-mono text-[11px] uppercase tracking-[0.22em] text-edge-textDim hover:text-edge-accent border-b border-transparent hover:border-edge-accent pb-1 self-start"
+            >
+              {p.cta} →
+            </Link>
           </div>
         ))}
+      </section>
+
+      {/* Disclaimer */}
+      <section className="mt-20">
+        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textFaint max-w-prose leading-relaxed">
+          Edge Equation publishes data and analysis. We do not sell guaranteed
+          winners — they don&apos;t exist. Past performance does not predict
+          future results. Bet within your means. 21+.
+        </p>
       </section>
     </Layout>
   );
