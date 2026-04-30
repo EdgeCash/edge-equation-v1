@@ -138,12 +138,19 @@ export default function Home({ generatedAt, totalPicks, teaser }: Props) {
           <em className="text-edge-text not-italic">why</em> is the real edge.
         </p>
 
-        <div className="mt-10 flex flex-wrap items-center gap-5">
+        <div className="mt-10 flex flex-wrap items-center gap-3 sm:gap-4">
           <Link
             href="/daily-edge"
             className="group inline-flex items-center gap-3 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.22em] hover:bg-edge-text transition-colors"
           >
-            See Today&apos;s Edge
+            Free Daily Edge
+            <span className="group-hover:translate-x-1 transition-transform">→</span>
+          </Link>
+          <Link
+            href="/premium-edge"
+            className="group inline-flex items-center gap-3 border border-edge-accent text-edge-accent px-6 py-3 font-mono text-xs uppercase tracking-[0.22em] hover:bg-edge-accent hover:text-ink-950 transition-colors"
+          >
+            Explore Premium
             <span className="group-hover:translate-x-1 transition-transform">→</span>
           </Link>
           <Link
@@ -208,21 +215,22 @@ export default function Home({ generatedAt, totalPicks, teaser }: Props) {
       <section className="mt-24">
         <div className="grid gap-8 md:grid-cols-[1fr_1.4fr] items-start">
           <div>
-            <div className="eyebrow mb-3">The System</div>
+            <div className="eyebrow mb-3">The Conviction System</div>
             <h2 className="font-display text-3xl sm:text-4xl tracking-tightest leading-tight">
-              One color. One conviction.
+              One scale. Both sides.
             </h2>
             <p className="mt-4 text-edge-textDim leading-relaxed max-w-prose">
               Every pick we publish is tagged with a single tier. Electric Blue
-              is reserved for our highest-conviction calls. Deep Green and Red
-              flag strong directional reads. Amber is a lean, Slate is a pass.
-              The colors don&apos;t change. The standards don&apos;t change.
+              is the top of the ladder, on either side of a market — a strong
+              NRFI lean and a strong YRFI lean can both reach Electric Blue
+              when the math gets there. The colours don&apos;t change. The
+              standards don&apos;t change.
             </p>
             <Link
-              href="/learn"
-              className="mt-6 inline-block font-mono text-xs uppercase tracking-[0.22em] text-edge-textDim hover:text-edge-accent border-b border-transparent hover:border-edge-accent pb-1"
+              href="/conviction"
+              className="mt-6 inline-block font-mono text-xs uppercase tracking-[0.22em] text-edge-accent border-b border-edge-accent/40 hover:border-edge-accent pb-1"
             >
-              Learn how to read the board →
+              How conviction works →
             </Link>
           </div>
           <ConvictionKey />
@@ -277,9 +285,9 @@ export default function Home({ generatedAt, totalPicks, teaser }: Props) {
             num: "02",
             title: "Show The Why",
             body:
-              "Each pick comes with the inputs that drove it. Our job is to make the reasoning legible.",
-            href: "/engine",
-            cta: "How the engine thinks",
+              "Each pick comes with the inputs that drove it. Premium subscribers get the full Why notes, deeper analysis, and parlay reasoning.",
+            href: "/premium-edge",
+            cta: "Explore Premium",
           },
           {
             num: "03",
