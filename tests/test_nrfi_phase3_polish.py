@@ -80,7 +80,7 @@ def test_build_output_basic_fields():
     assert out.nrfi_pct == 78.0
     assert out.color_band == "Deep Green"
     assert out.signal == "STRONG_NRFI"
-    assert out.tier == "LOCK"
+    assert out.tier == "ELITE"
     assert out.tier_band == "70-100%"
     assert out.headline().startswith("78.")
 
@@ -125,7 +125,7 @@ def test_to_email_card_renders_one_liner_plus_drivers():
     )
     s = to_email_card(out)
     assert "74.0% NRFI" in s
-    assert "LOCK" in s
+    assert "ELITE" in s
     assert "Deep Green" in s
     assert "drivers:" in s
 
@@ -159,7 +159,7 @@ def test_build_output_includes_elite_daily_fields():
         shap_drivers=[("away_top3_xwoba", 0.04), ("park_factor_runs", -0.02)],
     )
     d = to_api_dict(out)
-    assert d["tier"] == "LOCK"
+    assert d["tier"] == "ELITE"
     assert d["tier_basis"] == "raw_probability"
     assert d["tier_band"] == "70-100%"
     assert d["mc_band_pp"] == 4.0

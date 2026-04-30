@@ -261,11 +261,21 @@ def walkforward_train(
                     if c not in X_pred.columns:
                         X_pred[c] = 0.0
                 X_pred = X_pred[classifier.feature_names]
+                raw_predict = getattr(classifier, "_raw_predict", None)
+                raw_p = raw_predict(X_pred) if raw_predict is not None else classifier.predict_proba(X_pred)
                 p = classifier.predict_proba(X_pred)
                 for i, row in wide_pred.reset_index(drop=True).iterrows():
                     calibration_rows.append({
                         "game_pk": int(row["game_pk"]),
                         "game_date": str(row["game_date"]),
+                        # Raw score from the time-local model.  The final
+                        # bundle's calibrator must train on this domain,
+                        # because live inference applies it to raw final-model
+                        # scores.  Using already-calibrated chunk probabilities
+                        # here double-calibrates and compresses live output.
+                        "raw_predicted_p": float(raw_p[i]),
+                        # Calibrated chunk probability retained for honest
+                        # walk-forward reporting/backward-compatible JSONL.
                         "predicted_p": float(p[i]),
                         "actual_y": int(row["nrfi"]),
                     })
@@ -330,7 +340,7 @@ def walkforward_train(
                 # fitted on the FULL walk-forward calibration set —
                 # honest, non-leaking.
                 cal = Calibrator(method=calibration_method).fit(
-                    [r["predicted_p"] for r in calibration_rows],
+                    [r.get("raw_predicted_p", r["predicted_p"]) for r in calibration_rows],
                     [r["actual_y"] for r in calibration_rows],
                 )
                 final_clf._calibrator = cal
