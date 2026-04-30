@@ -69,14 +69,32 @@ floor is intentional.
 * Empty `features/`, `models/`, `calibration/`, `source/`,
   `output/` packages.
 
+### Phase F-1.5 (shipped) — data foundation
+
+* Resumable backfill orchestrator at
+  `engines/football_core/data/backfill_nfl.py`. Pulls games + plays
+  from nflverse parquet feeds (no API key) and per-game weather from
+  Open-Meteo archive. Optional Odds API historical lines behind
+  `--include-historical-odds` (paid tier).
+* DuckDB schema shared with NCAAF (`football_games`, `football_plays`,
+  `football_actuals`, `football_lines`, `football_weather`,
+  `football_props`, `football_features`) plus a
+  `football_backfill_checkpoints` table that makes re-runs idempotent.
+* Diagnostics CLI at
+  `engines/football_core/data/diagnostics.py` — row counts, missing
+  rates, sample game.
+* Run a season: `python -m edge_equation.engines.football_core.data.backfill_nfl --season 2025`.
+
 ### Phase F-2 — data pipeline
 
-* `source/odds_fetcher.py` — per-event Odds API for NFL.
-* `source/schedule.py` — nflverse / sportradar pull.
-* `source/storage.py` — DuckDB tables.
+* `source/odds_fetcher.py` — per-event Odds API for NFL (live, not
+  backfill).
+* `source/schedule.py` — current-week schedule pull (the historical
+  schedule already lives in DuckDB after F-1.5).
+* `source/storage.py` — thin reader over the F-1.5 DuckDB tables.
 * `source/injuries.py` — practice-report scraper.
 * `features/team_rates.py` — rolling per-team rates with garbage-time
-  filtering.
+  filtering, computed off the F-1.5 PBP corpus.
 * `features/qb_rates.py` — per-QB rolling rates + injury status.
 
 ### Phase F-3 — projection + edge

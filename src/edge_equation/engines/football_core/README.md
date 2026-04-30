@@ -71,9 +71,54 @@ These are the things the per-league READMEs explore in depth:
    sports. Edge thresholds are conservative; we'd rather show 3 ELITE
    plays a season than chase 30 noisy STRONG plays.
 
+## Data foundation (Phase F-1.5)
+
+`data/` ships the resumable corpus loader for both leagues. One DuckDB
+per sport (`data/nfl_cache/nfl.duckdb`,
+`data/ncaaf_cache/ncaaf.duckdb`) sharing the same schema with a
+`sport` discriminator column.
+
+| Module | Source | API key | Purpose |
+|---|---|---|---|
+| `nflverse_loader.py` | nflverse parquet (GitHub releases) | none | NFL games + PBP per season |
+| `cfbd_loader.py` | College Football Data API | `CFBD_API_KEY` (free tier) | NCAAF games + plays + lines |
+| `weather_history.py` | Open-Meteo archive | none | Per-game kickoff weather |
+| `odds_history.py` | The Odds API historical | `THE_ODDS_API_KEY` (paid tier) | Bookmaker line snapshots; gated behind `--include-historical-odds` |
+| `storage.py` | — | — | DuckDB schema + `FootballStore` wrapper |
+| `checkpoints.py` | — | — | Resumability — `(sport, target_date, op)` PK so re-runs skip completed work |
+| `backfill_nfl.py` | orchestrator | — | 5-op pipeline (games → plays → actuals → weather → odds) |
+| `backfill_ncaaf.py` | orchestrator | — | Same pipeline; plays paged per-week, native CFBD lines pulled by default |
+| `diagnostics.py` | — | — | Corpus-quality CLI: row counts, missing rates, sample game |
+
+### Running a backfill
+
+```bash
+# NFL — single season, free sources only
+python -m edge_equation.engines.football_core.data.backfill_nfl \
+    --season 2025 --duckdb-path data/nfl_cache/nfl.duckdb
+
+# NCAAF — single season, free sources only (requires CFBD_API_KEY)
+python -m edge_equation.engines.football_core.data.backfill_ncaaf \
+    --season 2025 --duckdb-path data/ncaaf_cache/ncaaf.duckdb
+
+# Either sport — with paid Odds API historical lines
+python -m edge_equation.engines.football_core.data.backfill_nfl \
+    --season 2025 --include-historical-odds
+
+# Diagnostics — corpus size + missing-rate report
+python -m edge_equation.engines.football_core.data.diagnostics \
+    --duckdb-path data/nfl_cache/nfl.duckdb --sport NFL --season 2025
+```
+
+Re-running the same command is idempotent: each op (`games`, `plays`,
+`plays_w<n>` for NCAAF, `actuals`, `weather`, `cfbd_lines`, `odds`) is
+checkpointed under `(sport, season-anchor-date, op)`. Successful ops
+are skipped on the next run; failed ops retry.
+
 ## Status
 
-**Phase F-1 skeleton.** Modules are stubbed with placeholder logic
-and educated-guess coefficients. Real magnitudes need a backtest
-harness with at least 4 NFL seasons of game-script data + the same
-for NCAAF. Track that work under `claude/football-*` PRs.
+**Phase F-1.5 — data foundation in place.** Backfill orchestrators +
+loaders are wired but the projection / training layer (Phase F-2)
+that consumes the corpus has not been built yet. The football engine
+READMEs (`engines/nfl/README.md`, `engines/ncaaf/README.md`) cover
+per-league wiring; track follow-up under `claude/football-*` PRs.
