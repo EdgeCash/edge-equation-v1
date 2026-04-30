@@ -2,10 +2,12 @@ import Link from "next/link";
 import type { GetServerSideProps } from "next";
 
 import CardShell from "@/components/CardShell";
+import ConvictionKey from "@/components/ConvictionKey";
 import Layout from "@/components/Layout";
 import PickRow from "@/components/PickRow";
 import StatTile from "@/components/StatTile";
 import { api, formatDate, formatPercent } from "@/lib/api";
+import { tierFromGrade } from "@/lib/conviction";
 import type { SlateDetail } from "@/lib/types";
 
 
@@ -30,12 +32,17 @@ export const getServerSideProps: GetServerSideProps<Props> = async () => {
 };
 
 
-function pickByGrade(slate: SlateDetail): Record<string, number> {
-  const counts: Record<string, number> = {};
+function tierCounts(slate: SlateDetail) {
+  let elite = 0;
+  let strong = 0;
+  let other = 0;
   for (const p of slate.picks) {
-    counts[p.grade] = (counts[p.grade] ?? 0) + 1;
+    const t = tierFromGrade(p.grade);
+    if (t === "ELITE") elite++;
+    else if (t === "STRONG" || t === "STRONG_NRFI" || t === "STRONG_YRFI") strong++;
+    else other++;
   }
-  return counts;
+  return { elite, strong, other };
 }
 
 
@@ -52,25 +59,26 @@ function topEdge(slate: SlateDetail): string | null {
 
 
 export default function DailyEdge({ slate, error }: Props) {
+  const counts = slate ? tierCounts(slate) : null;
+
   return (
     <Layout
       title="Daily Edge"
-      description="Today's Daily Edge slate from the Edge Equation engine."
+      description="Today's Daily Edge slate from the Edge Equation engine. Free, every day."
     >
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-edge-accent mb-4">
-        Public · Free
-      </div>
-      <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-none">
-        Daily Edge
+      <div className="eyebrow mb-4">Free · Every Day</div>
+      <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-[0.95]">
+        Daily <span className="italic text-edge-accent">Edge.</span>
       </h1>
-      <p className="mt-4 text-edge-textDim max-w-prose">
-        A single card, once a day. Model-driven projections across today&apos;s
-        slate — fair probability, edge, grade, half-Kelly sizing.
+      <p className="mt-6 max-w-prose text-edge-textDim text-lg leading-relaxed">
+        Today&apos;s board, every pick tagged with a single conviction tier.
+        Electric Blue is rare on purpose. Most days, most plays sit below it —
+        and that&apos;s the point.
       </p>
 
       {error && (
         <div className="mt-10 border border-edge-line rounded-sm p-6 bg-ink-900/80">
-          <div className="text-edge-accent uppercase tracking-[0.2em] text-[10px] mb-2">
+          <div className="text-edge-accent uppercase tracking-[0.22em] text-[10px] mb-2">
             API Error
           </div>
           <p className="text-edge-text font-mono text-sm">{error}</p>
@@ -84,7 +92,7 @@ export default function DailyEdge({ slate, error }: Props) {
       {!error && !slate && (
         <div className="mt-12">
           <CardShell
-            eyebrow="Awaiting First Slate"
+            eyebrow="Awaiting today’s slate"
             headline="No daily_edge slate has been persisted yet."
             subhead="Once the scheduler runs python -m edge_equation daily, today's picks will appear here."
           >
@@ -92,7 +100,7 @@ export default function DailyEdge({ slate, error }: Props) {
               Follow on{" "}
               <Link
                 href="https://x.com/edgeequation"
-                className="text-edge-accent border-b border-edge-accent/50 hover:border-edge-accent"
+                className="text-edge-accent border-b border-edge-accent/40 hover:border-edge-accent"
               >
                 X
               </Link>{" "}
@@ -102,35 +110,42 @@ export default function DailyEdge({ slate, error }: Props) {
         </div>
       )}
 
-      {slate && (
+      {slate && counts && (
         <div className="mt-10 space-y-10">
           <CardShell
             eyebrow={`Slate · ${formatDate(slate.generated_at)}`}
-            headline={`${slate.picks.length} pick${slate.picks.length === 1 ? "" : "s"}`}
+            headline={`${slate.picks.length} pick${slate.picks.length === 1 ? "" : "s"} on the board`}
             subhead={`Slate id: ${slate.slate_id}`}
           >
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <StatTile label="Top Edge" value={formatPercent(topEdge(slate))} />
-              <StatTile label="Picks" value={String(slate.n_picks)} />
-              <StatTile
-                label="A/A+ Count"
-                value={String(
-                  (pickByGrade(slate)["A"] ?? 0) + (pickByGrade(slate)["A+"] ?? 0),
-                )}
-              />
-              <StatTile label="Card Type" value={slate.card_type} />
+              <StatTile label="Electric Blue" value={String(counts.elite)} />
+              <StatTile label="Strong" value={String(counts.strong)} />
+              <StatTile label="Total picks" value={String(slate.n_picks)} />
             </div>
           </CardShell>
 
           <section>
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-edge-accent mb-4">
-              Every pick in this slate
+            <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-accent">
+                Every pick on today&apos;s board
+              </div>
+              <Link
+                href="/learn"
+                className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textDim hover:text-edge-accent border-b border-transparent hover:border-edge-accent pb-1"
+              >
+                How to read this →
+              </Link>
             </div>
             <div className="space-y-3">
               {slate.picks.map((p) => (
                 <PickRow key={p.pick_id} pick={p} />
               ))}
             </div>
+          </section>
+
+          <section>
+            <ConvictionKey />
           </section>
         </div>
       )}
@@ -139,25 +154,29 @@ export default function DailyEdge({ slate, error }: Props) {
         Follow on{" "}
         <Link
           href="https://x.com/edgeequation"
-          className="text-edge-accent border-b border-edge-accent/50 hover:border-edge-accent"
+          className="text-edge-accent border-b border-edge-accent/40 hover:border-edge-accent"
         >
           X
         </Link>{" "}
         for live cards,{" "}
         <Link
           href="/archive"
-          className="text-edge-accent border-b border-edge-accent/50 hover:border-edge-accent"
+          className="text-edge-accent border-b border-edge-accent/40 hover:border-edge-accent"
         >
           browse the archive
         </Link>
         , or check{" "}
         <Link
           href="/grade-history"
-          className="text-edge-accent border-b border-edge-accent/50 hover:border-edge-accent"
+          className="text-edge-accent border-b border-edge-accent/40 hover:border-edge-accent"
         >
-          hit rate by grade
+          hit rate by tier
         </Link>
         .
+      </p>
+
+      <p className="mt-10 font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textFaint max-w-prose leading-relaxed">
+        Educational and entertainment use. No guarantees. 21+. Bet within your means.
       </p>
     </Layout>
   );
