@@ -87,6 +87,25 @@ def _season_from_date(target_date: str) -> int:
     return int(target_date[:4])
 
 
+def _persist_weather_snapshot(store: NRFIStore, game_pk: int, wx, roof_open) -> None:
+    """Persist weather used for feature construction into DuckDB."""
+    if wx is None:
+        return
+    store.upsert("weather", [{
+        "game_pk": int(game_pk),
+        "source": wx.source,
+        "as_of_ts": None,
+        "temperature_f": float(wx.temperature_f),
+        "wind_speed_mph": float(wx.wind_speed_mph),
+        "wind_dir_deg": float(wx.wind_dir_deg),
+        "humidity_pct": float(wx.humidity_pct),
+        "dew_point_f": float(wx.dew_point_f),
+        "air_density": float(wx.air_density_kg_m3),
+        "precip_prob": float(wx.precip_prob),
+        "roof_open": roof_open,
+    }])
+
+
 def _abs_active_for_season(season: int) -> bool:
     """ABS Challenge System became league-wide in 2026."""
     return season >= 2026
@@ -193,6 +212,20 @@ def reconstruct_features_for_date(
                         wx = weather.forecast(park.lat, park.lon, target_iso, park.altitude_ft)
                     else:
                         wx = weather.archive(park.lat, park.lon, fp_ts, park.altitude_ft)
+                    if wx is not None:
+                        store.upsert("weather", [{
+                            "game_pk": _safe_int(g.game_pk, default=0),
+                            "source": wx.source,
+                            "as_of_ts": fp_ts,
+                            "temperature_f": wx.temperature_f,
+                            "wind_speed_mph": wx.wind_speed_mph,
+                            "wind_dir_deg": wx.wind_dir_deg,
+                            "humidity_pct": wx.humidity_pct,
+                            "dew_point_f": wx.dew_point_f,
+                            "air_density": wx.air_density_kg_m3,
+                            "precip_prob": wx.precip_prob,
+                            "roof_open": None,
+                        }])
 
                 # Pitcher inputs (first-inning splits from Statcast).
                 home_pid = _safe_int(g.home_pitcher_id, default=0)

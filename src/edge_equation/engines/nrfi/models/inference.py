@@ -130,7 +130,23 @@ class NRFIInferenceEngine:
             if model_quality.use_poisson_only_baseline
             else 0.5 * (lam_p + poisson_p)
         )
-        blended = model_quality.blend_weight * ml_p + (1 - model_quality.blend_weight) * baseline_p
+        raw_predict = getattr(self.bundle.classifier, "_raw_predict", None)
+        raw_ml = raw_predict(X) if raw_predict is not None else ml_p
+        signal_strength = np.abs(raw_ml - 0.5) * 2.0
+        dynamic_weight = np.minimum(
+            self.cfg.model.max_dynamic_ml_weight,
+            model_quality.blend_weight
+            + self.cfg.model.signal_blend_boost * signal_strength,
+        )
+        signal_adjusted_ml = np.clip(
+            ml_p
+            + self.cfg.model.raw_signal_residual_alpha
+            * signal_strength
+            * (raw_ml - ml_p),
+            0.01,
+            0.99,
+        )
+        blended = dynamic_weight * signal_adjusted_ml + (1 - dynamic_weight) * baseline_p
 
         # SHAP top-N for each row (optional).
         shap_top: list[list[tuple[str, float]]] = [[] for _ in range(len(X))]

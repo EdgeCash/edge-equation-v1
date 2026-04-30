@@ -17,7 +17,7 @@ import numpy as np
 
 @dataclass
 class Calibrator:
-    method: Literal["isotonic", "platt"] = "isotonic"
+    method: Literal["isotonic", "platt", "hybrid"] = "isotonic"
     _model: object | None = None
 
     # ---- Fit -----------------------------------------------------------
@@ -38,6 +38,20 @@ class Calibrator:
             lr = LogisticRegression(C=1.0, solver="lbfgs", max_iter=200)
             lr.fit(raw.reshape(-1, 1), y)
             self._model = lr
+        elif self.method == "hybrid":
+            # A lighter calibrator for noisy sports data. Pure isotonic can
+            # overfit plateaus and crush all live probabilities into one bin;
+            # pure Platt can underfit local reliability. Blend mostly-Platt
+            # with some isotonic so strong raw signal can survive while still
+            # respecting empirical calibration.
+            from sklearn.isotonic import IsotonicRegression  # type: ignore
+            from sklearn.linear_model import LogisticRegression  # type: ignore
+            ir = IsotonicRegression(y_min=0.0, y_max=1.0,
+                                    out_of_bounds="clip")
+            ir.fit(raw, y)
+            lr = LogisticRegression(C=0.75, solver="lbfgs", max_iter=500)
+            lr.fit(raw.reshape(-1, 1), y)
+            self._model = {"isotonic": ir, "platt": lr, "isotonic_weight": 0.35}
         else:
             raise ValueError(f"Unknown calibration method: {self.method}")
         return self
@@ -49,6 +63,11 @@ class Calibrator:
         raw = np.asarray(raw_probs, dtype=float).reshape(-1)
         if self.method == "isotonic":
             return self._model.transform(raw)
+        if self.method == "hybrid":
+            iso = self._model["isotonic"].transform(raw)
+            platt = self._model["platt"].predict_proba(raw.reshape(-1, 1))[:, 1]
+            w = float(self._model.get("isotonic_weight", 0.35))
+            return (w * iso) + ((1.0 - w) * platt)
         return self._model.predict_proba(raw.reshape(-1, 1))[:, 1]
 
     # ---- Persistence ---------------------------------------------------

@@ -110,9 +110,18 @@ def diagnostics_for_date(target_date: str):
     engine = NRFIInferenceEngine(bundle, cfg)
     preds = engine.predict_many(feature_dicts, game_pks=[pk for pk, _ in feats])
     blended = [p.nrfi_prob for p in preds]
+    strength = abs(raw - 0.5) * 2.0
+    boosted = calibrated + cfg.model.raw_signal_residual_alpha * strength * (raw - calibrated)
+    signal_strength = np.abs(raw - 0.5) * 2.0
+    dynamic_weight = np.minimum(
+        cfg.model.max_dynamic_ml_weight,
+        cfg.model.ml_blend_weight + cfg.model.signal_blend_boost * signal_strength,
+    )
     return [
         summarize_probabilities("raw_xgb", raw),
         summarize_probabilities("calibrated", calibrated),
+        summarize_probabilities("raw_boost", boosted),
+        summarize_probabilities("dyn_weight", dynamic_weight),
         summarize_probabilities("poisson", poisson),
         summarize_probabilities("lambda_head", lam_p),
         summarize_probabilities("blended", blended),
