@@ -265,24 +265,62 @@ def _expected_calibration_error(
 def load_bundle_holdout_predictions():
     """Pull walk-forward holdout (raw_score, y_true) pairs.
 
-    Returns ``(raw_scores, y_true)`` as numpy arrays from the trained
-    bundle's persisted walk-forward predictions if available. Returns
-    ``None`` if no walk-forward record exists yet — operators can rerun
-    `nrfi.training.walkforward` to populate them.
+    Returns ``(raw_scores, y_true)`` as numpy arrays. Two paths in
+    priority order:
+
+    1. **Bundle attributes.** If ``TrainedBundle`` was extended to carry
+       ``walkforward_raw_scores`` + ``walkforward_y_true``, use them
+       directly.
+    2. **walkforward_calibration.jsonl.** Default in-tree path — the
+       walk-forward trainer writes this JSONL to ``cfg.cache_dir`` on
+       every run. Each row carries ``predicted_p`` + ``actual_y``;
+       ``predicted_p`` is the *raw* model score (no calibration applied
+       at the chunk-prediction step), so it's exactly what the audit
+       wants as input.
+
+    Returns ``None`` if neither source is available — operator can run
+    ``python -m edge_equation.engines.nrfi.training.walkforward`` to
+    populate the JSONL.
     """
+    import json
+    from pathlib import Path
+
     from ..config import get_default_config
-    from ..models.model_training import MODEL_VERSION, TrainedBundle
 
     cfg = get_default_config().resolve_paths()
+
+    # Path 1: bundle attributes (only present if a future trainer
+    # writes them onto the pickle).
     try:
+        from ..models.model_training import MODEL_VERSION, TrainedBundle
         bundle = TrainedBundle.load(cfg.model_dir, MODEL_VERSION)
+        raw = getattr(bundle, "walkforward_raw_scores", None)
+        y = getattr(bundle, "walkforward_y_true", None)
+        if raw is not None and y is not None:
+            return np.asarray(raw, dtype=float), np.asarray(y, dtype=int)
     except Exception:
+        pass
+
+    # Path 2: walkforward_calibration.jsonl
+    jsonl_path = Path(cfg.cache_dir) / "walkforward_calibration.jsonl"
+    if not jsonl_path.exists():
         return None
-    raw = getattr(bundle, "walkforward_raw_scores", None)
-    y = getattr(bundle, "walkforward_y_true", None)
-    if raw is None or y is None:
+    raw_list: list[float] = []
+    y_list: list[int] = []
+    with jsonl_path.open() as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+                raw_list.append(float(row["predicted_p"]))
+                y_list.append(int(row["actual_y"]))
+            except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                continue
+    if not raw_list:
         return None
-    return np.asarray(raw, dtype=float), np.asarray(y, dtype=int)
+    return np.asarray(raw_list, dtype=float), np.asarray(y_list, dtype=int)
 
 
 # ---------------------------------------------------------------------------
