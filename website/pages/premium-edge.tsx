@@ -12,24 +12,24 @@ import type { MeResponse } from "@/lib/types";
 
 const FEATURES = [
   {
-    title: "Full Distributions",
+    title: "Full Why Notes",
     body:
-      "p10 / p50 / p90 and the modeled mean from deterministic Monte Carlo. See the full shape of the outcome, not just the headline number.",
+      "A written breakdown of every pick — what drove the number, what the model is leaning on, what would change the read, and what we're not sure about.",
   },
   {
-    title: "The Why Notes",
+    title: "Deeper Analysis",
     body:
-      "A short paragraph on every pick explaining what drove the number, what the model is leaning on, and what would change the read.",
+      "Distributions (p10 / p50 / p90), modeled mean, calibration notes, and the underlying features ranked by impact. The full data layer behind every call.",
   },
   {
-    title: "Conviction & Sizing",
+    title: "The Full Slate",
     body:
-      "The same conviction tiers as the public board, with explicit half-Kelly sizing on every play. Math, not vibes.",
+      "Every market the engine scored today — including the picks below the public threshold and the games we passed on, with the reasoning attached.",
   },
   {
-    title: "Slate Walkthroughs",
+    title: "Parlay Reasoning",
     body:
-      "A written breakdown of the day’s slate — including the games we passed on and why. Process, not just picks.",
+      "When the cross-market parlay engine surfaces a candidate, you get the joint probability math, the correlation adjustment, and the explicit edge gates — not just the ticket.",
   },
 ];
 
@@ -226,35 +226,25 @@ function Paywall({ me }: { me: MeResponse | null }) {
 }
 
 
-function StrongDisclaimer() {
+function PremiumDisclaimer() {
   return (
-    <aside className="mt-16 border-l-2 border-conviction-fade bg-conviction-fadeSoft/30 pl-6 py-5 pr-5">
-      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-conviction-fade mb-3">
-        Read this before subscribing
+    <aside className="mt-16 border-l-2 border-conviction-elite bg-conviction-eliteSoft/30 pl-6 py-5 pr-5 max-w-prose">
+      <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-conviction-elite mb-3">
+        A note before subscribing
       </div>
-      <div className="text-edge-textDim leading-relaxed max-w-prose space-y-3 text-sm">
-        <p>
-          <strong className="text-edge-text">There are no guaranteed winners.</strong>{" "}
-          Anyone who tells you otherwise is selling you something. Edge
-          Equation publishes a model. Models are wrong. Frequently. The
-          question is whether the long-run record beats break-even at the
-          conviction tiers you bet at — not whether last Tuesday hit.
-        </p>
-        <p>
-          Sports betting carries real risk of real loss. Past performance,
-          including ours, does not predict future results. The conviction
-          tiers, the Kelly sizing, and the educational content on this site
-          are tools — they are not a license to bet money you can&apos;t
-          afford to lose.
-        </p>
-        <p>
-          If you or someone you know has a gambling problem, call{" "}
-          <span className="text-edge-text">1-800-GAMBLER</span>. You must be
-          21+ to use this product in jurisdictions where it is legal. If
-          it&apos;s not legal where you are, this content is for educational
-          and entertainment use only.
-        </p>
-      </div>
+      <p className="font-display text-xl tracking-tightest leading-snug text-edge-text">
+        Premium provides more data and insights.
+        <br />
+        <span className="italic text-edge-accent">Final decisions are always yours.</span>
+      </p>
+      <p className="mt-4 text-sm text-edge-textDim leading-relaxed">
+        Models are wrong sometimes. Variance is real. Past performance does
+        not predict future results. We&apos;re in a public testing phase and
+        results are tracked transparently — see the daily board for the live
+        record. If you or someone you know has a gambling problem, call{" "}
+        <span className="text-edge-text">1-800-GAMBLER</span>. 21+. Bet within
+        your means.
+      </p>
     </aside>
   );
 }
@@ -294,7 +284,7 @@ export default function PremiumEdge({ me, picks, picksError, meError }: Props) {
       {!subscribed && (
         <>
           <Paywall me={me} />
-          <StrongDisclaimer />
+          <PremiumDisclaimer />
         </>
       )}
 
@@ -342,7 +332,7 @@ export default function PremiumEdge({ me, picks, picksError, meError }: Props) {
             </div>
           </section>
 
-          <StrongDisclaimer />
+          <PremiumDisclaimer />
         </div>
       )}
     </Layout>
