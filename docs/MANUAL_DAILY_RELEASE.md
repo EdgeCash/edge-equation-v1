@@ -104,7 +104,8 @@ Inputs:
 - `dry_run`: **`false`**
 
 This:
-1. Hydrates DuckDB from the latest backfill artifact (NRFI + props)
+1. Hydrates DuckDB from the latest backfill artifacts (NRFI + props
+   + full-game)
 2. Settles yesterday's NRFI picks into `nrfi_pick_settled` (so they
    show up on the public ledger today)
 3. Builds today's email card from `run_daily.py`
@@ -118,12 +119,23 @@ This:
    baselines. Verdict is logged + emitted as
    `data/props_cache/sanity_report.json`. Soft-fail today; once the
    sample reaches ≥50 settled picks this will gate the publish step.
-7. Runs `build_daily_feed` to write today's picks to
-   `website/public/data/daily/latest.json` — NRFI + props together
-8. Commits that JSON back to `main` — Vercel auto-deploys
+7. Builds today's **full-game card** (`full_game.daily`) — pulls
+   Odds-API moneyline / spread / total / F5 markets, projects per-
+   team Bayesian-blended Poisson + Skellam, persists tier-LEAN+
+   predictions to the full-game DuckDB
+8. Runs the **full-game sanity gate**
+   (`full_game.evaluation.sanity`) on the trailing 365-day window
+   — projection vs vig-corrected market and vs league-prior
+   baseline (re-projection with no per-team rates). Verdict is
+   logged + emitted as `data/fullgame_cache/sanity_report.json`.
+   Soft-fail today; same ≥50 settled-picks threshold as props.
+9. Runs `build_daily_feed` to write today's picks to
+   `website/public/data/daily/latest.json` — NRFI + props +
+   full-game together
+10. Commits that JSON back to `main` — Vercel auto-deploys
 
 After ~3-4 minutes the email arrives and `/daily-edge` shows
-today's NRFI **and** props picks.
+today's NRFI, props, **and** full-game picks.
 
 ### Step 4 — Publish the track record
 
@@ -147,9 +159,10 @@ Open the deployed site and check:
 - **`/daily-edge`** — today's picks rendered with the right tier
   colors, conviction percentages, and game labels. The "generated_at"
   timestamp at the bottom should be within the last few minutes.
-  Both the **First Inning** group (NRFI/YRFI) and the **Props**
-  group should show today's qualifying picks. An empty Props group
-  is normal on light-slate days or when no prop lines clear LEAN.
+  All three groups should show today's qualifying picks: **First
+  Inning** (NRFI/YRFI), **Props**, and **Full Game** (moneylines,
+  totals, run lines, F5 markets, team totals). An empty group is
+  normal on light-slate days or when no lines clear LEAN.
 - **`/track-record`** — yesterday's settled picks now appear in the
   ledger; the running-record cards reflect the new W/L/Push counts.
 
