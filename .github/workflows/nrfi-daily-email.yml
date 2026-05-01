@@ -73,13 +73,22 @@ jobs:
         # posted before we send. Refuse to proceed otherwise. This
         # is the single human-in-the-loop check that makes the
         # public-testing release safe.
+        #
+        # Accepts ``true`` / ``True`` / ``TRUE`` / ``yes`` / ``1`` so
+        # mobile autocorrect doesn't lock the operator out of running
+        # the workflow.
         if: github.event_name == 'workflow_dispatch'
         run: |
-          if [ "${{ github.event.inputs.confirm_lineups_posted }}" != "true" ]; then
-            echo "::error::Lineup confirmation NOT given. Set confirm_lineups_posted=true in the Run-workflow form before triggering."
-            echo "This gate exists to prevent accidental sends before MLB has posted confirmed lineups (~2-3 hours pre-first-pitch)."
-            exit 1
-          fi
+          INPUT="${{ github.event.inputs.confirm_lineups_posted }}"
+          INPUT_LOWER="$(printf '%s' "$INPUT" | tr '[:upper:]' '[:lower:]')"
+          case "$INPUT_LOWER" in
+            true|yes|y|1) ;;
+            *)
+              echo "::error::Lineup confirmation NOT given (received: '$INPUT'). Set confirm_lineups_posted=true in the Run-workflow form before triggering."
+              echo "This gate exists to prevent accidental sends before MLB has posted confirmed lineups (~2-3 hours pre-first-pitch)."
+              exit 1
+              ;;
+          esac
           echo "Lineup confirmation received. Proceeding."
 
       - name: CT-hour guard
