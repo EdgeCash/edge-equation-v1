@@ -40,7 +40,7 @@ This directory holds the static JSON feed that powers the Daily Edge page.
 
 ### Field notes
 
-- `picks[].grade` drives the conviction tier via `tierFromGrade` unless `picks[].tier` is provided. Use `tier` to set `STRONG_NRFI` / `STRONG_YRFI` explicitly so the right colour shows on a side-aware market.
+- `picks[].grade` drives the conviction tier via `tierFromGrade` unless `picks[].tier` is provided. Tier values are `ELITE`, `STRONG`, `MODERATE`, `LEAN`, `NO_PLAY`. Coloring is tier-only (post 2026-05-01) — Red is reserved for `NO_PLAY`.
 - All decimal-valued fields (`fair_prob`, `edge`, `kelly`) are JSON strings, not numbers. The website preserves them as strings until display.
 - `line.number` is the line value (run total, prop number, spread, etc.) or `null`. `line.odds` is American odds.
 

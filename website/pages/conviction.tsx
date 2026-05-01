@@ -125,13 +125,12 @@ export default function Conviction() {
           </div>
           <div className="border border-conviction-strong/40 bg-conviction-strongSoft/30 rounded-sm p-6">
             <div className="flex items-center gap-3">
-              <ConvictionBadge tier="STRONG_NRFI" />
-              <ConvictionBadge tier="STRONG_YRFI" />
+              <ConvictionBadge tier="STRONG" />
             </div>
             <p className="mt-3 text-edge-textDim leading-relaxed text-sm">
-              Strong directional reads on baseball first-inning markets. Deep
-              Green is the NRFI side, Red is the YRFI side. Same conviction,
-              different side.
+              Strong directional reads — solid edge with grade-A inputs. The
+              kind of play that runs every day on the board, regardless of
+              which side of the market the model lands on.
             </p>
           </div>
           <div className="border border-conviction-moderate/40 bg-conviction-moderateSoft/30 rounded-sm p-6">
@@ -152,8 +151,9 @@ export default function Conviction() {
               <ConvictionBadge tier="NO_PLAY" />
             </div>
             <p className="mt-3 text-edge-textDim leading-relaxed text-sm">
-              Slate is a small lean — logged for the record. No Play means the
-              model and the market agree, and we pass.
+              Slate is a small directional lean — logged for the record. Red
+              means No Play: the modeled edge is too small to matter, or the
+              model and market agree. We pass and say so.
             </p>
           </div>
         </div>

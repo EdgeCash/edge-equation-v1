@@ -349,9 +349,9 @@ def _polished_pick_line(pick: dict) -> str:
         Why: home offense soft (+4.2), umpire pitcher-friendly (+2.1),
               cool air boost (+1.5)
 
-    Side-aware color: Strong YRFI rows render the band as **Red** to
-    match the "red-hot opportunity" framing. Every other tier/market
-    falls through to the standard ladder.
+    Tier-only color (post 2026-05-01): the band reads as the
+    conviction-tier color regardless of NRFI/YRFI side. Red is now
+    reserved exclusively for No-Play.
 
     Robust to missing fields — every optional metric (MC, edge, Kelly,
     drivers) drops out cleanly when not present.
