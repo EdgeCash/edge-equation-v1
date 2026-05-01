@@ -138,12 +138,23 @@ def build_edge_picks(
     projections: Sequence[ProjectedSide],
     *,
     min_tier: Tier = Tier.LEAN,
+    min_confidence: float = 0.31,
 ) -> list[PropEdgePick]:
     """Pair each (line, projection), compute edge, classify tier, filter.
 
     Default `min_tier=Tier.LEAN` keeps the ledger-eligible threshold
     (`is_qualifying`) — operators who want the public-facing report
     can pass `Tier.STRONG` to drop LEAN/MODERATE.
+
+    `min_confidence` excludes projections that rest entirely on the
+    league prior (`blend_n == 0` → ``confidence == 0.30``). When the
+    Statcast loader can't find per-player rates, every pitcher gets
+    the same league-average λ, and the market prices each pitcher
+    individually — that mismatch produces fake "edges" of 20-30pp on
+    every line, classifying everyone as ELITE. The default floor of
+    ``0.31`` (slightly above the pure-prior baseline) keeps day-one
+    operations honest. Backtest callers that want the trivial
+    baseline can pass ``min_confidence=0.0``.
     """
     if len(lines) != len(projections):
         raise ValueError(
@@ -156,6 +167,8 @@ def build_edge_picks(
               Tier.LEAN: 1, Tier.NO_PLAY: 0}
     floor = rank[min_tier]
     for line, proj in zip(lines, projections):
+        if float(proj.confidence) < min_confidence:
+            continue
         edge_pp, raw, devigged, corrected = compute_edge_pp(
             line=line, projection=proj,
             devig_total=devig.get(_key_for_pair(line)),

@@ -276,6 +276,51 @@ def test_build_edge_picks_raises_on_length_mismatch():
         build_edge_picks([_line()], [], min_tier=Tier.LEAN)
 
 
+def test_build_edge_picks_skips_pure_prior_projections_by_default():
+    """confidence==0.30 means projection rests entirely on the league
+    prior (no per-player Statcast data). Without this floor, every
+    pitcher would project as league-average and produce fake huge
+    edges against the per-pitcher market."""
+    line = _line(side="Over", american_odds=+250)  # implied ~28.6%
+    proj = ProjectedSide(market=line.market, player_name=line.player_name,
+                          line_value=0.5, side="Over",
+                          # Big nominal edge — would classify ELITE without the floor.
+                          model_prob=0.50, confidence=0.30)
+    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
+    assert picks == []
+    # Backtest-style override keeps the trivial baseline available.
+    picks_no_floor = build_edge_picks(
+        [line], [proj], min_tier=Tier.LEAN, min_confidence=0.0,
+    )
+    assert len(picks_no_floor) == 1
+
+
+def test_build_edge_picks_keeps_high_confidence_picks():
+    """confidence above the floor lets the pick through to tier classification."""
+    line = _line(side="Over", american_odds=+250)
+    proj = ProjectedSide(market=line.market, player_name=line.player_name,
+                          line_value=0.5, side="Over",
+                          model_prob=0.36, confidence=0.55)   # > floor
+    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
+    assert len(picks) == 1
+
+
+def test_build_edge_picks_floor_is_strict_inequality_at_pure_prior():
+    """Default ``min_confidence=0.31`` excludes exactly conf=0.30 (pure-prior)
+    but accepts 0.31 — the smallest sample-size signal."""
+    line = _line(side="Over", american_odds=+250)
+    p_at_floor = ProjectedSide(market=line.market,
+                                  player_name=line.player_name,
+                                  line_value=0.5, side="Over",
+                                  model_prob=0.36, confidence=0.30)
+    p_above = ProjectedSide(market=line.market,
+                                player_name=line.player_name,
+                                line_value=0.5, side="Over",
+                                model_prob=0.36, confidence=0.31)
+    assert build_edge_picks([line], [p_at_floor], min_tier=Tier.LEAN) == []
+    assert len(build_edge_picks([line], [p_above], min_tier=Tier.LEAN)) == 1
+
+
 # ---------------------------------------------------------------------------
 # Odds API normalization
 # ---------------------------------------------------------------------------

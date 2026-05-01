@@ -86,8 +86,35 @@ def test_render_top_props_block_empty_returns_empty_string():
 def test_render_top_props_block_includes_header_and_separator():
     outputs = [_build_prop_output()]
     text = daily_mod.render_top_props_block(outputs)
-    assert "PROPS BOARD — Top 1 by Edge" in text
+    # New header format: "Top {N} of {M} LEAN+ Props"
+    assert "PROPS BOARD — Top 1 of 1 LEAN+ Props" in text
     assert "═" * 60 in text
+
+
+def test_render_top_props_block_header_shows_qualifying_count():
+    """Operator sees that the published list isn't the whole slate."""
+    outputs = [_build_prop_output(player=f"p{i}") for i in range(3)]
+    text = daily_mod.render_top_props_block(outputs, n=2, n_qualifying=15)
+    assert "Top 2 of 15 LEAN+ Props" in text
+
+
+def test_render_top_props_block_appends_skipped_count_when_present():
+    outputs = [_build_prop_output()]
+    text = daily_mod.render_top_props_block(
+        outputs, n_qualifying=1, n_skipped_low_confidence=42,
+    )
+    assert "42 skipped" in text
+    assert "no per-player rate data" in text
+
+
+def test_render_top_props_block_empty_with_skipped_explains_why():
+    """No qualifying picks but many skipped → don't render an empty
+    section; explain the operator that data is missing."""
+    text = daily_mod.render_top_props_block(
+        [], n_skipped_low_confidence=88,
+    )
+    assert "0 LEAN+ Props qualified today" in text
+    assert "88 skipped" in text
 
 
 def test_render_top_props_block_caps_at_n():

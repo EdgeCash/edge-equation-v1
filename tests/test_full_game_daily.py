@@ -83,8 +83,34 @@ def test_render_block_empty_returns_empty_string():
 
 def test_render_block_includes_header_and_separator():
     text = daily_mod.render_top_full_game_block([_build_full_game_output()])
-    assert "FULL-GAME BOARD — Top 1 by Edge" in text
+    # New header format: "Top {N} of {M} LEAN+ picks"
+    assert "FULL-GAME BOARD — Top 1 of 1 LEAN+ picks" in text
     assert "═" * 60 in text
+
+
+def test_render_block_header_shows_qualifying_count():
+    outputs = [_build_full_game_output() for _ in range(3)]
+    text = daily_mod.render_top_full_game_block(
+        outputs, n=2, n_qualifying=10,
+    )
+    assert "Top 2 of 10 LEAN+ picks" in text
+
+
+def test_render_block_appends_skipped_count_when_present():
+    text = daily_mod.render_top_full_game_block(
+        [_build_full_game_output()], n_qualifying=1,
+        n_skipped_low_confidence=12,
+    )
+    assert "12 skipped" in text
+    assert "no per-team rate data" in text
+
+
+def test_render_block_empty_with_skipped_explains_why():
+    text = daily_mod.render_top_full_game_block(
+        [], n_skipped_low_confidence=8,
+    )
+    assert "0 LEAN+ picks qualified today" in text
+    assert "8 skipped" in text
 
 
 def test_render_block_caps_at_n():

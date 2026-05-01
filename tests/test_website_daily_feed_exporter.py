@@ -315,6 +315,22 @@ def test_props_returns_empty_when_table_missing():
     assert _load_props_picks(store, "2026-05-01") == []
 
 
+def test_props_query_filters_confidence_above_pure_prior():
+    """The SQL must reject ``confidence == 0.30`` rows so historical
+    pure-prior picks stored before the orchestrator's confidence floor
+    was added don't leak into the public feed."""
+    from edge_equation.engines.website.build_daily_feed import _TODAY_PROPS_QUERY
+    sql = _TODAY_PROPS_QUERY.lower()
+    assert "confidence > 0.30" in sql or "confidence > 0.3" in sql
+
+
+def test_fullgame_query_filters_confidence_above_pure_prior():
+    """Same belt-and-suspenders SQL filter for full-game predictions."""
+    from edge_equation.engines.website.build_daily_feed import _TODAY_FULLGAME_QUERY
+    sql = _TODAY_FULLGAME_QUERY.lower()
+    assert "confidence > 0.30" in sql or "confidence > 0.3" in sql
+
+
 def test_props_returns_empty_when_store_is_none():
     from edge_equation.engines.website.build_daily_feed import _load_props_picks
     assert _load_props_picks(None, "2026-05-01") == []

@@ -200,6 +200,14 @@ def _load_nrfi_picks(store, target_date: str) -> list[FeedPick]:
 # Pull tier-LEAN-and-above predictions for the slate. We keep things
 # defensive: an event_date row count of zero (or a missing table)
 # returns []. The website renders fewer picks; nothing fails.
+#
+# The ``confidence > 0.30`` clause is the SQL belt-and-suspenders
+# version of the orchestrator's confidence floor — picks with
+# ``confidence == 0.30`` are pure-prior projections (no per-player
+# Statcast data, every player projected as league-average). Those
+# manufacture fake huge "edges" against the market. The orchestrator
+# already excludes them but the SQL filter ensures historical rows
+# from before the floor was added don't leak into the public feed.
 _TODAY_PROPS_QUERY = """
 SELECT
     game_pk,
@@ -219,6 +227,7 @@ SELECT
 FROM prop_predictions
 WHERE event_date = ?
   AND tier IN ('ELITE', 'STRONG', 'MODERATE', 'LEAN')
+  AND confidence > 0.30
 ORDER BY edge_pp DESC NULLS LAST
 """
 
@@ -357,8 +366,8 @@ def _props_notes(
 
 
 # Pull tier-LEAN-and-above predictions for the slate. Defensive: zero
-# rows or a missing table returns []. The website renders fewer picks;
-# nothing fails.
+# rows or a missing table returns []. ``confidence > 0.30`` filter
+# matches the props-side rationale — see _TODAY_PROPS_QUERY comment.
 _TODAY_FULLGAME_QUERY = """
 SELECT
     game_pk,
@@ -378,6 +387,7 @@ SELECT
 FROM fullgame_predictions
 WHERE event_date = ?
   AND tier IN ('ELITE', 'STRONG', 'MODERATE', 'LEAN')
+  AND confidence > 0.30
 ORDER BY edge_pp DESC NULLS LAST
 """
 
