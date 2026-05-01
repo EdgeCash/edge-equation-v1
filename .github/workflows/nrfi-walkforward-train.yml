@@ -65,11 +65,40 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[nrfi]"
 
-      - name: Hydrate DuckDB store from latest backfill artifact
-        # Backfill uploads `nrfi-duckdb-latest` (fixed name, overwrite=true)
-        # alongside a run-id-stamped archive copy. We pull the literal
-        # `latest` here — no regex matching, no cross-run discovery
-        # quirks. Phase 2c replaces this with an R2 fetch.
+      # Prefer the freshest DuckDB. Multiple workflows publish
+      # `nrfi-duckdb-latest` under their own namespaces:
+      #   * nrfi-weather-backfill.yml — re-uploads after weather +
+      #     feature-blob rebuilds (PR #105+). This is the freshest
+      #     after a manual mode='weather_then_rebuild' run.
+      #   * nrfi-daily-email.yml — re-uploads after the daily email
+      #     incrementally settles yesterday's picks.
+      #   * backfill-historical.yml — the original chunked rebuild.
+      # Try them in freshness order; first hit wins. The
+      # `if: hashFiles(...)` guard on each fallback ensures we don't
+      # overwrite a fresher copy with a staler one.
+      - name: Hydrate DuckDB (weather backfill, freshest)
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: nrfi-weather-backfill.yml
+          workflow_conclusion: success
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
+      - name: Hydrate DuckDB (daily email fallback)
+        if: hashFiles('data/nrfi_cache/nrfi.duckdb') == ''
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: nrfi-daily-email.yml
+          workflow_conclusion: success
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
+      - name: Hydrate DuckDB (backfill-historical fallback)
+        if: hashFiles('data/nrfi_cache/nrfi.duckdb') == ''
         uses: dawidd6/action-download-artifact@v6
         continue-on-error: true
         with:
