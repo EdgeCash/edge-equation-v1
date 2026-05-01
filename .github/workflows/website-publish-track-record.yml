@@ -1,0 +1,146 @@
+name: Website · Publish Track Record
+
+# Runs the engine's track-record exporter against the latest DuckDB
+# and commits the resulting JSON files into website/public/data/
+# track-record/ so Vercel auto-redeploys with the fresh ledger.
+#
+# Cron-fires once daily after the daily-email cron has settled
+# yesterday's picks. Also exposes workflow_dispatch for manual
+# republish (useful when wiring up new engines or fixing a backfill).
+#
+# This is the engine -> public-website handshake. The exporter reads
+# from DuckDB but never mutates it, so a failed export can't corrupt
+# the cache.
+
+on:
+  schedule:
+    # 11:00 UTC = 06:00 CT (CDT) / 05:00 CT (CST). Runs after the
+    # daily-email cron at 14:00/15:00 UTC has finished settling
+    # yesterday's picks.
+    - cron: "0 11 * * *"
+  workflow_dispatch:
+    inputs:
+      duckdb_source:
+        description: "Which workflow's nrfi-duckdb-latest to read."
+        required: false
+        default: "nrfi-weather-backfill"
+        type: choice
+        options:
+          - nrfi-weather-backfill
+          - nrfi-daily-email
+          - backfill-historical
+
+permissions:
+  contents: write   # required to commit the JSON files back
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # We're going to commit + push back to main, so we need the
+          # fetch token to outlive the checkout step.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[nrfi]"
+
+      # Pull the freshest DuckDB. Same chain pattern as the
+      # walkforward-train workflow (see PR #107).
+      - name: Hydrate DuckDB (weather backfill, freshest)
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: nrfi-weather-backfill.yml
+          workflow_conclusion: success
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
+      - name: Hydrate DuckDB (daily-email fallback)
+        if: hashFiles('data/nrfi_cache/nrfi.duckdb') == ''
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: nrfi-daily-email.yml
+          workflow_conclusion: success
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
+      - name: Hydrate DuckDB (backfill-historical fallback)
+        if: hashFiles('data/nrfi_cache/nrfi.duckdb') == ''
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: backfill-historical.yml
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
+      - name: Run track-record exporter
+        run: |
+          mkdir -p website/public/data/track-record
+          python -m edge_equation.engines.website.build_track_record \
+            --duckdb-path data/nrfi_cache/nrfi.duckdb \
+            --out-dir website/public/data/track-record
+
+      - name: Show diff (debug)
+        run: |
+          git diff --stat website/public/data/track-record/ || true
+
+      - name: Commit + push if changed
+        run: |
+          git config user.name "edge-equation-bot"
+          git config user.email "bot@edge-equation.local"
+          git add website/public/data/track-record/
+          if git diff --cached --quiet; then
+            echo "No changes to commit. Track record is unchanged."
+            exit 0
+          fi
+          git commit -m "website: refresh track-record JSON ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          # Retry up to 4 times with exponential backoff for transient
+          # network errors (per repo's git push convention).
+          for i in 1 2 3 4; do
+            if git push origin HEAD:main; then
+              echo "Push succeeded on attempt $i"
+              exit 0
+            fi
+            echo "Push failed on attempt $i, retrying..."
+            sleep $((2 ** i))
+          done
+          echo "::error::Push failed after 4 attempts."
+          exit 1
+
+      - name: Post summary
+        if: always()
+        run: |
+          {
+            echo "## Track Record · Daily Refresh"
+            echo ""
+            if [ -f website/public/data/track-record/ledger.json ]; then
+              echo '```text'
+              python -c "
+              import json
+              for f in ['ledger.json', 'summary.json', 'by-day.json']:
+                  data = json.load(open(f'website/public/data/track-record/{f}'))
+                  if f == 'ledger.json':
+                      print(f'  ledger      n_picks={data[\"n_picks\"]}, generated_at={data[\"generated_at\"]}')
+                  elif f == 'summary.json':
+                      print(f'  summary     buckets={len(data[\"buckets\"])}')
+                  elif f == 'by-day.json':
+                      print(f'  by-day      days={len(data[\"days\"])}')"
+              echo '```'
+            else
+              echo "No JSON written — DuckDB hydration probably failed."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

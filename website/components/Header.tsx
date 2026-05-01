@@ -4,10 +4,10 @@ import { useState } from "react";
 
 const PRIMARY_NAV = [
   { href: "/", label: "Home" },
-  { href: "/daily-edge", label: "Daily Edge" },
+  { href: "/daily-edge", label: "Daily" },
+  { href: "/track-record", label: "Track Record" },
   { href: "/conviction", label: "Conviction" },
   { href: "/about", label: "About" },
-  { href: "/premium-edge", label: "Premium" },
   { href: "/learn", label: "Learn" },
 ];
 

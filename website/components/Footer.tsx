@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 const SECONDARY = [
+  { href: "/track-record", label: "Track Record" },
   { href: "/archive", label: "Archive" },
   { href: "/grade-history", label: "Grades" },
-  { href: "/account", label: "Account" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -69,13 +69,29 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-edge-line">
-        <div className="mx-auto max-w-6xl px-6 py-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto max-w-6xl px-6 py-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textFaint">
             © {new Date().getFullYear()} Edge Equation · For entertainment and
             educational use. 21+. Please bet responsibly.
           </p>
           <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textFaint">
             No guarantees. No locks. Just the math.
+          </p>
+        </div>
+        <div className="mx-auto max-w-6xl px-6 pb-6">
+          <p className="text-[11px] leading-relaxed text-edge-textFaint">
+            <strong className="text-edge-textDim">Disclaimer.</strong>{" "}
+            Edge Equation publishes data, projections, and historical
+            outcomes. Nothing on this site is financial or wagering advice.
+            Past performance does not predict future results. If you or
+            someone you know has a gambling problem, call{" "}
+            <a
+              href="tel:18004262537"
+              className="text-edge-textDim underline underline-offset-2"
+            >
+              1-800-GAMBLER
+            </a>
+            .
           </p>
         </div>
       </div>
