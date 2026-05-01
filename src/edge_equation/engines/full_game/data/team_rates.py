@@ -84,10 +84,18 @@ def bayesian_blend(
 # ---------------------------------------------------------------------------
 
 
+# Set of supported MLB tricodes. The Athletics relocated mid-2025 and
+# the Stats API now returns "ATH" in the schedule payload while older
+# rows in fullgame_actuals still carry "OAK" — keep both so neither
+# gets silently dropped from the rolling-rate aggregation. Same idea
+# for any future relocation: add the new code without removing the
+# old, then sunset once historical rows have aged out of the lookback
+# window.
 _MLB_TRICODES = (
     "ARI", "ATL", "BAL", "BOS", "CHC", "CWS", "CIN", "CLE", "COL", "DET",
     "HOU", "KC", "LAA", "LAD", "MIA", "MIL", "MIN", "NYM", "NYY", "OAK",
     "PHI", "PIT", "SD", "SF", "SEA", "STL", "TB", "TEX", "TOR", "WSH",
+    "ATH",   # 2025+ Athletics (replaces OAK in current schedule payloads)
 )
 
 
@@ -198,7 +206,10 @@ def load_team_rates_table(
     yield ``confidence == 0.30`` projections, which the edge module's
     confidence floor (introduced 2026-05-01) skips before publishing.
     """
+    import logging
     from datetime import date as _date, timedelta
+    log = logging.getLogger(__name__)
+
     end = _date.fromisoformat(end_date)
     start = end - timedelta(days=int(lookback_days))
 
@@ -206,17 +217,48 @@ def load_team_rates_table(
     try:
         df = store.query_df(_TEAM_RATES_QUERY, (start.isoformat(),
                                                     end.isoformat()))
-    except Exception:
+    except Exception as e:
         # Schema not migrated yet, table empty, anything else — fall
         # through to the league-prior table. The orchestrator's
         # confidence floor still keeps publication honest.
+        log.warning("FG team rates query failed (%s): %s",
+                      type(e).__name__, e)
         df = None
 
     table = default_team_rates_table(
         end_date=end_date, lookback_days=lookback_days,
     )
     if df is None or len(df) == 0:
+        log.info(
+            "FG team rates: 0 rows in %s..%s window — every tricode "
+            "falls back to league prior.",
+            start.isoformat(), end.isoformat(),
+        )
         return table
+
+    # Diagnostic: log distinct tricodes seen in actuals so we can spot
+    # tricode drift (e.g. Athletics ATH vs OAK relocation rename) at
+    # first sight in the workflow log instead of silently dropping
+    # those teams from the rolling-rate aggregation.
+    try:
+        seen = set()
+        for col in ("home_team", "away_team"):
+            if col in df.columns:
+                seen.update(str(x) for x in df[col].dropna().unique())
+        seen.discard("")
+        unknown = sorted(seen - set(table.keys()))
+        if unknown:
+            log.warning(
+                "FG team rates: %d tricodes in actuals not recognized: %s "
+                "(consider adding to _MLB_TRICODES).",
+                len(unknown), unknown,
+            )
+        log.info(
+            "FG team rates: %d rows in window, %d distinct tricodes seen.",
+            len(df), len(seen),
+        )
+    except Exception:
+        pass
 
     for tri in list(table.keys()):
         rates = compute_team_rates_from_actuals(

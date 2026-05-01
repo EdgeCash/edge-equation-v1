@@ -77,7 +77,13 @@ def main(argv: list[str] | None = None) -> int:
         rows = [p.as_row() for p in preds]
     else:
         # Deterministic fallback — Poisson baseline only.
-        from .utils.colors import gradient_hex, nrfi_band
+        # Column set must match the ``predictions`` table schema in
+        # ``data/storage.py``. The schema doesn't include ``color_hex``
+        # (the website renders the band → color map itself), so we
+        # omit it here. Same with any other UI-only column the
+        # operator might be tempted to add — the predictions table
+        # is the canonical model output, not a render cache.
+        from .utils.colors import nrfi_band
         rows = []
         for pk, f in feats_per_game:
             p = float(f.get("poisson_p_nrfi", 0.55))
@@ -88,7 +94,6 @@ def main(argv: list[str] | None = None) -> int:
                 "nrfi_pct": round(p * 100.0, 1),
                 "lambda_total": float(f.get("lambda_total", 1.0)),
                 "color_band": band.label,
-                "color_hex": gradient_hex(p * 100.0),
                 "signal": band.signal,
                 "model_version": "poisson_baseline_only",
             })

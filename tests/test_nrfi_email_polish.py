@@ -224,17 +224,18 @@ def test_render_body_emits_top_board_above_per_side_boards():
                 pct=34.0),
     ]
     body = er.render_body(_minimal_card(picks=picks))
-    # Top board appears.
-    assert "TOP BOARD" in body
-    # And it appears BEFORE the per-side NRFI / YRFI boards.
-    top_idx = body.index("TOP BOARD")
-    nrfi_idx = body.index("NRFI BOARD")
-    assert top_idx < nrfi_idx
+    # Single FIRST INNING section now (replacing the old TOP BOARD +
+    # NRFI BOARD + YRFI BOARD trio that duplicated the same data).
+    assert "FIRST INNING" in body
+    # The mirror-image YRFI BOARD got removed because every game's
+    # YRFI prob is exactly 1 - NRFI%; rendering it twice was wasteful.
+    assert "NRFI BOARD" not in body
+    assert "YRFI BOARD" not in body
 
 
-def test_render_body_top_board_skipped_when_no_picks():
+def test_render_body_first_inning_section_skipped_when_no_picks():
     body = er.render_body(_minimal_card())
-    assert "TOP BOARD" not in body
+    assert "FIRST INNING" not in body
     assert "(No games on the slate" in body
 
 
