@@ -144,6 +144,19 @@ jobs:
           path: data/props_cache/
           if_no_artifact_found: warn
 
+      # Full-Game uses its own DuckDB at data/fullgame_cache/fullgame.duckdb.
+      # Same handoff pattern — yesterday's predictions need to land for
+      # today's settle pass + ledger.
+      - name: Hydrate full-game DuckDB from latest artifact
+        if: env.SKIP_RUN != '1'
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: nrfi-daily-email.yml
+          name: fullgame-duckdb-latest
+          path: data/fullgame_cache/
+          if_no_artifact_found: warn
+
       - name: Build & send NRFI email
         if: env.SKIP_RUN != '1'
         run: |
@@ -198,12 +211,49 @@ jobs:
             echo "No props DuckDB on disk yet — skipping sanity gate."
           fi
 
+      # Build today's full-game card (ML / Run_Line / Total / F5 / Team_Total).
+      # Same best-effort posture as the props step.
+      - name: Build full-game daily card
+        if: env.SKIP_RUN != '1'
+        continue-on-error: true
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ github.event.inputs.target_date }}" ]; then
+            DATE_ARG="--date ${{ github.event.inputs.target_date }}"
+          fi
+          python -m edge_equation.engines.full_game.daily $DATE_ARG
+
+      # Full-Game sanity gate (vs vig-corrected market + vs league prior).
+      # Soft-fail until we accumulate enough settled picks; verdict is
+      # logged + emitted as data/fullgame_cache/sanity_report.json.
+      - name: Run full-game sanity gate
+        if: env.SKIP_RUN != '1'
+        continue-on-error: true
+        run: |
+          if [ -f data/fullgame_cache/fullgame.duckdb ]; then
+            END_DATE=$(date -u +%Y-%m-%d)
+            if [ -n "${{ github.event.inputs.target_date }}" ]; then
+              END_DATE="${{ github.event.inputs.target_date }}"
+            fi
+            START_DATE=$(date -u -d "$END_DATE - 365 days" +%Y-%m-%d 2>/dev/null \
+              || python -c "from datetime import date, timedelta; \
+                              print((date.fromisoformat('$END_DATE') - timedelta(days=365)).isoformat())")
+            python -m edge_equation.engines.full_game.evaluation.sanity \
+              --duckdb-path data/fullgame_cache/fullgame.duckdb \
+              --from "$START_DATE" \
+              --to "$END_DATE" \
+              --json-out data/fullgame_cache/sanity_report.json || true
+          else
+            echo "No full-game DuckDB on disk yet — skipping sanity gate."
+          fi
+
       # Manual-mode publishing: after the email sends successfully,
       # write today's picks to website/public/data/daily/latest.json
       # and commit. Vercel auto-deploys; /daily-edge updates within
       # ~2 minutes. Skipped on dry-run since dry-runs don't represent
-      # a real published slate. Now includes the props DuckDB when
-      # present so /daily-edge surfaces today's tier-LEAN+ props.
+      # a real published slate. Includes the props + full-game DuckDBs
+      # when present so /daily-edge surfaces today's tier-LEAN+ picks
+      # across all three engines.
       - name: Publish daily feed to website
         if: env.SKIP_RUN != '1' && github.event.inputs.dry_run != 'true'
         run: |
@@ -215,9 +265,14 @@ jobs:
           if [ -f data/props_cache/props.duckdb ]; then
             PROPS_ARG="--props-duckdb-path data/props_cache/props.duckdb"
           fi
+          FG_ARG=""
+          if [ -f data/fullgame_cache/fullgame.duckdb ]; then
+            FG_ARG="--fullgame-duckdb-path data/fullgame_cache/fullgame.duckdb"
+          fi
           python -m edge_equation.engines.website.build_daily_feed \
             --duckdb-path data/nrfi_cache/nrfi.duckdb \
             $PROPS_ARG \
+            $FG_ARG \
             $DATE_ARG \
             --out-path website/public/data/daily/latest.json
 
@@ -276,6 +331,17 @@ jobs:
         with:
           name: props-duckdb-latest
           path: data/props_cache/props.duckdb
+          if-no-files-found: ignore
+          retention-days: 30
+          overwrite: true
+
+      # Same handoff for full-game.
+      - name: Re-upload populated full-game DuckDB (latest)
+        if: always() && env.SKIP_RUN != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fullgame-duckdb-latest
+          path: data/fullgame_cache/fullgame.duckdb
           if-no-files-found: ignore
           retention-days: 30
           overwrite: true

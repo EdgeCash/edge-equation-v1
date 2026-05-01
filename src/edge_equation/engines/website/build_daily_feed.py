@@ -18,10 +18,13 @@ Engines included
   (``props_prizepicks.evaluation.sanity``). Picks with tier
   LEAN-and-above flow through; ``NO_PLAY`` is dropped here just like
   the props ledger does.
+* **Full-Game** — gated by the Phase Full-Game-2 sanity gate
+  (``full_game.evaluation.sanity``). Same LEAN+ filter applies.
 
-The props join is *optional*: if ``--props-duckdb-path`` isn't
-provided (or the file doesn't exist), the exporter still produces a
-NRFI-only feed and the website renders the same way as before.
+Both the props and full-game joins are *optional*: if their
+``--props-duckdb-path`` / ``--fullgame-duckdb-path`` aren't provided
+(or the files don't exist), the exporter still produces a NRFI-only
+feed and the website renders the same way as before.
 
 CLI
 ~~~
@@ -31,6 +34,7 @@ CLI
     python -m edge_equation.engines.website.build_daily_feed \\
         --duckdb-path data/nrfi_cache/nrfi.duckdb \\
         --props-duckdb-path data/props_cache/props.duckdb \\
+        --fullgame-duckdb-path data/fullgame_cache/fullgame.duckdb \\
         --date 2026-05-01 \\
         --out-path website/public/data/daily/latest.json
 """
@@ -348,18 +352,179 @@ def _props_notes(
 
 
 # ---------------------------------------------------------------------------
+# Today's full-game picks
+# ---------------------------------------------------------------------------
+
+
+# Pull tier-LEAN-and-above predictions for the slate. Defensive: zero
+# rows or a missing table returns []. The website renders fewer picks;
+# nothing fails.
+_TODAY_FULLGAME_QUERY = """
+SELECT
+    game_pk,
+    market_type,
+    side,
+    team_tricode,
+    line_value,
+    model_prob,
+    market_prob,
+    edge_pp,
+    american_odds,
+    book,
+    confidence,
+    tier,
+    feature_blob,
+    event_date
+FROM fullgame_predictions
+WHERE event_date = ?
+  AND tier IN ('ELITE', 'STRONG', 'MODERATE', 'LEAN')
+ORDER BY edge_pp DESC NULLS LAST
+"""
+
+
+# Map daily-feed market_type strings the website classifier groups
+# under "Full Game" (see daily-edge.tsx::classify). All Full-Game
+# canonical markets land in MONEYLINE / TOTAL / RUN_LINE / SPREAD or
+# carry the *FULL_GAME* substring.
+_FULLGAME_FEED_MARKET: dict[str, str] = {
+    "ML":         "MONEYLINE",
+    "F5_ML":      "MONEYLINE_FULL_GAME_F5",
+    "Total":      "TOTAL",
+    "F5_Total":   "TOTAL_FULL_GAME_F5",
+    "Team_Total": "TEAM_TOTAL_FULL_GAME",
+    "Run_Line":   "RUN_LINE",
+}
+
+
+def _fullgame_market_label(market_type: str) -> str:
+    """Operator-facing market label."""
+    return {
+        "ML":         "Moneyline",
+        "F5_ML":      "F5 Moneyline",
+        "Total":      "Total Runs",
+        "F5_Total":   "F5 Total Runs",
+        "Team_Total": "Team Total Runs",
+        "Run_Line":   "Run Line",
+    }.get(market_type, market_type.replace("_", " "))
+
+
+def _load_fullgame_picks(store, target_date: str) -> list[FeedPick]:
+    """Pull today's tier-LEAN+ full-game predictions into FeedPick rows."""
+    if store is None:
+        return []
+    if not _table_exists(store, "fullgame_predictions"):
+        return []
+    df = store.query_df(_TODAY_FULLGAME_QUERY, (target_date,))
+    if df is None or len(df) == 0:
+        return []
+
+    picks: list[FeedPick] = []
+    for _, r in df.iterrows():
+        market_type = str(r.get("market_type") or "")
+        side = str(r.get("side") or "")
+        team = str(r.get("team_tricode") or "")
+        line_value = _safe_float(r.get("line_value"))
+        model_prob = _safe_float(r.get("model_prob"))
+        edge_pp = _safe_float(r.get("edge_pp"))
+        american = _safe_float(r.get("american_odds")) or -110.0
+        tier = str(r.get("tier") or "NO_PLAY").upper()
+        confidence = _safe_float(r.get("confidence"))
+        lam_used = _fullgame_lam_from_blob(r.get("feature_blob"))
+        edge_frac = edge_pp / 100.0
+        # Conservative 1/4-Kelly proxy off the edge — tier is the
+        # source of truth for stake sizing in the public ledger.
+        kelly = max(0.0, edge_frac * 0.25)
+
+        market_label = _fullgame_market_label(market_type)
+        feed_market_type = _FULLGAME_FEED_MARKET.get(
+            market_type, f"FULL_GAME_{market_type.upper()}",
+        )
+        selection = _fullgame_selection(market_type, market_label, side,
+                                          team, line_value)
+        notes = _props_notes(model_prob, side, lam_used, edge_pp, confidence)
+
+        game_pk = int(r.get("game_pk") or 0)
+        # game_pk is a placeholder (0) until the FG odds_fetcher
+        # surfaces it; build a deterministic id from the prop tuple
+        # so duplicates within a slate don't collide.
+        pid = "-".join([
+            str(game_pk),
+            market_type,
+            _slug(team or side),
+            f"{line_value:g}",
+        ])
+
+        picks.append(FeedPick(
+            id=pid,
+            sport="MLB",
+            market_type=feed_market_type,
+            selection=selection,
+            line_odds=american,
+            line_number=None if market_type in ("ML", "F5_ML") else f"{line_value:g}",
+            fair_prob=f"{model_prob:.4f}",
+            edge=f"{edge_frac:.4f}",
+            kelly=f"{kelly:.4f}",
+            grade=_grade_from_tier(tier),
+            tier=tier,
+            notes=notes,
+            event_time=None,
+            game_id=str(game_pk),
+        ))
+    return picks
+
+
+def _fullgame_lam_from_blob(blob) -> float:
+    """Pull lam_used out of the persisted feature_blob (best-effort)."""
+    if not blob:
+        return 0.0
+    try:
+        d = json.loads(blob)
+        return float(d.get("lam_used") or d.get("lam") or 0.0)
+    except Exception:
+        return 0.0
+
+
+def _fullgame_selection(market_type: str, market_label: str, side: str,
+                          team: str, line_value: float) -> str:
+    """Human-readable selection label per market.
+
+    Examples::
+
+        NYY ML
+        NYY -1.5
+        Over 8.5  (Total)
+        BOS Over 4.5 (Team_Total)
+    """
+    if market_type in ("ML", "F5_ML"):
+        return f"{team or side} · {market_label}"
+    if market_type == "Run_Line":
+        sign = f"{line_value:+g}"
+        return f"{team or side} · {market_label} {sign}"
+    if market_type == "Team_Total":
+        return f"{team} · {market_label} {side} {line_value:g}"
+    # Total / F5_Total
+    return f"{market_label} {side} {line_value:g}"
+
+
+# ---------------------------------------------------------------------------
 # Top-level builder
 # ---------------------------------------------------------------------------
 
 
-def build_bundle(store, target_date: str, props_store=None) -> FeedBundle:
+def build_bundle(
+    store, target_date: str,
+    props_store=None,
+    fullgame_store=None,
+) -> FeedBundle:
     """Aggregate today's picks across engines.
 
     ``store`` is the NRFI DuckDB; ``props_store`` is the props DuckDB
-    (optional — if None, the bundle is NRFI-only).
+    (optional); ``fullgame_store`` is the full-game DuckDB (optional).
+    Missing engines are silently skipped — the bundle still renders.
     """
     picks = _load_nrfi_picks(store, target_date)
     picks.extend(_load_props_picks(props_store, target_date))
+    picks.extend(_load_fullgame_picks(fullgame_store, target_date))
     notes = (
         "Public-testing release. Manual operator trigger. Lineups + "
         "weather + umpires confirmed at publish time."
@@ -455,7 +620,11 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                           help="NRFI DuckDB path.")
     parser.add_argument("--props-duckdb-path", default=None,
                           help="Props DuckDB path (optional). When omitted "
-                               "or missing, the feed is NRFI-only.")
+                               "or missing, props are excluded from the feed.")
+    parser.add_argument("--fullgame-duckdb-path", default=None,
+                          help="Full-Game DuckDB path (optional). When "
+                               "omitted or missing, full-game picks are "
+                               "excluded from the feed.")
     parser.add_argument(
         "--date", default=None,
         help="Slate date YYYY-MM-DD. Default: today (UTC).",
@@ -472,13 +641,23 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     if args.props_duckdb_path and Path(args.props_duckdb_path).exists():
         from edge_equation.engines.props_prizepicks.data.storage import PropsStore
         props_store = PropsStore(args.props_duckdb_path)
+    fullgame_store = None
+    if args.fullgame_duckdb_path and Path(args.fullgame_duckdb_path).exists():
+        from edge_equation.engines.full_game.data.storage import FullGameStore
+        fullgame_store = FullGameStore(args.fullgame_duckdb_path)
     try:
-        bundle = build_bundle(store, target_date, props_store=props_store)
+        bundle = build_bundle(
+            store, target_date,
+            props_store=props_store,
+            fullgame_store=fullgame_store,
+        )
         write_bundle(bundle, args.out_path)
     finally:
         store.close()
         if props_store is not None:
             props_store.close()
+        if fullgame_store is not None:
+            fullgame_store.close()
 
     if not args.quiet:
         print(
