@@ -166,6 +166,24 @@ jobs:
           path: data/fullgame_cache/
           if_no_artifact_found: warn
 
+      # Run NRFI daily inference so the ``predictions`` table is
+      # populated for today's slate. ``email_report.main`` builds the
+      # email card in memory but does NOT persist predictions; the
+      # downstream ``build_daily_feed`` step reads from
+      # ``predictions JOIN games`` and would otherwise surface zero
+      # NRFI/YRFI rows on the website despite the email going out.
+      # ``run_daily`` is idempotent (UPSERT on game_pk) so re-running
+      # on the same slate is safe.
+      - name: Run NRFI inference (write predictions table)
+        if: env.SKIP_RUN != '1'
+        continue-on-error: true
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ github.event.inputs.target_date }}" ]; then
+            DATE_ARG="${{ github.event.inputs.target_date }}"
+          fi
+          python -m edge_equation.engines.nrfi.run_daily $DATE_ARG
+
       - name: Build & send NRFI email
         if: env.SKIP_RUN != '1'
         run: |
