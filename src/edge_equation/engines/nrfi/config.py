@@ -131,11 +131,16 @@ class ModelConfig:
     # baseline (P_NRFI = exp(-λ_total)). 0.0 = pure Poisson, 1.0 = pure ML.
     ml_blend_weight: float = 0.65
     # Calibration method: "isotonic", "platt", or "beta".
-    # Beta calibration is the production default since 2026-05-01 — the
-    # calibration audit confirmed it wins on Brier, log-loss, and ECE
-    # while preserving high-conviction picks. See
-    # `engines/nrfi/evaluation/calibration_audit.py` for the comparison.
-    calibration_method: str = "beta"
+    # `isotonic` is the production default. The 2026-05-01 calibration
+    # audit reported beta as the Pareto winner on a random-split
+    # walkforward holdout — but Walk-Forward Training run #9
+    # (commit 3ac09c9) trained a beta-calibrated bundle and the
+    # sanity gate rejected it (Brier delta +0.0012, accuracy collapsed
+    # to 0.498 vs Poisson 0.521). The audit's win didn't generalize
+    # to the out-of-period sanity slice, so we keep isotonic as the
+    # safe default and treat beta as opt-in (--calibration-method
+    # beta) while the gap is investigated.
+    calibration_method: str = "isotonic"
     # Holdout fraction used to fit the calibrator.
     calibration_holdout_frac: float = 0.20
     # Min samples per calibration bucket for diagnostic plots.
