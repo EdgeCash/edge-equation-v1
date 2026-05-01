@@ -151,6 +151,82 @@ def test_compute_team_rates_from_empty_falls_back_to_prior():
 
 
 # ---------------------------------------------------------------------------
+# load_team_rates_table — DuckDB-backed loader
+# ---------------------------------------------------------------------------
+
+
+class _FakeStore:
+    """Mimics FullGameStore.query_df for the loader tests."""
+
+    def __init__(self, rows: list[dict]):
+        self._rows = rows
+
+    def query_df(self, sql: str, params: tuple):
+        import pandas as pd
+        return pd.DataFrame(self._rows)
+
+
+def test_load_team_rates_table_returns_complete_dict_with_seeded_priors():
+    """Every supported tricode is in the result; teams without
+    actuals get the league prior (n_games=0)."""
+    from edge_equation.engines.full_game.data.team_rates import (
+        load_team_rates_table,
+    )
+    store = _FakeStore([
+        {"game_pk": 1, "event_date": "2026-04-25",
+          "home_team": "NYY", "away_team": "BOS",
+          "home_runs": 5, "away_runs": 4},
+        {"game_pk": 2, "event_date": "2026-04-26",
+          "home_team": "NYY", "away_team": "TB",
+          "home_runs": 7, "away_runs": 2},
+    ])
+    table = load_team_rates_table(store, end_date="2026-04-28",
+                                      lookback_days=10)
+    # NYY had real actuals → real rates.
+    assert table["NYY"].n_games == 2
+    assert table["NYY"].runs_per_game == pytest.approx(6.0)
+    # A team that didn't appear in actuals still gets a row with the prior.
+    assert "LAD" in table
+    assert table["LAD"].n_games == 0
+
+
+def test_load_team_rates_table_falls_back_when_query_raises():
+    """Missing column / unmigrated DB → fall back to default prior table."""
+    from edge_equation.engines.full_game.data.team_rates import (
+        load_team_rates_table,
+    )
+
+    class _Broken:
+        def query_df(self, sql, params):
+            raise RuntimeError("table fullgame_actuals does not exist")
+
+    table = load_team_rates_table(_Broken(), end_date="2026-04-28",
+                                      lookback_days=10)
+    # Every tricode is league-prior.
+    assert all(r.n_games == 0 for r in table.values())
+    assert "NYY" in table
+
+
+def test_load_team_rates_table_uses_lookback_window_in_query():
+    """end - lookback_days should bound the query."""
+    from edge_equation.engines.full_game.data.team_rates import (
+        load_team_rates_table,
+    )
+    captured: dict = {}
+
+    class _Spy:
+        def query_df(self, sql, params):
+            captured["params"] = params
+            import pandas as pd
+            return pd.DataFrame()
+
+    load_team_rates_table(_Spy(), end_date="2026-05-01", lookback_days=14)
+    start, end = captured["params"]
+    assert end == "2026-05-01"
+    assert start == "2026-04-17"   # 14 days back
+
+
+# ---------------------------------------------------------------------------
 # Poisson + Skellam math
 # ---------------------------------------------------------------------------
 

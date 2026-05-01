@@ -85,6 +85,8 @@ _SCHEMA: tuple[str, ...] = (
     CREATE TABLE IF NOT EXISTS fullgame_actuals (
         game_pk        BIGINT PRIMARY KEY,
         event_date     DATE,
+        home_team      VARCHAR,
+        away_team      VARCHAR,
         home_runs      INTEGER,
         away_runs      INTEGER,
         f5_home_runs   INTEGER,
@@ -101,6 +103,18 @@ _SCHEMA: tuple[str, ...] = (
         PRIMARY KEY (event_date, team_tricode)
     )
     """,
+)
+
+
+# ALTER statements applied after _SCHEMA to upgrade existing DBs with
+# columns added in later releases. ``CREATE TABLE IF NOT EXISTS`` won't
+# add columns to an existing table; these ALTERs handle that case
+# without forcing operators to drop and rebuild. Each statement is
+# wrapped in a try/except inside ``_init_schema`` so a duplicate-column
+# error on already-migrated DBs is a silent no-op.
+_MIGRATIONS: tuple[str, ...] = (
+    "ALTER TABLE fullgame_actuals ADD COLUMN home_team VARCHAR",
+    "ALTER TABLE fullgame_actuals ADD COLUMN away_team VARCHAR",
 )
 
 
@@ -128,6 +142,14 @@ class FullGameStore:
     def _init_schema(self) -> None:
         for stmt in _SCHEMA:
             self._conn.execute(stmt)
+        for stmt in _MIGRATIONS:
+            # Migrations are idempotent ALTER statements; on a fresh DB the
+            # CREATE TABLE above already includes the columns and the ALTER
+            # is a no-op or harmless duplicate-column error we swallow.
+            try:
+                self._conn.execute(stmt)
+            except Exception:
+                pass
 
     @contextlib.contextmanager
     def cursor(self) -> Iterator[Any]:

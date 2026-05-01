@@ -33,7 +33,9 @@ from edge_equation.utils.logging import get_logger
 
 from .config import FullGameConfig, get_default_config
 from .data.storage import FullGameStore
-from .data.team_rates import TeamRollingRates, default_team_rates_table
+from .data.team_rates import (
+    TeamRollingRates, default_team_rates_table, load_team_rates_table,
+)
 from .edge import build_edge_picks
 from .explain import decomposition_drivers, mc_band
 from .ledger import (
@@ -112,11 +114,41 @@ def build_full_game_card(
         card.ledger_text = _safe_render_ledger(cfg, target)
         return card
 
-    # 2. Per-team rates — default seeded league-prior table; caller may
-    # override with real rates from `compute_team_rates_from_actuals`.
-    rates = rates_by_team if rates_by_team is not None else default_team_rates_table(
-        end_date=target,
-    )
+    # 2. Per-team rates. When the caller didn't pass a precomputed
+    # table, pull rolling rates from this engine's own DuckDB
+    # ``fullgame_actuals`` table. ``load_team_rates_table`` falls back
+    # to the league-prior seed for tricodes with no recent actuals,
+    # so callers always get a complete dict — the orchestrator's
+    # confidence floor (introduced 2026-05-01) handles the empty rows.
+    if rates_by_team is not None:
+        rates = rates_by_team
+    else:
+        try:
+            store_for_rates = FullGameStore(cfg.duckdb_path)
+            try:
+                rates = load_team_rates_table(
+                    store_for_rates,
+                    end_date=target,
+                    lookback_days=cfg.projection.lookback_days,
+                )
+            finally:
+                store_for_rates.close()
+        except Exception as e:
+            log.warning(
+                "FG daily: load_team_rates_table failed (%s): %s — "
+                "falling back to league-prior table.",
+                type(e).__name__, e,
+            )
+            rates = default_team_rates_table(end_date=target)
+        n_team_with_signal = sum(
+            1 for r in rates.values() if r.n_games > 0
+        )
+        log.info(
+            "FG daily: %d/%d tricodes have non-empty rolling rates "
+            "(lookback=%d days).",
+            n_team_with_signal, len(rates),
+            cfg.projection.lookback_days,
+        )
 
     # 3. Project + 4. Compute edges.
     projections = project_all(
