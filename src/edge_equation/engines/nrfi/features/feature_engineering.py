@@ -56,6 +56,7 @@ LEAGUE_PRIORS = {
     "era": 4.20, "fip": 4.10, "whip": 1.30,
     "k_pct": 0.225, "bb_pct": 0.085, "hr_pct": 0.034,
     "obp_top3": 0.330, "wrc_top3": 100.0, "iso_top3": 0.150,
+    "obp_bottom3": 0.295, "woba_bottom3": 0.295,
     "ump_zone_idx": 100.0, "ump_run_env_idx": 100.0,
     "ump_csa": 0.0, "ump_abs_overturn": 0.05,
 }
@@ -133,6 +134,14 @@ class LineupInputs:
     top4_obp: Optional[float] = None
     rh_count: int = 2
     lh_count: int = 1
+    # Bottom-3 hitters (typical NRFI inning-1 exposure is the top 3,
+    # but innings where the lineup turns over against a low-K starter
+    # bring the 7-8-9 hitters into play. Carrying their aggregate
+    # gives the model a contrast feature — `top3_obp - bottom3_obp`
+    # is the lineup-shape signal a tree can split on.)
+    bottom3_obp: float = LEAGUE_PRIORS.get("obp_bottom3", 0.295)
+    bottom3_woba_vs_hand: float = 0.295
+    bottom3_combined_pa: float = 0.0
     # Combined PA across the three batters being aggregated. Drives
     # shrinkage of `top3_obp` toward league mean when data is thin
     # (e.g. early-season call-ups, projected lineups). 0 = full regression.
@@ -363,6 +372,13 @@ class FeatureBuilder:
         # season data round-trip basically unchanged; projected lineups
         # with sparse data regress hard toward the league mean.
         obp_shrunk = top_of_order_shrink(l.top3_obp, l.top3_combined_pa)
+        # Bottom-3 shrinks toward a slightly lower league anchor; the
+        # shape contrast with top-3 (top-heavy lineup vs balanced)
+        # is what gives the model something to split on for inning-1
+        # exposure beyond just the leadoff three.
+        bottom3_obp_shrunk = top_of_order_shrink(
+            l.bottom3_obp, l.bottom3_combined_pa,
+        )
         return {
             f"{prefix}_top3_obp": obp_shrunk,
             f"{prefix}_top3_obp_raw": l.top3_obp,
@@ -373,6 +389,9 @@ class FeatureBuilder:
             f"{prefix}_top3_bb_pct": l.top3_bb_pct,
             f"{prefix}_top3_woba_vs_hand": l.top3_woba_vs_hand,
             f"{prefix}_top4_obp": l.top4_obp if l.top4_obp is not None else obp_shrunk,
+            f"{prefix}_bottom3_obp": bottom3_obp_shrunk,
+            f"{prefix}_bottom3_woba_vs_hand": l.bottom3_woba_vs_hand,
+            f"{prefix}_lineup_shape_obp_gap": obp_shrunk - bottom3_obp_shrunk,
             f"{prefix}_lineup_confirmed": float(l.confirmed),
             f"{prefix}_lineup_source_confirmed": float(l.source == "confirmed"),
             f"{prefix}_lineup_source_projected": float(l.source == "projected"),
@@ -472,6 +491,32 @@ class FeatureBuilder:
         out["int_top3_obp_vs_away_p_x_bb"] = (
             f["vs_away_p_top3_obp"] * f["away_p_bb_pct"]
         )
+        # Park × handedness skew. The pragmatic surrogate for a true
+        # per-handedness park factor (which we don't carry yet): cross
+        # the park HR factor with the offensive lineup's handedness
+        # imbalance. A LHH-heavy offense in a left-handed-friendly
+        # park (Yankee Stadium short porch, Camden RF) magnifies HR
+        # exposure; a RHH-heavy offense in a RHH-suppressing park
+        # (Petco Park) does the opposite. Sign convention: positive
+        # value when the lineup leans toward the park's friendlier
+        # handedness; magnitude scales with imbalance.
+        for side, away_or_home in (("home", "away"), ("away", "home")):
+            lh = f.get(f"plat_lhh_count_vs_{side}_p", 0.0)
+            rh = f.get(f"plat_rhh_count_vs_{side}_p", 0.0)
+            n = max(1.0, lh + rh)
+            lhh_skew = (lh - rh) / n          # -1 (all RHH) .. +1 (all LHH)
+            park_hr = f["park_factor_hr"]
+            park_runs = f["park_factor_runs"]
+            out[f"int_park_hr_x_lhh_skew_vs_{side}_p"] = (park_hr - 1.0) * lhh_skew
+            out[f"int_park_runs_x_lhh_skew_vs_{side}_p"] = (park_runs - 1.0) * lhh_skew
+        # Lineup shape (top-3 vs bottom-3 OBP gap) × park run-factor.
+        # Top-heavy lineups in run-friendly parks concentrate inning-1
+        # exposure; balanced lineups in pitcher-friendly parks dilute it.
+        for side in ("home_p", "away_p"):
+            gap = f.get(f"vs_{side}_lineup_shape_obp_gap", 0.0)
+            out[f"int_lineup_shape_x_park_runs_vs_{side}"] = (
+                gap * (f["park_factor_runs"] - 1.0)
+            )
         return out
 
     # ------------------------------------------------------------------
