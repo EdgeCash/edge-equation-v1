@@ -124,22 +124,30 @@ jobs:
       - name: Post summary
         if: always()
         run: |
+          # Use jq (preinstalled on GH runners) for the summary so we
+          # avoid the heredoc-indent trap that breaks `python -c`
+          # inside a YAML run-block. jq is one-line per call, no
+          # multi-line string passed through bash.
+          DIR="website/public/data/track-record"
           {
             echo "## Track Record · Daily Refresh"
             echo ""
-            if [ -f website/public/data/track-record/ledger.json ]; then
+            if [ -f "$DIR/ledger.json" ]; then
+              N_PICKS=$(jq -r '.n_picks' "$DIR/ledger.json")
+              GEN_AT=$(jq -r '.generated_at' "$DIR/ledger.json")
+              N_BUCKETS=$(jq -r '.buckets | length' "$DIR/summary.json")
+              N_DAYS=$(jq -r '.days | length' "$DIR/by-day.json")
               echo '```text'
-              python -c "
-              import json
-              for f in ['ledger.json', 'summary.json', 'by-day.json']:
-                  data = json.load(open(f'website/public/data/track-record/{f}'))
-                  if f == 'ledger.json':
-                      print(f'  ledger      n_picks={data[\"n_picks\"]}, generated_at={data[\"generated_at\"]}')
-                  elif f == 'summary.json':
-                      print(f'  summary     buckets={len(data[\"buckets\"])}')
-                  elif f == 'by-day.json':
-                      print(f'  by-day      days={len(data[\"days\"])}')"
+              echo "  ledger      n_picks=$N_PICKS, generated_at=$GEN_AT"
+              echo "  summary     buckets=$N_BUCKETS"
+              echo "  by-day      days=$N_DAYS"
               echo '```'
+              if [ "$N_PICKS" = "0" ]; then
+                echo ""
+                echo "_No settled picks in the ledger yet. The page renders an"
+                echo "honest 'No data yet' state until the engine has settled"
+                echo "LEAN-and-above picks via the daily cron._"
+              fi
             else
               echo "No JSON written — DuckDB hydration probably failed."
             fi
