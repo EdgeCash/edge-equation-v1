@@ -104,17 +104,26 @@ Inputs:
 - `dry_run`: **`false`**
 
 This:
-1. Hydrates DuckDB from the latest backfill artifact
+1. Hydrates DuckDB from the latest backfill artifact (NRFI + props)
 2. Settles yesterday's NRFI picks into `nrfi_pick_settled` (so they
    show up on the public ledger today)
 3. Builds today's email card from `run_daily.py`
 4. Sends the email to the configured recipient
-5. Runs `build_daily_feed` to write today's picks to
-   `website/public/data/daily/latest.json`
-6. Commits that JSON back to `main` — Vercel auto-deploys
+5. Builds today's **props card** (`props_prizepicks.daily`) — pulls
+   PrizePicks/Odds-API lines, projects per-player Poisson rates,
+   persists tier-LEAN+ predictions to the props DuckDB
+6. Runs the **props sanity gate**
+   (`props_prizepicks.evaluation.sanity`) on the trailing 365-day
+   window — projection vs vig-corrected market and vs league-prior
+   baselines. Verdict is logged + emitted as
+   `data/props_cache/sanity_report.json`. Soft-fail today; once the
+   sample reaches ≥50 settled picks this will gate the publish step.
+7. Runs `build_daily_feed` to write today's picks to
+   `website/public/data/daily/latest.json` — NRFI + props together
+8. Commits that JSON back to `main` — Vercel auto-deploys
 
 After ~3-4 minutes the email arrives and `/daily-edge` shows
-today's picks.
+today's NRFI **and** props picks.
 
 ### Step 4 — Publish the track record
 
@@ -138,6 +147,9 @@ Open the deployed site and check:
 - **`/daily-edge`** — today's picks rendered with the right tier
   colors, conviction percentages, and game labels. The "generated_at"
   timestamp at the bottom should be within the last few minutes.
+  Both the **First Inning** group (NRFI/YRFI) and the **Props**
+  group should show today's qualifying picks. An empty Props group
+  is normal on light-slate days or when no prop lines clear LEAN.
 - **`/track-record`** — yesterday's settled picks now appear in the
   ledger; the running-record cards reflect the new W/L/Push counts.
 

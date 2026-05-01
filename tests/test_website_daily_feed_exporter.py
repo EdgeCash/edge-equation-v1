@@ -195,3 +195,136 @@ def test_notes_include_side_pct_and_lambda():
     pick = _load_nrfi_picks(store, "2026-05-01")[0]
     assert "65.0% NRFI" in pick.notes
     assert "λ=0.85" in pick.notes
+
+
+# ---------------------------------------------------------------------------
+# Props extension
+# ---------------------------------------------------------------------------
+
+
+class _FakePropsStore:
+    """Mimics PropsStore.query_df for the props exporter tests."""
+
+    def __init__(self, rows: list[dict] | None = None,
+                  has_table: bool = True):
+        self._rows = rows or []
+        self._has_table = has_table
+
+    def query_df(self, sql: str, params: tuple = ()):
+        import pandas as pd
+        if "LIMIT 1" in sql:
+            if "FROM prop_predictions" in sql and not self._has_table:
+                raise RuntimeError("prop_predictions missing")
+            return pd.DataFrame([{"col": 1}])
+        return pd.DataFrame(self._rows)
+
+
+def _prop_row(**overrides: Any) -> dict:
+    base = {
+        "game_pk": 778899,
+        "market_type": "HR",
+        "player_name": "Aaron Judge",
+        "line_value": 0.5,
+        "side": "Over",
+        "model_prob": 0.42,
+        "market_prob": 0.36,
+        "edge_pp": 6.0,
+        "american_odds": 250,
+        "book": "draftkings",
+        "confidence": 0.65,
+        "tier": "STRONG",
+        "feature_blob": '{"lam": 0.21, "blend_n": 120, "confidence": 0.65}',
+        "event_date": "2026-05-01",
+    }
+    base.update(overrides)
+    return base
+
+
+def test_props_picks_use_player_prop_market_type_prefix():
+    """Daily-feed classifier groups Props by the PLAYER_PROP_<MARKET> prefix."""
+    from edge_equation.engines.website.build_daily_feed import _load_props_picks
+    store = _FakePropsStore([_prop_row()])
+    picks = _load_props_picks(store, "2026-05-01")
+    assert len(picks) == 1
+    assert picks[0].market_type == "PLAYER_PROP_HR"
+
+
+def test_props_pick_id_is_stable_and_includes_tuple():
+    from edge_equation.engines.website.build_daily_feed import _load_props_picks
+    store = _FakePropsStore([_prop_row(player_name="Aaron Judge",
+                                         line_value=0.5, side="Over")])
+    pid = _load_props_picks(store, "2026-05-01")[0].id
+    assert "aaron-judge" in pid
+    assert "0.5" in pid
+    assert pid.endswith("-OVER")
+
+
+def test_props_picks_filter_no_play_tier():
+    """NO_PLAY rows are dropped so the public ledger never shows them."""
+    from edge_equation.engines.website.build_daily_feed import _load_props_picks
+    # The DB filter is part of the SQL; emulate that here by primitive
+    # filtering — the helper trusts the store to honor the WHERE clause.
+    store = _FakePropsStore([_prop_row(tier="LEAN"), _prop_row(tier="STRONG")])
+    picks = _load_props_picks(store, "2026-05-01")
+    # Both LEAN + STRONG are kept (NO_PLAY would have been filtered in SQL).
+    assert {p.tier for p in picks} == {"LEAN", "STRONG"}
+
+
+def test_props_pick_grade_follows_tier_mapping():
+    from edge_equation.engines.website.build_daily_feed import (
+        _grade_from_tier, _load_props_picks,
+    )
+    assert _grade_from_tier("ELITE") == "A+"
+    assert _grade_from_tier("STRONG") == "A"
+    assert _grade_from_tier("MODERATE") == "B"
+    assert _grade_from_tier("LEAN") == "C"
+    assert _grade_from_tier("NO_PLAY") == "F"
+
+    store = _FakePropsStore([_prop_row(tier="STRONG")])
+    pick = _load_props_picks(store, "2026-05-01")[0]
+    assert pick.grade == "A"
+    assert pick.tier == "STRONG"
+
+
+def test_props_edge_serialized_as_fraction_string():
+    """Schema requires fractional edge (0.06 = 6pp) as a string."""
+    from edge_equation.engines.website.build_daily_feed import _load_props_picks
+    store = _FakePropsStore([_prop_row(edge_pp=6.0)])
+    pick = _load_props_picks(store, "2026-05-01")[0]
+    assert pick.edge == "0.0600"
+    assert pick.fair_prob == "0.4200"
+
+
+def test_props_selection_label_is_human_readable():
+    from edge_equation.engines.website.build_daily_feed import _load_props_picks
+    store = _FakePropsStore([
+        _prop_row(player_name="Aaron Judge", market_type="HR",
+                    line_value=0.5, side="Over"),
+        _prop_row(player_name="Mookie Betts", market_type="Total_Bases",
+                    line_value=1.5, side="Over"),
+    ])
+    picks = _load_props_picks(store, "2026-05-01")
+    by_player = {p.selection.split(" · ")[0]: p for p in picks}
+    assert "Home Runs Over 0.5" in by_player["Aaron Judge"].selection
+    assert "Total Bases Over 1.5" in by_player["Mookie Betts"].selection
+
+
+def test_props_returns_empty_when_table_missing():
+    from edge_equation.engines.website.build_daily_feed import _load_props_picks
+    store = _FakePropsStore(has_table=False)
+    assert _load_props_picks(store, "2026-05-01") == []
+
+
+def test_props_returns_empty_when_store_is_none():
+    from edge_equation.engines.website.build_daily_feed import _load_props_picks
+    assert _load_props_picks(None, "2026-05-01") == []
+
+
+def test_build_bundle_combines_nrfi_and_props():
+    from edge_equation.engines.website.build_daily_feed import build_bundle
+    nrfi_store = _FakeStore([_row()])
+    props_store = _FakePropsStore([_prop_row()])
+    bundle = build_bundle(nrfi_store, "2026-05-01", props_store=props_store)
+    market_types = {p.market_type for p in bundle.picks}
+    assert "NRFI" in market_types or "YRFI" in market_types
+    assert "PLAYER_PROP_HR" in market_types

@@ -85,6 +85,13 @@ class PropOutput:
     blend_n: int = 0
     confidence: float = 0.30
 
+    # MC band on the projection (5/95 percentile of bootstrapped probs).
+    # ``mc_band_pp`` is the width in percentage points so the email layer
+    # can render "stable" vs "fragile" projections at a glance.
+    mc_low: float = 0.0
+    mc_high: float = 0.0
+    mc_band_pp: float = 0.0
+
     # Color
     color_band: str = "Yellow"
     color_hex: str = "#fbc02d"
@@ -126,6 +133,9 @@ def build_prop_output(
     lam: float = 0.0,
     blend_n: int = 0,
     driver_text: Optional[Sequence[str]] = None,
+    mc_low: float = 0.0,
+    mc_high: float = 0.0,
+    mc_band_pp: float = 0.0,
     game_id: str = "",
     kelly_fraction: float = 0.25,
     min_edge: float = 0.02,
@@ -179,6 +189,9 @@ def build_prop_output(
         lam=float(lam),
         blend_n=int(blend_n),
         confidence=float(confidence),
+        mc_low=float(mc_low),
+        mc_high=float(mc_high),
+        mc_band_pp=float(mc_band_pp),
         color_band=band,
         color_hex=hex_color,
         driver_text=list(driver_text or []),
@@ -219,6 +232,8 @@ def to_email_card(out: PropOutput) -> str:
     if out.edge_pp:
         sign = "+" if out.edge_pp >= 0 else ""
         metric_parts.append(f"edge {sign}{out.edge_pp:.1f}pp")
+    if out.mc_band_pp > 0:
+        metric_parts.append(f"band ±{out.mc_band_pp:.1f}pp")
     if out.kelly_units and out.kelly_units > 0:
         metric_parts.append(f"stake {out.kelly_units:.2f}u")
     metric_line = " · ".join(metric_parts[:3]) + "  " + "  ".join(
