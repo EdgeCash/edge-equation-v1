@@ -3,9 +3,8 @@ import type { GetStaticProps } from "next";
 import LedgerTable from "@/components/LedgerTable";
 import Layout from "@/components/Layout";
 import TierSummaryStrip from "@/components/TierSummaryStrip";
-import {
-  loadTrackRecord, type TrackRecordView,
-} from "@/lib/track-record";
+import type { TrackRecordView } from "@/lib/track-record";
+import { loadTrackRecord } from "@/lib/track-record-server";
 
 
 type Props = { view: TrackRecordView };

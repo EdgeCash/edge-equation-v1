@@ -1,9 +1,11 @@
 // Public track-record data shapes — mirror the JSON written by
 // `engines.website.build_track_record`. Keep these in sync; the
 // exporter is the source of truth for the schema.
-
-import fs from "fs/promises";
-import path from "path";
+//
+// **Client-safe.** This module has zero Node-only imports, so React
+// components can import types and helpers directly without dragging
+// `fs`/`path` into the client bundle. The server-side loader that
+// reads the JSON files lives in `track-record-server.ts`.
 
 
 export type Engine = "nrfi" | "props" | "full_game" | "parlay";
@@ -79,51 +81,6 @@ export interface TrackRecordView {
   summary: SummaryFile;
   byDay: ByDayFile;
   isPlaceholder: boolean;
-}
-
-
-// ---------------------------------------------------------------------------
-// Server-side loader (called from getStaticProps)
-// ---------------------------------------------------------------------------
-
-
-const DATA_DIR = path.join(process.cwd(), "public", "data", "track-record");
-
-
-/**
- * Load the three track-record JSON files. If any are missing — typical
- * for a fresh checkout before the engine has run the exporter — return
- * an empty placeholder bundle and flag `isPlaceholder=true` so the page
- * can render an honest "no data yet" state instead of erroring.
- */
-export async function loadTrackRecord(): Promise<TrackRecordView> {
-  try {
-    const [ledgerRaw, summaryRaw, byDayRaw] = await Promise.all([
-      fs.readFile(path.join(DATA_DIR, "ledger.json"), "utf-8"),
-      fs.readFile(path.join(DATA_DIR, "summary.json"), "utf-8"),
-      fs.readFile(path.join(DATA_DIR, "by-day.json"), "utf-8"),
-    ]);
-    return {
-      ledger: JSON.parse(ledgerRaw),
-      summary: JSON.parse(summaryRaw),
-      byDay: JSON.parse(byDayRaw),
-      isPlaceholder: false,
-    };
-  } catch {
-    const now = new Date().toISOString();
-    return {
-      ledger: {
-        version: 1, generated_at: now, n_picks: 0, picks: [],
-      },
-      summary: {
-        version: 1, generated_at: now, buckets: [],
-      },
-      byDay: {
-        version: 1, generated_at: now, days: [],
-      },
-      isPlaceholder: true,
-    };
-  }
 }
 
 
