@@ -67,6 +67,8 @@ class PropsCard:
     ledger_text: str = ""
     n_lines_fetched: int = 0
     n_qualifying_picks: int = 0
+    n_projected: int = 0                # all (line, projection) pairs evaluated
+    n_skipped_low_confidence: int = 0   # dropped by the confidence floor
 
 
 def build_props_card(
@@ -126,7 +128,22 @@ def build_props_card(
     projections = project_all(
         lines, rates_by_player=rates_map, knobs=cfg.projection,
     )
+    card.n_projected = len(projections)
+    # Track how many were dropped by the confidence floor — they would
+    # have been pure-prior projections (every player projected as
+    # league average), which manufactures fake huge "edges" against the
+    # market. Operators see this in the log as a transparency check.
+    n_pure_prior = sum(
+        1 for p in projections if float(p.confidence) < 0.31
+    )
+    card.n_skipped_low_confidence = n_pure_prior
     picks_edge = build_edge_picks(lines, projections, min_tier=Tier.LEAN)
+    log.info(
+        "props daily: %d lines fetched → %d projected → %d skipped "
+        "(pure-prior, blend_n=0) → %d LEAN+ qualified",
+        card.n_lines_fetched, card.n_projected,
+        card.n_skipped_low_confidence, len(picks_edge),
+    )
 
     # 5. Convert each edge-pick into a PropOutput. We need the matching
     # ProjectedSide so we carry lam / blend_n / confidence into the
@@ -177,7 +194,11 @@ def build_props_card(
     card.ledger_text = _safe_render_ledger(cfg, target)
 
     # 7b. Top board for the email.
-    card.top_board_text = render_top_props_block(outputs, n=top_n)
+    card.top_board_text = render_top_props_block(
+        outputs, n=top_n,
+        n_qualifying=card.n_qualifying_picks,
+        n_skipped_low_confidence=card.n_skipped_low_confidence,
+    )
     return card
 
 
@@ -188,21 +209,37 @@ def build_props_card(
 
 def render_top_props_block(
     picks: Sequence[PropOutput], *, n: int = 8,
+    n_qualifying: Optional[int] = None,
+    n_skipped_low_confidence: int = 0,
 ) -> str:
     """Render the polished top-N-by-edge props block for the daily email.
 
     Same visual conventions as `nrfi.email_report._render_top_board`:
-    numbered rows, ╪ rule, indented Why-clause continuation lines so
+    numbered rows, ═ rule, indented Why-clause continuation lines so
     the reader's eye lands on the matchup + tier first.
+
+    The header shows ``Top {N} of {M} LEAN+ Props`` so the reader
+    knows the published list isn't the whole slate. When we dropped
+    pure-prior projections via the confidence floor, append the count
+    so the audit trail is visible.
     """
     if not picks:
+        if n_skipped_low_confidence > 0:
+            return (
+                f"PROPS BOARD — 0 LEAN+ Props qualified today "
+                f"({n_skipped_low_confidence} skipped: no per-player rate data).\n"
+            )
         return ""
-    # Already sorted by edge desc by `build_edge_picks`; keep that order.
+    qualifying = n_qualifying if n_qualifying is not None else len(picks)
     top = list(picks)[:n]
-    lines = [f"PROPS BOARD — Top {len(top)} by Edge", "═" * 60]
+    header = f"PROPS BOARD — Top {len(top)} of {qualifying} LEAN+ Props"
+    if n_skipped_low_confidence > 0:
+        header += (
+            f"  ({n_skipped_low_confidence} skipped: no per-player rate data)"
+        )
+    lines = [header, "═" * 60]
     for i, out in enumerate(top, 1):
         rendered = to_email_card(out)
-        # Indent continuation lines under the row number for readability.
         prefix = f"{i:>2}.  "
         rendered = rendered.replace("\n", "\n" + " " * len(prefix))
         lines.append(prefix + rendered)
@@ -365,8 +402,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         args.date, persist=not args.no_persist, top_n=args.top_n,
     )
     print(f"Props card for {card.target_date}")
-    print(f"  lines fetched      {card.n_lines_fetched}")
-    print(f"  qualifying picks   {card.n_qualifying_picks}")
+    print(f"  lines fetched           {card.n_lines_fetched}")
+    print(f"  projected               {card.n_projected}")
+    print(f"  skipped (pure-prior)    {card.n_skipped_low_confidence}")
+    print(f"  LEAN+ qualifying picks  {card.n_qualifying_picks}")
     print()
     if card.top_board_text:
         print(card.top_board_text)

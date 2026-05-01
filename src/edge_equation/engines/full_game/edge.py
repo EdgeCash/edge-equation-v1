@@ -122,12 +122,22 @@ def build_edge_picks(
     lines: Sequence[FullGameLine],
     projections: Sequence[ProjectedFullGameSide],
     *, min_tier: Tier = Tier.LEAN,
+    min_confidence: float = 0.31,
 ) -> list[FullGameEdgePick]:
     """Pair each (line, projection), compute edge, classify, filter.
 
     Default ``min_tier=Tier.LEAN`` keeps the ledger-eligible threshold;
     operators wanting public-facing only pass ``Tier.STRONG`` to drop
     LEAN/MODERATE.
+
+    ``min_confidence`` excludes projections that rest entirely on the
+    league prior (every team is league-average → ``confidence == 0.30``
+    via ``_confidence_for_blend(min_n=0, …)``). The
+    ``default_team_rates_table()`` seed used on day one returns
+    ``n_games=0`` for every tricode, so without this floor every game
+    on the slate would project as a coin-flip vs the per-team market
+    line and produce inflated edges. Backtest callers that explicitly
+    want the trivial baseline can pass ``min_confidence=0.0``.
     """
     if len(lines) != len(projections):
         raise ValueError(
@@ -140,6 +150,8 @@ def build_edge_picks(
               Tier.LEAN: 1, Tier.NO_PLAY: 0}
     floor = rank[min_tier]
     for line, proj in zip(lines, projections):
+        if float(proj.confidence) < min_confidence:
+            continue
         edge_pp, raw, devigged, corrected = compute_edge_pp(
             line=line, projection=proj,
             devig_total=devig.get(_key_for_pair(line)),

@@ -412,12 +412,49 @@ def test_build_edge_picks_filters_below_min_tier():
     from edge_equation.engines.full_game.projection import (
         ProjectedFullGameSide,
     )
+    # Confidence above the default min_confidence floor so this test
+    # exercises the tier filter, not the pure-prior floor.
     proj = ProjectedFullGameSide(
         market=line.market, side="Over", line_value=8.5,
-        model_prob=0.527, confidence=0.30,
+        model_prob=0.527, confidence=0.50,
     )
     picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
     assert picks == []
+
+
+def test_build_edge_picks_skips_pure_prior_projections_by_default():
+    """confidence==0.30 means projection rests entirely on the league
+    prior — shouldn't reach the public-facing pick list."""
+    line = _line(side="Over", line_value=8.5, american_odds=-110)
+    from edge_equation.engines.full_game.projection import (
+        ProjectedFullGameSide,
+    )
+    # Wide model_prob → would otherwise classify as ELITE / STRONG.
+    proj = ProjectedFullGameSide(
+        market=line.market, side="Over", line_value=8.5,
+        model_prob=0.70, confidence=0.30,
+    )
+    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
+    assert picks == []
+    # Explicit override keeps backtest-style callers working.
+    picks_no_floor = build_edge_picks(
+        [line], [proj], min_tier=Tier.LEAN, min_confidence=0.0,
+    )
+    assert len(picks_no_floor) == 1
+
+
+def test_build_edge_picks_keeps_high_confidence_picks():
+    """confidence above the floor lets the pick through to tier classification."""
+    line = _line(side="Over", line_value=8.5, american_odds=-110)
+    from edge_equation.engines.full_game.projection import (
+        ProjectedFullGameSide,
+    )
+    proj = ProjectedFullGameSide(
+        market=line.market, side="Over", line_value=8.5,
+        model_prob=0.58, confidence=0.55,
+    )
+    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
+    assert len(picks) == 1
 
 
 def test_build_edge_picks_classifies_strong_at_5pp():
