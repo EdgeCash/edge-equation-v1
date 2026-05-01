@@ -206,9 +206,9 @@ def load_team_rates_table(
     yield ``confidence == 0.30`` projections, which the edge module's
     confidence floor (introduced 2026-05-01) skips before publishing.
     """
-    import logging
     from datetime import date as _date, timedelta
-    log = logging.getLogger(__name__)
+    from edge_equation.utils.logging import get_logger
+    log = get_logger(__name__)
 
     end = _date.fromisoformat(end_date)
     start = end - timedelta(days=int(lookback_days))

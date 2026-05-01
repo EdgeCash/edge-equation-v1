@@ -171,7 +171,13 @@ def _load_nrfi_picks(store, target_date: str) -> list[FeedPick]:
         edge_val = _safe_float(r.get("edge"))
         kelly_val = _safe_float(r.get("kelly_units"))
         market_prob = _safe_float(r.get("market_prob"))
-        american = _market_prob_to_american(market_prob) if market_prob else -110.0
+        # ``_market_prob_to_american`` is internally NaN-safe, but
+        # ``_safe_float`` already collapses NaN/None/garbage to 0.0,
+        # which falls through to the ``-110.0`` default below.
+        american = (
+            _market_prob_to_american(market_prob)
+            if market_prob > 0 else -110.0
+        )
 
         picks.append(FeedPick(
             id=f"{int(r.get('game_pk') or 0)}-{side}",
@@ -562,12 +568,44 @@ def write_bundle(bundle: FeedBundle, out_path: str | Path) -> None:
 
 
 def _safe_float(v) -> float:
+    """Coerce a DuckDB cell value to a float — NaN, None, and non-
+    numeric strings all collapse to ``0.0`` so callers don't have to
+    sprinkle ``isnan`` guards. Pandas NaN is the most common case here:
+    ``run_daily.py`` doesn't populate ``market_prob`` on the Poisson
+    baseline path, so DuckDB stores NaN; ``_market_prob_to_american``
+    would otherwise raise ``ValueError: cannot convert float NaN to
+    integer`` on the round() call.
+    """
     try:
         if v is None:
             return 0.0
-        return float(v)
+        f = float(v)
     except (TypeError, ValueError):
         return 0.0
+    # NaN check — math.isnan rejects non-floats, but we already coerced.
+    if f != f:   # NaN is the only float that doesn't equal itself
+        return 0.0
+    return f
+
+
+def _market_prob_to_american(market_prob: float) -> float:
+    """Convert a vig-corrected market probability to American odds.
+    Returns the rounded American value the website renders. Treats
+    pathological / NaN inputs as ``-110.0`` so the publish step
+    never crashes on unexpected data."""
+    if market_prob is None:
+        return -110.0
+    try:
+        mp = float(market_prob)
+    except (TypeError, ValueError):
+        return -110.0
+    if mp != mp:   # NaN
+        return -110.0
+    if mp <= 0 or mp >= 1:
+        return -110.0
+    if mp >= 0.5:
+        return round(-100.0 * mp / (1.0 - mp))
+    return round(100.0 * (1.0 - mp) / mp)
 
 
 def _iso(v) -> Optional[str]:
@@ -579,16 +617,6 @@ def _iso(v) -> Optional[str]:
         return v.isoformat()
     except Exception:
         return None
-
-
-def _market_prob_to_american(market_prob: float) -> float:
-    """Convert a vig-corrected market probability to American odds.
-    Returns the rounded American value the website renders."""
-    if market_prob <= 0 or market_prob >= 1:
-        return -110.0
-    if market_prob >= 0.5:
-        return round(-100.0 * market_prob / (1.0 - market_prob))
-    return round(100.0 * (1.0 - market_prob) / market_prob)
 
 
 def _grade_from_probability(p: float) -> str:

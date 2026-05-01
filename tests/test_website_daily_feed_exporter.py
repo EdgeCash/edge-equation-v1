@@ -119,6 +119,19 @@ def test_build_bundle_emits_friendly_notes_when_empty():
     assert "no picks for this slate" in bundle.notes.lower()
 
 
+def test_load_nrfi_picks_handles_nan_market_prob():
+    """``run_daily.py``'s Poisson baseline doesn't populate
+    ``market_prob`` so DuckDB stores NaN; the publish step must not
+    crash on those rows."""
+    import math
+    from edge_equation.engines.website.build_daily_feed import _load_nrfi_picks
+    store = _FakeStore([_row(market_prob=math.nan)])
+    picks = _load_nrfi_picks(store, "2026-05-01")
+    assert len(picks) == 1
+    # Falls through to the -110 default when market_prob is unusable.
+    assert picks[0].line_odds == -110.0
+
+
 # ---------------------------------------------------------------------------
 # Output JSON shape
 # ---------------------------------------------------------------------------
@@ -169,6 +182,29 @@ def test_market_prob_to_american_handles_favorites_and_dogs():
     # Pathological inputs default to -110
     assert _market_prob_to_american(0.0) == -110.0
     assert _market_prob_to_american(1.0) == -110.0
+
+
+def test_market_prob_to_american_handles_nan():
+    """``run_daily.py`` doesn't populate ``market_prob`` on the Poisson
+    baseline path, so DuckDB stores NaN; the publish step's odds
+    converter must not crash on those rows."""
+    import math
+    from edge_equation.engines.website.build_daily_feed import (
+        _market_prob_to_american,
+    )
+    assert _market_prob_to_american(math.nan) == -110.0
+    assert _market_prob_to_american(None) == -110.0      # type: ignore[arg-type]
+    assert _market_prob_to_american("garbage") == -110.0  # type: ignore[arg-type]
+
+
+def test_safe_float_handles_nan_and_garbage():
+    import math
+    from edge_equation.engines.website.build_daily_feed import _safe_float
+    assert _safe_float(math.nan) == 0.0
+    assert _safe_float(None) == 0.0
+    assert _safe_float("notanum") == 0.0
+    assert _safe_float(0.42) == 0.42
+    assert _safe_float("0.42") == 0.42
 
 
 def test_market_prob_to_american_known_values():
