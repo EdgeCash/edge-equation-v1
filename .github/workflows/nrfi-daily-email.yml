@@ -14,11 +14,21 @@ name: NRFI/YRFI Daily Email (9am CT)
 # already used by the premium-daily workflow).
 
 on:
-  schedule:
-    - cron: "0 14 * * *"   # 09:00 CT during CDT (Mar-Nov)
-    - cron: "0 15 * * *"   # 09:00 CT during CST (Nov-Mar)
+  # MANUAL TRIGGER MODE — public-testing phase (2026-05-01).
+  # Operator triggers this workflow via the GitHub Actions UI's
+  # "Run workflow" button after verifying lineups + weather + umpires
+  # are posted. See docs/MANUAL_DAILY_RELEASE.md for the full SOP.
+  # To re-enable automatic cron, uncomment the schedule block below.
+  #
+  # schedule:
+  #   - cron: "0 14 * * *"   # 09:00 CT during CDT (Mar-Nov)
+  #   - cron: "0 15 * * *"   # 09:00 CT during CST (Nov-Mar)
   workflow_dispatch:
     inputs:
+      confirm_lineups_posted:
+        description: "I've confirmed lineups + weather + umpires are posted (REQUIRED — workflow refuses to send unless TRUE)."
+        required: true
+        default: "false"
       target_date:
         description: "Slate date (YYYY-MM-DD). Leave blank for today."
         required: false
@@ -27,6 +37,9 @@ on:
         description: "Build the card and log it without sending email. DEFAULT FALSE."
         required: false
         default: "false"
+
+permissions:
+  contents: write   # required to commit website/public/data/daily/latest.json back to main
 
 jobs:
   nrfi-email:
@@ -53,6 +66,21 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+
+      - name: Lineup-confirmation gate
+        # Manual-trigger mode (2026-05-01): operator must explicitly
+        # confirm that today's lineups, weather, and umpires are
+        # posted before we send. Refuse to proceed otherwise. This
+        # is the single human-in-the-loop check that makes the
+        # public-testing release safe.
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.confirm_lineups_posted }}" != "true" ]; then
+            echo "::error::Lineup confirmation NOT given. Set confirm_lineups_posted=true in the Run-workflow form before triggering."
+            echo "This gate exists to prevent accidental sends before MLB has posted confirmed lineups (~2-3 hours pre-first-pitch)."
+            exit 1
+          fi
+          echo "Lineup confirmation received. Proceeding."
 
       - name: CT-hour guard
         # Cron lines fire on both UTC slots (one for CDT, one for CST).
@@ -114,6 +142,45 @@ jobs:
             DATE_ARG="--date ${{ github.event.inputs.target_date }}"
           fi
           python -m edge_equation.engines.nrfi.email_report $DATE_ARG $DRY_RUN_ARG
+
+      # Manual-mode publishing: after the email sends successfully,
+      # write today's picks to website/public/data/daily/latest.json
+      # and commit. Vercel auto-deploys; /daily-edge updates within
+      # ~2 minutes. Skipped on dry-run since dry-runs don't represent
+      # a real published slate.
+      - name: Publish daily feed to website
+        if: env.SKIP_RUN != '1' && github.event.inputs.dry_run != 'true'
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ github.event.inputs.target_date }}" ]; then
+            DATE_ARG="--date ${{ github.event.inputs.target_date }}"
+          fi
+          python -m edge_equation.engines.website.build_daily_feed \
+            --duckdb-path data/nrfi_cache/nrfi.duckdb \
+            $DATE_ARG \
+            --out-path website/public/data/daily/latest.json
+
+      - name: Commit + push daily feed if changed
+        if: env.SKIP_RUN != '1' && github.event.inputs.dry_run != 'true'
+        run: |
+          git config user.name "edge-equation-bot"
+          git config user.email "bot@edge-equation.local"
+          git add website/public/data/daily/latest.json
+          if git diff --cached --quiet; then
+            echo "No change to latest.json — nothing to publish."
+            exit 0
+          fi
+          git commit -m "website: refresh daily-edge picks ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          for i in 1 2 3 4; do
+            if git push origin HEAD:main; then
+              echo "Push succeeded on attempt $i"
+              exit 0
+            fi
+            echo "Push failed on attempt $i, retrying..."
+            sleep $((2 ** i))
+          done
+          echo "::error::Push failed after 4 attempts."
+          exit 1
 
       - name: Upload failsafe artifacts (if any)
         if: always() && env.SKIP_RUN != '1'

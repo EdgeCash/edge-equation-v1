@@ -13,11 +13,17 @@ name: Website · Publish Track Record
 # the cache.
 
 on:
-  schedule:
-    # 11:00 UTC = 06:00 CT (CDT) / 05:00 CT (CST). Runs after the
-    # daily-email cron at 14:00/15:00 UTC has finished settling
-    # yesterday's picks.
-    - cron: "0 11 * * *"
+  # MANUAL TRIGGER MODE — public-testing phase (2026-05-01).
+  # Operator triggers this workflow via the GitHub Actions UI's
+  # "Run workflow" button after verifying lineups + weather + umpires
+  # are posted. See docs/MANUAL_DAILY_RELEASE.md for the full SOP.
+  # To re-enable automatic cron, uncomment the schedule block below.
+  #
+  # schedule:
+  #  # 11:00 UTC = 06:00 CT (CDT) / 05:00 CT (CST). Runs after the
+  #  # daily-email cron at 14:00/15:00 UTC has finished settling
+  #  # yesterday's picks.
+  #   - cron: "0 11 * * *"
   workflow_dispatch:
     inputs:
       duckdb_source:
@@ -54,24 +60,29 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[nrfi]"
 
-      # Pull the freshest DuckDB. Same chain pattern as the
-      # walkforward-train workflow (see PR #107).
-      - name: Hydrate DuckDB (weather backfill, freshest)
+      # Pull the freshest DuckDB. Order matters: in manual-trigger
+      # mode (2026-05-01) the operator runs nrfi-daily-email FIRST,
+      # which re-uploads nrfi-duckdb-latest with newly-settled picks.
+      # Then runs THIS workflow. So daily-email is the canonical
+      # freshest source. weather-backfill + backfill-historical are
+      # less-frequent operator-driven tasks; their artifacts are
+      # only used if daily-email hasn't run yet today.
+      - name: Hydrate DuckDB (daily-email, freshest in manual mode)
         uses: dawidd6/action-download-artifact@v6
         continue-on-error: true
         with:
-          workflow: nrfi-weather-backfill.yml
+          workflow: nrfi-daily-email.yml
           workflow_conclusion: success
           name: nrfi-duckdb-latest
           path: data/nrfi_cache/
           if_no_artifact_found: warn
 
-      - name: Hydrate DuckDB (daily-email fallback)
+      - name: Hydrate DuckDB (weather backfill fallback)
         if: hashFiles('data/nrfi_cache/nrfi.duckdb') == ''
         uses: dawidd6/action-download-artifact@v6
         continue-on-error: true
         with:
-          workflow: nrfi-daily-email.yml
+          workflow: nrfi-weather-backfill.yml
           workflow_conclusion: success
           name: nrfi-duckdb-latest
           path: data/nrfi_cache/

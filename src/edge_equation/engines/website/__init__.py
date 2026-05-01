@@ -15,10 +15,11 @@ Modules
   record per tier × engine), and ``by-day.json`` (per-day rollup for
   the chart strip).
 
-(planned) ``build_daily_feed.py`` — pulls today's `daily-card` JSON
-from the unified ``run_daily`` orchestrator output and reshapes into
-the ``daily/latest.json`` schema. Follow-up PR; today the daily-edge
-page reads a placeholder feed.
+* ``build_daily_feed.py`` — reads today's NRFI predictions + game
+  metadata out of DuckDB and writes ``daily/latest.json`` in the
+  schema documented at ``website/public/data/daily/README.md``. NRFI
+  only for now; Props/Full-Game/Parlay engines extend this once they
+  pass their own sanity gates.
 
 The exporters are pure read operations — they never mutate the
 DuckDB. Run them after the daily settlement cron so the website

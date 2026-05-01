@@ -80,6 +80,16 @@ python -m edge_equation.engines.nrfi.backtest_historical 2026-04-01 2026-04-27 \
 python -m edge_equation.engines.nrfi.email_report --dry-run
 ```
 
+## Daily Operations
+
+**Public-testing release runs in manual-trigger mode** (since 2026-05-01).
+Daily user-facing crons are commented out; the operator triggers each
+release via the GitHub Actions UI after confirming lineups, weather,
+and umpires are posted.
+
+See [`docs/MANUAL_DAILY_RELEASE.md`](docs/MANUAL_DAILY_RELEASE.md) for
+the step-by-step SOP.
+
 ## Tests
 
 ```bash
