@@ -25,6 +25,9 @@ export default function Layout({
         <meta name="description" content={description} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#06080c" />
+        {/* Favicon — same Σ + cyan trend SVG as the in-app LogoMark.
+            Modern browsers + Safari iOS 18+ support SVG favicons. */}
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
       </Head>
       <div className="min-h-screen flex flex-col">
         <TestingBanner />
