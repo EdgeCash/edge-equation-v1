@@ -35,9 +35,9 @@ on:
         required: false
         default: "7"
       calibration_method:
-        description: "isotonic or platt"
+        description: "isotonic, platt, or beta (production default)"
         required: false
-        default: "isotonic"
+        default: "beta"
       run_sanity:
         description: "Run the ML-vs-baseline sanity report after training. Default true."
         required: false

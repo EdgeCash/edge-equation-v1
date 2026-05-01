@@ -130,8 +130,12 @@ class ModelConfig:
     # Convex blend between the ML classifier output and the Poisson
     # baseline (P_NRFI = exp(-λ_total)). 0.0 = pure Poisson, 1.0 = pure ML.
     ml_blend_weight: float = 0.65
-    # Calibration method: "isotonic" or "platt".
-    calibration_method: str = "isotonic"
+    # Calibration method: "isotonic", "platt", or "beta".
+    # Beta calibration is the production default since 2026-05-01 — the
+    # calibration audit confirmed it wins on Brier, log-loss, and ECE
+    # while preserving high-conviction picks. See
+    # `engines/nrfi/evaluation/calibration_audit.py` for the comparison.
+    calibration_method: str = "beta"
     # Holdout fraction used to fit the calibrator.
     calibration_holdout_frac: float = 0.20
     # Min samples per calibration bucket for diagnostic plots.
