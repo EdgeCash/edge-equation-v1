@@ -1,0 +1,161 @@
+name: NRFI Weather Backfill (on demand)
+
+# Manually-triggered weather + corpus backfill. Hydrates the latest
+# DuckDB artifact, runs the corpus QA to capture the BEFORE
+# weather-missing rate, runs the backfill orchestrator (which writes
+# weather snapshots into DuckDB during feature reconstruction —
+# delivered in PR #101), runs the QA again to capture the AFTER
+# rate, and posts the delta to the workflow's step summary so the
+# operator can read it on mobile.
+#
+# Trigger from the GitHub UI: Actions tab → "NRFI Weather Backfill"
+# → "Run workflow". Defaults run from 2025-01-01 to today.
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_date:
+        description: "Start date (YYYY-MM-DD). Default: 2025-01-01."
+        required: false
+        default: "2025-01-01"
+      to_date:
+        description: "End date (YYYY-MM-DD). Blank = today."
+        required: false
+        default: ""
+      max_days:
+        description: "Cap on chunk count (safety brake)."
+        required: false
+        default: ""
+      include_odds:
+        description: "Also pull Odds API closing-line snapshots (slower)."
+        required: false
+        default: "false"
+
+jobs:
+  weather-backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240    # heavy backfill; up to ~4hrs for full corpus
+    env:
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[nrfi]"
+
+      - name: Hydrate DuckDB from latest backfill artifact
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: backfill-historical.yml
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
+      - name: Capture corpus QA — BEFORE
+        id: qa_before
+        run: |
+          OUTPUT_FILE="$RUNNER_TEMP/qa_before.txt"
+          set +e
+          python -m edge_equation.engines.nrfi.data.qa > "$OUTPUT_FILE" 2>&1
+          QA_RC=$?
+          set -e
+          cat "$OUTPUT_FILE"
+          if [ $QA_RC -ne 0 ]; then
+            echo "::warning::QA before-snapshot exited $QA_RC — likely no DuckDB present. Backfill will create one."
+            # Write an empty placeholder so the diff section still renders.
+            echo "(no corpus yet; backfill will create one)" > "$OUTPUT_FILE"
+          fi
+          # Extract the missing-weather % for the headline diff.
+          MISS=$(grep -E "missing weather" "$OUTPUT_FILE" | awk '{print $4}' | tr -d '%' || echo "n/a")
+          echo "missing_before=$MISS" >> "$GITHUB_OUTPUT"
+
+      - name: Run backfill (weather-included via reconstruction loop)
+        run: |
+          DATE_TO="${{ github.event.inputs.to_date }}"
+          MAX_DAYS_ARG=""
+          ODDS_ARG=""
+          if [ -n "${{ github.event.inputs.max_days }}" ]; then
+            MAX_DAYS_ARG="--max-days ${{ github.event.inputs.max_days }}"
+          fi
+          if [ "${{ github.event.inputs.include_odds }}" != "true" ]; then
+            ODDS_ARG="--no-odds"
+          fi
+          DATE_ARGS="--from ${{ github.event.inputs.from_date }}"
+          if [ -n "$DATE_TO" ]; then
+            DATE_ARGS="$DATE_ARGS --to $DATE_TO"
+          fi
+          # The data/backfill.py orchestrator wraps training/backfill.py,
+          # which calls reconstruct_features_for_date — that's where the
+          # weather snapshots are now persisted (PR #101's
+          # backtest.py addition).
+          python -m edge_equation.engines.nrfi.data.backfill \
+              $DATE_ARGS $MAX_DAYS_ARG $ODDS_ARG
+
+      - name: Capture corpus QA — AFTER
+        id: qa_after
+        run: |
+          OUTPUT_FILE="$RUNNER_TEMP/qa_after.txt"
+          python -m edge_equation.engines.nrfi.data.qa > "$OUTPUT_FILE" 2>&1
+          cat "$OUTPUT_FILE"
+          MISS=$(grep -E "missing weather" "$OUTPUT_FILE" | awk '{print $4}' | tr -d '%' || echo "n/a")
+          echo "missing_after=$MISS" >> "$GITHUB_OUTPUT"
+
+      - name: Post summary
+        if: always()
+        run: |
+          MISS_BEFORE="${{ steps.qa_before.outputs.missing_before }}"
+          MISS_AFTER="${{ steps.qa_after.outputs.missing_after }}"
+          {
+            echo "## NRFI Weather Backfill"
+            echo ""
+            echo "| Metric | Before | After |"
+            echo "|---|---|---|"
+            echo "| Missing weather % | ${MISS_BEFORE:-n/a}% | ${MISS_AFTER:-n/a}% |"
+            echo ""
+            echo "### Corpus QA — BEFORE"
+            echo '```text'
+            cat "$RUNNER_TEMP/qa_before.txt" 2>/dev/null || echo "(unavailable)"
+            echo '```'
+            echo ""
+            echo "### Corpus QA — AFTER"
+            echo '```text'
+            cat "$RUNNER_TEMP/qa_after.txt" 2>/dev/null || echo "(unavailable)"
+            echo '```'
+            echo ""
+            echo "### Next step"
+            echo ""
+            echo "Run **NRFI Weekly Retrain** to rebuild the bundle with the"
+            echo "newly-backfilled weather rows, then re-run **NRFI Calibration"
+            echo "Audit** to see if Brier moves."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Re-upload the enriched DuckDB so the daily email + audit + retrain
+      # all see the new weather rows on their next run.
+      - name: Re-upload populated DuckDB (latest)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/nrfi.duckdb
+          if-no-files-found: warn
+          retention-days: 30
+          overwrite: true
+
+      - name: Upload QA snapshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nrfi-weather-backfill-qa
+          path: |
+            ${{ runner.temp }}/qa_before.txt
+            ${{ runner.temp }}/qa_after.txt
+          if-no-files-found: warn
+          retention-days: 30
