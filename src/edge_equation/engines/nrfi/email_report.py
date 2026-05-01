@@ -453,6 +453,86 @@ def _render_top_board(picks: list[dict], *, n: int = 8) -> str:
     return "\n".join(lines)
 
 
+def _render_first_inning_section(
+    picks: list[dict], *, top_n: int = 8,
+) -> str:
+    """Single FIRST INNING section — replaces the duplicated TOP BOARD
+    + NRFI BOARD + YRFI BOARD trio.
+
+    Layout::
+
+        FIRST INNING — 15 games on the slate
+        ════════════════════════════════════════════════════════════
+         1.  KC @ SEA · NRFI                                [LEAN    ]
+             57.8% Conviction · Light Green · λ 0.55
+         2.  TEX @ DET · NRFI                               [LEAN    ]
+             ...
+
+        — Rest of slate (7 games) —
+         9.  CLE @ ATH · NRFI · 54.6% [Yellow] · λ=0.60
+        10.  PHI @ MIA · NRFI · 54.5% [Yellow] · λ=0.61
+        ...
+
+    One row per game (the higher-tier side — usually NRFI for typical
+    matchups, YRFI for high-scoring ones). The mirror-image YRFI BOARD
+    that earlier emails included gets dropped because every game's
+    YRFI prob is exactly 1 - NRFI prob; rendering it added zero
+    information.
+
+    Top ``top_n`` picks (one per game, sorted by tier × edge × pct)
+    render in the polished multi-line format. The remainder render
+    as compact one-liners under a "Rest of slate" separator so the
+    operator can scan the full slate without scrolling past
+    duplicates.
+    """
+    if not picks:
+        return ""
+
+    # `_select_top_picks_by_edge(n=∞)` already groups by game and
+    # picks the higher-tier side; reuse to get one-row-per-game.
+    one_per_game = _select_top_picks_by_edge(picks, n=10**6)
+    if not one_per_game:
+        return ""
+
+    n_games = len(one_per_game)
+    top = one_per_game[:top_n]
+    rest = one_per_game[top_n:]
+
+    lines = [
+        f"FIRST INNING — {n_games} games on the slate",
+        "═" * 60,
+    ]
+    for i, pick in enumerate(top, 1):
+        lines.append(f"{i:>2}.  {_polished_pick_line(pick)}".replace(
+            "\n", "\n     ",
+        ))
+        lines.append("")
+    if rest:
+        lines.append(f"— Rest of slate ({len(rest)} games) —")
+        for j, pick in enumerate(rest, len(top) + 1):
+            lines.append(
+                f"{j:>2}.  {_compact_pick_line(pick)}"
+            )
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _compact_pick_line(pick: dict) -> str:
+    """One-liner for the "rest of slate" rows — game / side / pct /
+    band / λ. Used after the polished top-N cards."""
+    matchup = str(pick.get("game_id", "—"))
+    market = pick.get("market_type", "NRFI")
+    pct = pick.get("pct", 0.0)
+    band = str(pick.get("color_band", "")).strip()
+    lam = pick.get("lambda_total")
+    parts = [f"{matchup} · {market}", f"{pct:.1f}%"]
+    if band:
+        parts.append(f"[{band}]")
+    if isinstance(lam, (int, float)):
+        parts.append(f"λ={lam:.2f}")
+    return " · ".join(parts)
+
+
 def _build_parlay_block(
     bridge_outputs: list, label_map: dict[str, str], store,
 ) -> tuple[str, str]:
@@ -601,32 +681,17 @@ def render_body(card: dict) -> str:
         lines.append("(No games on the slate or feature reconstruction failed.)")
         lines.append("")
     else:
-        # 3. TOP BOARD — top N (default 8) by edge then NRFI%, polished
-        # one-liner with tier + color + λ + MC + edge + Kelly. The
-        # operator's eye lands here first.
-        top_text = _render_top_board(picks, n=8)
-        if top_text:
-            lines.append(top_text)
+        # 3. FIRST INNING — single consolidated section that replaces
+        # the legacy TOP BOARD + NRFI BOARD + YRFI BOARD trio. The
+        # mirror-image YRFI BOARD never carried information beyond
+        # 1 - NRFI%, so rendering it twice (once polished, twice as
+        # mirror) wasted reader attention. New format: top picks
+        # polished, the rest as compact one-liners under a "Rest of
+        # slate" separator. One row per game (the higher-tier side).
+        first_inning_text = _render_first_inning_section(picks, top_n=8)
+        if first_inning_text:
+            lines.append(first_inning_text)
             lines.append("")
-
-        # 4. Per-side boards — classic full-slate rendering (kept for
-        # operators who want every game's NRFI + YRFI rows to scan).
-        nrfi = [p for p in picks if p["market_type"] == "NRFI"]
-        yrfi = [p for p in picks if p["market_type"] == "YRFI"]
-        if nrfi:
-            lines.append(f"NRFI BOARD ({len(nrfi)} games)")
-            lines.append("─" * 60)
-            for p in nrfi:
-                rendered = p.get("rendered") or _render_fallback(p)
-                lines.append(rendered)
-                lines.append("")
-        if yrfi:
-            lines.append(f"YRFI BOARD ({len(yrfi)} games)")
-            lines.append("─" * 60)
-            for p in yrfi:
-                rendered = p.get("rendered") or _render_fallback(p)
-                lines.append(rendered)
-                lines.append("")
 
     # 5. Parlay candidates (already top-2 capped in _build_parlay_block).
     parlay_text = card.get("parlay_text", "")

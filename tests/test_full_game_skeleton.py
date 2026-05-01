@@ -113,10 +113,15 @@ def test_blend_negative_n_treated_as_zero():
 # ---------------------------------------------------------------------------
 
 
-def test_default_team_rates_table_covers_30_teams():
+def test_default_team_rates_table_covers_supported_teams():
+    """30 historical tricodes plus ATH (post-2025 Athletics relocation)."""
     table = default_team_rates_table()
-    assert len(table) == 30
+    assert len(table) >= 30
     assert "NYY" in table and "BOS" in table
+    # Athletics relocation: keep both OAK (legacy rows) and ATH (current
+    # schedule payloads) so neither gets silently dropped.
+    assert "OAK" in table
+    assert "ATH" in table
     for tri, rates in table.items():
         assert rates.runs_per_game == LEAGUE_RUNS_PER_GAME
         assert rates.n_games == 0

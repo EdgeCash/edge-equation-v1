@@ -66,14 +66,16 @@ def _make_card_with_picks(n_nrfi=2, n_yrfi=1):
     }
 
 
-def test_render_body_groups_nrfi_then_yrfi():
+def test_render_body_uses_single_first_inning_section():
+    """Post 2026-05-01 the duplicated NRFI BOARD + YRFI BOARD trio is
+    replaced by one consolidated FIRST INNING section showing each
+    game once with its higher-tier side."""
     from edge_equation.engines.nrfi.email_report import render_body
     card = _make_card_with_picks(n_nrfi=3, n_yrfi=2)
     body = render_body(card)
-    assert "NRFI BOARD (3 games)" in body
-    assert "YRFI BOARD (2 games)" in body
-    # NRFI section appears before YRFI section.
-    assert body.index("NRFI BOARD") < body.index("YRFI BOARD")
+    assert "FIRST INNING" in body
+    assert "NRFI BOARD" not in body
+    assert "YRFI BOARD" not in body
     # Footer present.
     assert "Internal testing" in body
 
