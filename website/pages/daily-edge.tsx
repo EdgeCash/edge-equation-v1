@@ -68,12 +68,10 @@ function classify(market: string): GroupKey {
 
 const TIER_RANK: Record<ConvictionTier, number> = {
   ELITE: 0,
-  STRONG_NRFI: 1,
-  STRONG_YRFI: 1,
-  STRONG: 2,
-  MODERATE: 3,
-  LEAN: 4,
-  NO_PLAY: 5,
+  STRONG: 1,
+  MODERATE: 2,
+  LEAN: 3,
+  NO_PLAY: 4,
 };
 
 

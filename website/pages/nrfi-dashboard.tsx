@@ -39,9 +39,10 @@ export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
 
 
 // ---------------------------------------------------------------------------
-// Tier badge — bridges the NRFI engine's tier names (LOCK / STRONG / ...) into
-// the V4 conviction system, with the colour switching by market: STRONG_NRFI
-// is Deep Green, STRONG_YRFI is Red.
+// Tier badge — bridges the NRFI engine's tier names (LOCK / STRONG / ...)
+// into the V4 conviction system. Tier-only coloring (post 2026-05-01): a
+// Strong call on either NRFI or YRFI side gets Deep Green; Red is
+// reserved for No-Play.
 // ---------------------------------------------------------------------------
 
 function NrfiTierBadge({

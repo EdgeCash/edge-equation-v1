@@ -1,13 +1,23 @@
-// Single source of truth for the V4 Conviction system.
+// Single source of truth for the V4 Conviction system (post 2026-05-01
+// unification).
 //
-// Every pick on the site — regardless of sport or market — maps to exactly
-// one tier here. The tier drives the color, the label, and the visual weight.
-// If a tier isn't represented here, it doesn't get a color.
+// Every pick on the site — regardless of sport, market, or side — maps
+// to exactly one tier here. The tier drives the color, the label, and
+// the visual weight. Cold-traffic-friendly semantics:
+//
+//   Electric Blue → Strong upside (Elite)
+//   Deep Green    → Strong upside
+//   Amber         → Moderate
+//   Slate         → Lean (informational)
+//   Red           → No play / pass — the universal "stop" semantic
+//
+// Earlier the system tried Red as a positive-framing "Strong YRFI"
+// color (PR #96). Cold visitors read Red as "don't trust this," so
+// the YRFI-side override was dropped 2026-05-01. Red is exclusively
+// NO_PLAY now; STRONG works on either side of a market.
 
 export type ConvictionTier =
   | "ELITE"
-  | "STRONG_NRFI"
-  | "STRONG_YRFI"
   | "STRONG"
   | "MODERATE"
   | "LEAN"
@@ -37,34 +47,12 @@ export const CONVICTION: Record<ConvictionTier, ConvictionMeta> = {
     borderClass: "border-conviction-elite",
     dotClass: "bg-conviction-elite",
   },
-  STRONG_NRFI: {
-    tier: "STRONG_NRFI",
-    label: "Deep Green",
-    longLabel: "Deep Green · Strong NRFI",
-    description:
-      "Strong NRFI / over-the-under read. Pitching and park lean toward a quiet first inning.",
-    textClass: "text-conviction-strong",
-    bgSoftClass: "bg-conviction-strongSoft",
-    borderClass: "border-conviction-strong",
-    dotClass: "bg-conviction-strong",
-  },
-  STRONG_YRFI: {
-    tier: "STRONG_YRFI",
-    label: "Red",
-    longLabel: "Red · Strong YRFI",
-    description:
-      "Strong YRFI read. Lineup, weather, or pitcher fragility points to a run in the first.",
-    textClass: "text-conviction-fade",
-    bgSoftClass: "bg-conviction-fadeSoft",
-    borderClass: "border-conviction-fade",
-    dotClass: "bg-conviction-fade",
-  },
   STRONG: {
     tier: "STRONG",
-    label: "Strong",
-    longLabel: "Strong",
+    label: "Deep Green",
+    longLabel: "Deep Green · Strong",
     description:
-      "Solid edge with grade A inputs. Not Elite, but the kind of play we run every day.",
+      "Strong conviction read on either side of the market. Solid edge with grade A inputs — the kind of play we run every day.",
     textClass: "text-conviction-strong",
     bgSoftClass: "bg-conviction-strongSoft",
     borderClass: "border-conviction-strong",
@@ -72,7 +60,7 @@ export const CONVICTION: Record<ConvictionTier, ConvictionMeta> = {
   },
   MODERATE: {
     tier: "MODERATE",
-    label: "Moderate",
+    label: "Amber",
     longLabel: "Amber · Moderate",
     description:
       "Modest edge or a noisier signal. We publish it for transparency, not to chase.",
@@ -83,7 +71,7 @@ export const CONVICTION: Record<ConvictionTier, ConvictionMeta> = {
   },
   LEAN: {
     tier: "LEAN",
-    label: "Lean",
+    label: "Slate",
     longLabel: "Slate · Lean",
     description:
       "Small directional edge. Logged for the record; not a recommended play.",
@@ -94,23 +82,23 @@ export const CONVICTION: Record<ConvictionTier, ConvictionMeta> = {
   },
   NO_PLAY: {
     tier: "NO_PLAY",
-    label: "No Play",
-    longLabel: "No Play",
+    label: "Red",
+    longLabel: "Red · No Play",
     description:
-      "The model and the market agree. We pass — and saying that is the whole point.",
-    textClass: "text-edge-textFaint",
-    bgSoftClass: "bg-conviction-neutralSoft",
-    borderClass: "border-edge-line",
-    dotClass: "bg-edge-textFaint",
+      "Model and market agree, or the modeled edge is too small to matter. We pass — and saying that openly is the whole point.",
+    textClass: "text-conviction-fade",
+    bgSoftClass: "bg-conviction-fadeSoft",
+    borderClass: "border-conviction-fade",
+    dotClass: "bg-conviction-fade",
   },
 };
 
-// Ordered list for the visual key — Elite first, then strong directions,
-// then everything quieter.
+// Ordered list for the visual key — Elite at the top, NO_PLAY (Red)
+// at the bottom of the conviction ladder. Reading top-to-bottom you
+// move from "highest conviction" to "no play."
 export const CONVICTION_ORDER: ConvictionTier[] = [
   "ELITE",
-  "STRONG_NRFI",
-  "STRONG_YRFI",
+  "STRONG",
   "MODERATE",
   "LEAN",
   "NO_PLAY",
@@ -133,15 +121,18 @@ export function tierFromGrade(grade: string | null | undefined): ConvictionTier 
   }
 }
 
-// Map an NRFI/YRFI tier ("LOCK" | "STRONG" | ...) plus a market_type
-// ("NRFI" or "YRFI") into the unified conviction tier.
+// Map an NRFI/YRFI tier name ("LOCK" | "ELITE" | "STRONG" | ...) into
+// the unified conviction tier. Side-aware overrides were dropped
+// 2026-05-01 — STRONG is STRONG on either side.
 export function tierFromNrfi(
   nrfiTier: string | null | undefined,
-  market: "NRFI" | "YRFI",
+  // The `market` parameter is preserved for backwards-compatible
+  // call sites; it has no effect on the returned tier.
+  _market?: "NRFI" | "YRFI",
 ): ConvictionTier {
   const t = (nrfiTier ?? "").toUpperCase();
-  if (t === "LOCK") return "ELITE";
-  if (t === "STRONG") return market === "YRFI" ? "STRONG_YRFI" : "STRONG_NRFI";
+  if (t === "LOCK" || t === "ELITE") return "ELITE";
+  if (t === "STRONG") return "STRONG";
   if (t === "MODERATE") return "MODERATE";
   if (t === "LEAN") return "LEAN";
   return "NO_PLAY";
