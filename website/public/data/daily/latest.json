@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-01T21:18:08+00:00",
+  "generated_at": "2026-05-01T22:37:59+00:00",
   "date": "2026-05-01",
   "source": "run_daily.py",
   "notes": "Public-testing release. Manual operator trigger. Lineups + weather + umpires confirmed at publish time.",
@@ -32,12 +32,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5630",
+      "fair_prob": "0.5660",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "C",
       "tier": null,
-      "notes": "56.3% NRFI (\u03bb=0.57) \u00b7 band: Light Green",
+      "notes": "56.6% NRFI (\u03bb=0.57) \u00b7 band: Light Green",
       "event_time": "2026-05-01T22:40:00",
       "game_id": "824287"
     },
@@ -50,12 +50,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5577",
+      "fair_prob": "0.5549",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "C",
       "tier": null,
-      "notes": "55.8% NRFI (\u03bb=0.58) \u00b7 band: Light Green",
+      "notes": "55.5% NRFI (\u03bb=0.59) \u00b7 band: Light Green",
       "event_time": "2026-05-01T22:45:00",
       "game_id": "823389"
     },
@@ -68,12 +68,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5365",
+      "fair_prob": "0.5380",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "D",
       "tier": null,
-      "notes": "53.7% NRFI (\u03bb=0.62) \u00b7 band: Yellow",
+      "notes": "53.8% NRFI (\u03bb=0.62) \u00b7 band: Yellow",
       "event_time": "2026-05-01T22:45:00",
       "game_id": "822744"
     },
@@ -86,12 +86,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5176",
+      "fair_prob": "0.5223",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "D",
       "tier": null,
-      "notes": "51.8% NRFI (\u03bb=0.66) \u00b7 band: Yellow",
+      "notes": "52.2% NRFI (\u03bb=0.65) \u00b7 band: Yellow",
       "event_time": "2026-05-01T23:05:00",
       "game_id": "823557"
     },
@@ -104,12 +104,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5465",
+      "fair_prob": "0.5500",
       "edge": "0.0000",
       "kelly": "0.0000",
-      "grade": "D",
+      "grade": "C",
       "tier": null,
-      "notes": "54.7% NRFI (\u03bb=0.60) \u00b7 band: Yellow",
+      "notes": "55.0% NRFI (\u03bb=0.60) \u00b7 band: Light Green",
       "event_time": "2026-05-01T23:10:00",
       "game_id": "823877"
     },
@@ -140,12 +140,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5164",
+      "fair_prob": "0.5177",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "D",
       "tier": null,
-      "notes": "51.6% NRFI (\u03bb=0.66) \u00b7 band: Yellow",
+      "notes": "51.8% NRFI (\u03bb=0.66) \u00b7 band: Yellow",
       "event_time": "2026-05-01T23:10:00",
       "game_id": "824772"
     },
@@ -158,12 +158,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5525",
+      "fair_prob": "0.5608",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "C",
       "tier": null,
-      "notes": "55.3% NRFI (\u03bb=0.59) \u00b7 band: Light Green",
+      "notes": "56.1% NRFI (\u03bb=0.58) \u00b7 band: Light Green",
       "event_time": "2026-05-02T00:10:00",
       "game_id": "823713"
     },
@@ -176,12 +176,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5531",
+      "fair_prob": "0.5497",
       "edge": "0.0000",
       "kelly": "0.0000",
-      "grade": "C",
+      "grade": "D",
       "tier": null,
-      "notes": "55.3% NRFI (\u03bb=0.59) \u00b7 band: Light Green",
+      "notes": "55.0% NRFI (\u03bb=0.60) \u00b7 band: Yellow",
       "event_time": "2026-05-02T00:15:00",
       "game_id": "823066"
     },
@@ -194,12 +194,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5545",
+      "fair_prob": "0.5517",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "C",
       "tier": null,
-      "notes": "55.4% NRFI (\u03bb=0.59) \u00b7 band: Light Green",
+      "notes": "55.2% NRFI (\u03bb=0.59) \u00b7 band: Light Green",
       "event_time": "2026-05-02T00:40:00",
       "game_id": "824366"
     },
@@ -212,12 +212,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5346",
+      "fair_prob": "0.5343",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "D",
       "tier": null,
-      "notes": "53.5% NRFI (\u03bb=0.63) \u00b7 band: Yellow",
+      "notes": "53.4% NRFI (\u03bb=0.63) \u00b7 band: Yellow",
       "event_time": "2026-05-02T01:38:00",
       "game_id": "824041"
     },
@@ -230,12 +230,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5542",
+      "fair_prob": "0.5509",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "C",
       "tier": null,
-      "notes": "55.4% NRFI (\u03bb=0.59) \u00b7 band: Light Green",
+      "notes": "55.1% NRFI (\u03bb=0.60) \u00b7 band: Light Green",
       "event_time": "2026-05-02T01:40:00",
       "game_id": "823309"
     },
@@ -248,12 +248,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5485",
+      "fair_prob": "0.5473",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "D",
       "tier": null,
-      "notes": "54.8% NRFI (\u03bb=0.60) \u00b7 band: Yellow",
+      "notes": "54.7% NRFI (\u03bb=0.60) \u00b7 band: Yellow",
       "event_time": "2026-05-02T01:40:00",
       "game_id": "825012"
     },
@@ -266,12 +266,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5822",
+      "fair_prob": "0.5848",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "B",
       "tier": null,
-      "notes": "58.2% NRFI (\u03bb=0.54) \u00b7 band: Light Green",
+      "notes": "58.5% NRFI (\u03bb=0.54) \u00b7 band: Light Green",
       "event_time": "2026-05-02T01:45:00",
       "game_id": "823146"
     },
