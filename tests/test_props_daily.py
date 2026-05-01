@@ -327,3 +327,198 @@ def test_run_daily_module_imports_without_side_effects():
     fetches, no email sends)."""
     import importlib
     importlib.import_module("edge_equation.run_daily")
+
+
+# ---------------------------------------------------------------------------
+# _load_rates_for_slate — Statcast wireup
+# ---------------------------------------------------------------------------
+
+
+class _FakeBatterRates:
+    """Stand-in for BatterRollingRates used to verify wiring without DuckDB."""
+    def __init__(self, name: str):
+        self.player_name = name
+        self.n_pa = 100
+
+
+class _FakePitcherRates:
+    def __init__(self, name: str):
+        self.player_name = name
+        self.n_bf = 50
+
+
+def test_load_rates_resolves_each_distinct_player_once(monkeypatch, tmp_path):
+    """Statcast fetch is per (player, role) — 4 lines from the same
+    batter on different markets only triggers one batter-rate load."""
+    from edge_equation.engines.props_prizepicks import daily as daily_mod
+    from edge_equation.engines.props_prizepicks.config import (
+        PropsConfig, get_default_config,
+    )
+
+    cfg = get_default_config()
+    object.__setattr__(cfg, "cache_dir", tmp_path)
+
+    # Fake resolver returns a deterministic id for each name.
+    class _Resolver:
+        def __init__(self, cache_path):
+            self._cache_path = cache_path
+            self.calls: list[str] = []
+        def resolve(self, name):
+            self.calls.append(name)
+            return {"Aaron Judge": 592450, "Mookie Betts": 605141,
+                      "Gerrit Cole": 543037}.get(name)
+        def save(self):
+            pass
+
+    monkeypatch.setattr(
+        "edge_equation.engines.props_prizepicks.data.player_id_lookup."
+        "PlayerIdResolver",
+        _Resolver,
+    )
+
+    batter_calls: list[tuple] = []
+    pitcher_calls: list[tuple] = []
+
+    def fake_batter(player_id, *, player_name, end_date, days, config):
+        batter_calls.append((player_id, player_name))
+        return _FakeBatterRates(player_name)
+
+    def fake_pitcher(player_id, *, player_name, end_date, days, config):
+        pitcher_calls.append((player_id, player_name))
+        return _FakePitcherRates(player_name)
+
+    monkeypatch.setattr(daily_mod, "load_batter_rates", fake_batter)
+    monkeypatch.setattr(daily_mod, "load_pitcher_rates", fake_pitcher)
+
+    lines = [
+        _line(canonical="HR", side="Over", player="Aaron Judge"),
+        _line(canonical="Hits", side="Over", player="Aaron Judge"),
+        _line(canonical="Total_Bases", side="Over", player="Aaron Judge"),
+        _line(canonical="Hits", side="Under", player="Mookie Betts"),
+        _line(canonical="K", side="Over", player="Gerrit Cole"),
+    ]
+    rates = daily_mod._load_rates_for_slate(lines, "2026-05-01", cfg)
+
+    # 3 distinct players resolved, but Aaron Judge only fetched once.
+    assert {"Aaron Judge", "Mookie Betts", "Gerrit Cole"} == set(rates.keys())
+    assert len(batter_calls) == 2     # Judge + Betts
+    assert len(pitcher_calls) == 1    # Cole
+    assert (592450, "Aaron Judge") in batter_calls
+    assert (543037, "Gerrit Cole") in pitcher_calls
+
+
+def test_load_rates_skips_unresolved_names(monkeypatch, tmp_path):
+    """When the resolver returns None, no Statcast fetch happens and
+    the player is absent from the returned dict (projection layer
+    falls through to the league prior, edge layer's confidence floor
+    skips the resulting picks)."""
+    from edge_equation.engines.props_prizepicks import daily as daily_mod
+    from edge_equation.engines.props_prizepicks.config import get_default_config
+
+    cfg = get_default_config()
+    object.__setattr__(cfg, "cache_dir", tmp_path)
+
+    class _Resolver:
+        def __init__(self, cache_path): pass
+        def resolve(self, name): return None  # everyone unresolved
+        def save(self): pass
+
+    monkeypatch.setattr(
+        "edge_equation.engines.props_prizepicks.data.player_id_lookup."
+        "PlayerIdResolver",
+        _Resolver,
+    )
+
+    bcalls = []
+    monkeypatch.setattr(daily_mod, "load_batter_rates",
+                          lambda *a, **k: bcalls.append(1))
+    monkeypatch.setattr(daily_mod, "load_pitcher_rates",
+                          lambda *a, **k: bcalls.append(1))
+
+    rates = daily_mod._load_rates_for_slate(
+        [_line(player="Aaron Judge")], "2026-05-01", cfg,
+    )
+    assert rates == {}
+    assert bcalls == []
+
+
+def test_load_rates_swallows_per_player_failures(monkeypatch, tmp_path):
+    """A Statcast fetch that raises for one player must not break the
+    slate — other players still get their rates."""
+    from edge_equation.engines.props_prizepicks import daily as daily_mod
+    from edge_equation.engines.props_prizepicks.config import get_default_config
+
+    cfg = get_default_config()
+    object.__setattr__(cfg, "cache_dir", tmp_path)
+
+    class _Resolver:
+        def __init__(self, cache_path): pass
+        def resolve(self, name):
+            return {"Judge": 1, "Betts": 2}.get(name)
+        def save(self): pass
+
+    monkeypatch.setattr(
+        "edge_equation.engines.props_prizepicks.data.player_id_lookup."
+        "PlayerIdResolver",
+        _Resolver,
+    )
+
+    def flaky_batter(player_id, *, player_name, end_date, days, config):
+        if player_id == 1:
+            raise RuntimeError("Statcast 503")
+        return _FakeBatterRates(player_name)
+
+    monkeypatch.setattr(daily_mod, "load_batter_rates", flaky_batter)
+
+    rates = daily_mod._load_rates_for_slate(
+        [_line(player="Judge"), _line(player="Betts")],
+        "2026-05-01", cfg,
+    )
+    # Judge dropped, Betts retained.
+    assert "Judge" not in rates
+    assert "Betts" in rates
+
+
+def test_load_rates_two_way_player_picks_dominant_role(monkeypatch, tmp_path):
+    """Ohtani-style: a player with both batter and pitcher lines on
+    the same slate. The dict is keyed on player_name only, so we pick
+    whichever role has more lines and log the other."""
+    from edge_equation.engines.props_prizepicks import daily as daily_mod
+    from edge_equation.engines.props_prizepicks.config import get_default_config
+
+    cfg = get_default_config()
+    object.__setattr__(cfg, "cache_dir", tmp_path)
+
+    class _Resolver:
+        def __init__(self, cache_path): pass
+        def resolve(self, name): return 660271 if name == "Shohei Ohtani" else None
+        def save(self): pass
+
+    monkeypatch.setattr(
+        "edge_equation.engines.props_prizepicks.data.player_id_lookup."
+        "PlayerIdResolver",
+        _Resolver,
+    )
+
+    batter_calls = []
+    pitcher_calls = []
+    monkeypatch.setattr(
+        daily_mod, "load_batter_rates",
+        lambda pid, **kw: batter_calls.append(kw["player_name"]) or _FakeBatterRates(kw["player_name"]),
+    )
+    monkeypatch.setattr(
+        daily_mod, "load_pitcher_rates",
+        lambda pid, **kw: pitcher_calls.append(kw["player_name"]) or _FakePitcherRates(kw["player_name"]),
+    )
+
+    # 3 batter lines + 1 pitcher line for Ohtani → batter wins.
+    lines = [
+        _line(canonical="HR", player="Shohei Ohtani"),
+        _line(canonical="Hits", player="Shohei Ohtani"),
+        _line(canonical="Total_Bases", player="Shohei Ohtani"),
+        _line(canonical="K", player="Shohei Ohtani"),
+    ]
+    rates = daily_mod._load_rates_for_slate(lines, "2026-05-01", cfg)
+    assert "Shohei Ohtani" in rates
+    assert batter_calls == ["Shohei Ohtani"]
+    assert pitcher_calls == []

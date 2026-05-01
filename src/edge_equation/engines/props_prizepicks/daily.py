@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from datetime import date as _date, datetime, timezone
+from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
 from edge_equation.engines.tiering import Tier, classify_tier
@@ -307,16 +308,116 @@ def _load_rates_for_slate(
     """Best-effort Statcast load for every distinct player on the slate.
 
     Returns ``{player_name → BatterRollingRates|PitcherRollingRates}``.
-    On any per-player failure the player is simply absent from the
-    map — projection falls through to the league prior.
+    On any per-player failure (no MLBAM id, Statcast fetch fails,
+    pybaseball not installed) the player is simply absent from the
+    map — projection falls through to the league prior, and the
+    edge module's confidence floor skips the resulting pick.
 
-    Note: this requires the player's MLB Stats API id, which the
-    Phase-4 odds_fetcher doesn't currently surface. Without an id we
-    skip Statcast entirely; the projection layer's no-rates path
-    still produces a valid (league-prior) projection. Hooking up the
-    id mapping is a small follow-up that doesn't gate this PR.
+    Two-step pipeline:
+
+    1. Resolve every distinct ``(player_name, role)`` on the slate to
+       an MLBAM id via ``PlayerIdResolver`` (Chadwick register +
+       persistent JSON cache so repeated runs don't re-pound the
+       lookup endpoint).
+    2. For each resolved player, fetch + aggregate their rolling
+       rates via ``load_batter_rates`` / ``load_pitcher_rates`` (both
+       cached as parquet, so day-2 runs reuse day-1 fetches for
+       any window that didn't shift).
+
+    Edge cases:
+
+    * Two-way players (e.g. Ohtani) appear as both batter and pitcher
+       lines on the same slate. The returned dict is keyed on
+       ``player_name`` only, so we'd otherwise overwrite. We pick
+       whichever role has more lines on the slate and log a warning.
+       The minority role's lines fall through to the league prior.
+       Acceptable until we re-key on ``(player_name, role)``.
     """
-    return {}
+    from .data.player_id_lookup import PlayerIdResolver
+
+    resolver = PlayerIdResolver(
+        cache_path=Path(cfg.cache_dir) / "player_ids.json",
+    )
+    # Group lines by (player_name, role) so we make one Statcast call
+    # per unique player+role pair, not one per line.
+    role_counts: dict[tuple[str, str], int] = {}
+    for line in lines:
+        key = (line.player_name, line.market.role)
+        role_counts[key] = role_counts.get(key, 0) + 1
+
+    # Pick the dominant role per player so two-way players don't
+    # silently overwrite each other in the returned dict.
+    chosen_role: dict[str, str] = {}
+    for (name, role), n in role_counts.items():
+        prev = chosen_role.get(name)
+        if prev is None:
+            chosen_role[name] = role
+        elif prev != role:
+            prev_n = role_counts[(name, prev)]
+            if n > prev_n:
+                log.warning(
+                    "props daily: %s appears as both '%s' (%d lines) "
+                    "and '%s' (%d lines); using '%s' rates only.",
+                    name, prev, prev_n, role, n, role,
+                )
+                chosen_role[name] = role
+            else:
+                log.warning(
+                    "props daily: %s appears as both '%s' (%d lines) "
+                    "and '%s' (%d lines); using '%s' rates only.",
+                    name, role, n, prev, prev_n, prev,
+                )
+
+    rates_map: dict[str, object] = {}
+    n_resolved = 0
+    n_unresolved = 0
+    for player_name, role in chosen_role.items():
+        try:
+            mlbam_id = resolver.resolve(player_name)
+        except Exception as e:
+            log.warning("props daily: resolve(%s) raised (%s): %s",
+                          player_name, type(e).__name__, e)
+            mlbam_id = None
+        if mlbam_id is None:
+            n_unresolved += 1
+            continue
+        n_resolved += 1
+        try:
+            if role == "batter":
+                rates_map[player_name] = load_batter_rates(
+                    int(mlbam_id),
+                    player_name=player_name,
+                    end_date=target_date,
+                    days=cfg.projection.lookback_days,
+                    config=cfg,
+                )
+            else:
+                rates_map[player_name] = load_pitcher_rates(
+                    int(mlbam_id),
+                    player_name=player_name,
+                    end_date=target_date,
+                    days=cfg.projection.lookback_days,
+                    config=cfg,
+                )
+        except Exception as e:
+            log.warning(
+                "props daily: load %s rates failed for %s (id=%s): %s: %s",
+                role, player_name, mlbam_id, type(e).__name__, e,
+            )
+
+    # Persist any new name→id learnings so tomorrow's run skips them.
+    try:
+        resolver.save()
+    except Exception as e:
+        log.debug("props daily: resolver.save() skipped (%s): %s",
+                    type(e).__name__, e)
+
+    log.info(
+        "props daily: resolved %d/%d players to MLBAM ids → %d "
+        "Statcast rate frames loaded",
+        n_resolved, len(chosen_role), len(rates_map),
+    )
+    return rates_map
 
 
 def _persist_predictions(
