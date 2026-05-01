@@ -98,7 +98,7 @@ jobs:
             echo "::warning::QA before-snapshot exited $QA_RC — likely no DuckDB present."
             echo "(no corpus yet; backfill will create one)" > "$OUTPUT_FILE"
           fi
-          MISS=$(grep -E "missing weather" "$OUTPUT_FILE" | awk '{print $4}' | tr -d '%' || echo "n/a")
+          MISS=$(grep -E "missing weather" "$OUTPUT_FILE" | awk '{print $3}' | tr -d '%' || echo "n/a")
           echo "missing_before=$MISS" >> "$GITHUB_OUTPUT"
 
       - name: Run backfill
@@ -145,7 +145,7 @@ jobs:
           OUTPUT_FILE="$RUNNER_TEMP/qa_after.txt"
           python -m edge_equation.engines.nrfi.data.qa > "$OUTPUT_FILE" 2>&1
           cat "$OUTPUT_FILE"
-          MISS=$(grep -E "missing weather" "$OUTPUT_FILE" | awk '{print $4}' | tr -d '%' || echo "n/a")
+          MISS=$(grep -E "missing weather" "$OUTPUT_FILE" | awk '{print $3}' | tr -d '%' || echo "n/a")
           echo "missing_after=$MISS" >> "$GITHUB_OUTPUT"
 
       - name: Post summary
