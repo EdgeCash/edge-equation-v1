@@ -2,6 +2,7 @@ import type { GetStaticProps } from "next";
 
 import LedgerTable from "@/components/LedgerTable";
 import Layout from "@/components/Layout";
+import MathBackdrop from "@/components/MathBackdrop";
 import TierSummaryStrip from "@/components/TierSummaryStrip";
 import type { TrackRecordView } from "@/lib/track-record";
 import { loadTrackRecord } from "@/lib/track-record-server";
@@ -41,20 +42,23 @@ export default function TrackRecordPage({ view }: Props) {
     >
       <main className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         {/* ----- Page header ----- */}
-        <div className="mb-10 max-w-prose">
-          <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-edge-accent">
-            Public Ledger
+        <section className="relative mb-10">
+          <MathBackdrop variant="section" />
+          <div className="relative max-w-prose">
+            <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-edge-accent">
+              Public Ledger
+            </div>
+            <h1 className="mt-3 font-display text-4xl tracking-tightest leading-[1.05] text-edge-text sm:text-5xl">
+              Track Record
+            </h1>
+            <p className="mt-4 text-edge-textDim">
+              Every LEAN-and-above pick the engine produces is logged here, with
+              the actual outcome attached. No selective publishing. No
+              retroactive edits. The numbers below reflect every pick — wins,
+              losses, pushes, and pending games.
+            </p>
           </div>
-          <h1 className="mt-3 font-display text-4xl tracking-tightest leading-[1.05] text-edge-text sm:text-5xl">
-            Track Record
-          </h1>
-          <p className="mt-4 text-edge-textDim">
-            Every LEAN-and-above pick the engine produces is logged here, with
-            the actual outcome attached. No selective publishing. No
-            retroactive edits. The numbers below reflect every pick — wins,
-            losses, pushes, and pending games.
-          </p>
-        </div>
+        </section>
 
         {/* ----- Honesty disclaimer banner ----- */}
         <div className="mb-10 rounded-sm border border-edge-line bg-ink-900/60 px-5 py-4">

@@ -4,6 +4,7 @@ import type { GetServerSideProps } from "next";
 import Layout from "@/components/Layout";
 import ConvictionBadge from "@/components/ConvictionBadge";
 import ConvictionKey from "@/components/ConvictionKey";
+import MathBackdrop from "@/components/MathBackdrop";
 import { api, formatAmericanOdds, formatDate, formatPercent } from "@/lib/api";
 import {
   CONVICTION,
@@ -124,42 +125,47 @@ export default function Home({ generatedAt, totalPicks, teaser }: Props) {
     <Layout>
       {/* Hero — cold-traffic optimized. Product clarity first
           ("Free Daily MLB Picks · Highest Conviction First"), brand
-          tagline second ("Facts. Not Feelings."), CTAs third. */}
-      <section className="pt-6 sm:pt-10">
-        <div className="eyebrow mb-5">
-          MLB · 2026 Public Testing
-        </div>
-        <h1 className="font-display font-light text-[clamp(2.5rem,8vw,6rem)] leading-[0.96] tracking-tightest">
-          Free Daily MLB Picks.
-          <br />
-          <span className="italic text-edge-accent">Highest Conviction First.</span>
-        </h1>
-        <p className="mt-6 max-w-prose text-edge-textDim text-base sm:text-lg leading-relaxed">
-          Electric Blue plays + the full board + a transparent track record.
-          <span className="mt-2 block font-mono text-[11px] uppercase tracking-[0.24em] text-edge-textFaint">
-            Facts. Not Feelings.
-          </span>
-        </p>
+          tagline second ("Facts. Not Feelings."), CTAs third.
+          The MathBackdrop adds the chalkboard / sigma / curve / candle
+          decoration matching the brand graphics. */}
+      <section className="relative pt-6 sm:pt-10 pb-2">
+        <MathBackdrop variant="hero" />
+        <div className="relative">
+          <div className="eyebrow mb-5">
+            MLB · 2026 Public Testing
+          </div>
+          <h1 className="font-display font-light text-[clamp(2.5rem,8vw,6rem)] leading-[0.96] tracking-tightest">
+            Free Daily MLB Picks.
+            <br />
+            <span className="italic text-edge-accent">Highest Conviction First.</span>
+          </h1>
+          <p className="mt-6 max-w-prose text-edge-textDim text-base sm:text-lg leading-relaxed">
+            Electric Blue plays + the full board + a transparent track record.
+            <span className="mt-2 block font-mono text-[11px] uppercase tracking-[0.24em] text-edge-textFaint">
+              Facts. Not Feelings.
+            </span>
+          </p>
 
-        <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4">
-          <Link
-            href="/daily-edge"
-            className="group inline-flex items-center gap-3 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs font-semibold uppercase tracking-[0.22em] hover:bg-edge-text transition-colors"
-          >
-            See Today&apos;s Full Free Board
-            <span className="group-hover:translate-x-1 transition-transform">→</span>
-          </Link>
-          <Link
-            href="/track-record"
-            className="group inline-flex items-center gap-3 border border-edge-accent text-edge-accent px-6 py-3 font-mono text-xs uppercase tracking-[0.22em] hover:bg-edge-accent hover:text-ink-950 transition-colors"
-          >
-            View Full Track Record
-            <span className="group-hover:translate-x-1 transition-transform">→</span>
-          </Link>
-          <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-conviction-elite">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-conviction-elite" aria-hidden="true" />
-            Free. Always.
-          </span>
+          <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4">
+            <Link
+              href="/daily-edge"
+              className="group inline-flex items-center gap-3 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs font-semibold uppercase tracking-[0.22em] hover:bg-edge-text transition-all glow-cyan-soft"
+            >
+              See Today&apos;s Full Free Board
+              <span className="group-hover:translate-x-1 transition-transform">→</span>
+            </Link>
+            <Link
+              href="/track-record"
+              className="group inline-flex items-center gap-3 border border-edge-accent text-edge-accent px-6 py-3 font-mono text-xs uppercase tracking-[0.22em] hover:bg-edge-accent hover:text-ink-950 transition-colors"
+            >
+              View Full Track Record
+              <span className="group-hover:translate-x-1 transition-transform">→</span>
+            </Link>
+            <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-conviction-elite">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-conviction-elite" aria-hidden="true" />
+              Free. Always.
+            </span>
+          </div>
         </div>
       </section>
 
