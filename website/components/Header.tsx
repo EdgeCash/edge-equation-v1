@@ -2,6 +2,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useState } from "react";
 
+import LogoMark from "./LogoMark";
+
 const PRIMARY_NAV = [
   { href: "/", label: "Home" },
   { href: "/daily-edge", label: "Daily" },
@@ -21,17 +23,19 @@ export default function Header() {
   return (
     <header className="border-b border-edge-line bg-ink-950/80 backdrop-blur sticky top-0 z-30">
       <div className="mx-auto max-w-6xl px-6 py-5 flex items-center justify-between gap-4">
-        <Link href="/" className="group" onClick={() => setOpen(false)}>
-          <div className="flex items-baseline gap-3">
-            <span className="font-display text-2xl tracking-tightest text-edge-text">
+        <Link
+          href="/"
+          className="group flex items-center gap-3"
+          onClick={() => setOpen(false)}
+        >
+          <LogoMark className="h-9 w-9 shrink-0 transition-transform group-hover:scale-105" />
+          <div>
+            <div className="font-display text-2xl tracking-tightest text-edge-text leading-none">
               Edge Equation
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-accent">
-              v4
-            </span>
-          </div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textDim mt-1">
-            Facts. Not Feelings.
+            </div>
+            <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textDim">
+              Facts. Not Feelings.
+            </div>
           </div>
         </Link>
 

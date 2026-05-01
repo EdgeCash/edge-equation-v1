@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import LogoMark from "./LogoMark";
+
 const SECONDARY = [
   { href: "/track-record", label: "Track Record" },
   { href: "/archive", label: "Archive" },
@@ -12,11 +14,16 @@ export default function Footer() {
     <footer className="border-t border-edge-line mt-24">
       <div className="mx-auto max-w-6xl px-6 py-12 grid gap-10 md:grid-cols-[2fr_1fr_1fr]">
         <div>
-          <div className="font-display text-2xl tracking-tightest text-edge-text">
-            Edge Equation
-          </div>
-          <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-edge-accent">
-            Facts. Not Feelings.
+          <div className="flex items-center gap-3">
+            <LogoMark className="h-12 w-12 shrink-0" />
+            <div>
+              <div className="font-display text-2xl tracking-tightest text-edge-text leading-none">
+                Edge Equation
+              </div>
+              <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-edge-accent">
+                Facts. Not Feelings.
+              </div>
+            </div>
           </div>
           <p className="mt-4 max-w-prose text-sm text-edge-textDim leading-relaxed">
             We help people become better bettors by publishing the data and the
