@@ -376,7 +376,8 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     parser.add_argument("--min-train-rows", type=int, default=200)
     parser.add_argument("--no-save-bundle", action="store_true")
     parser.add_argument("--calibration-method",
-                          choices=("isotonic", "platt"), default="isotonic")
+                          choices=("isotonic", "platt", "beta"),
+                          default="beta")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args(list(argv) if argv is not None else None)
 

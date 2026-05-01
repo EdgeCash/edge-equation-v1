@@ -121,7 +121,7 @@ jobs:
             $END_ARG \
             --window-months 18 \
             --chunk-days 7 \
-            --calibration-method isotonic
+            --calibration-method beta
 
       - name: Settle past-week tier ledger
         # Phase 3 — pull actuals for the past two weeks (handles late
