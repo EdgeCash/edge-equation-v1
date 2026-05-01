@@ -1,19 +1,45 @@
 name: NRFI Weather Backfill (on demand)
 
-# Manually-triggered weather + corpus backfill. Hydrates the latest
-# DuckDB artifact, runs the corpus QA to capture the BEFORE
-# weather-missing rate, runs the backfill orchestrator (which writes
-# weather snapshots into DuckDB during feature reconstruction —
-# delivered in PR #101), runs the QA again to capture the AFTER
-# rate, and posts the delta to the workflow's step summary so the
-# operator can read it on mobile.
+# Manually-triggered weather + corpus backfill. Three modes selectable
+# via the `mode` input:
+#
+#   weather_only       — direct weather backfill (walks games table,
+#                         fetches Open-Meteo archive per game, writes
+#                         weather rows). Default. Idempotent. Fills
+#                         historical gaps the corpus orchestrator's
+#                         skip_completed=True misses.
+#   force_rebuild      — force-rebuild every feature blob using current
+#                         feature_engineering code. Use after merging
+#                         a PR that adds new feature columns so the
+#                         trainer can see them. Slow (re-runs Statcast
+#                         per date).
+#   weather_then_rebuild — weather_only first, then force_rebuild.
+#                         Full pipeline; preferred after a PR that
+#                         touches both data and feature code.
+#   feature_pipeline   — original chunked corpus orchestrator
+#                         (data/backfill.py from PR #101). Schedule +
+#                         actuals + statcast + features for fresh dates
+#                         only. Use for daily incremental refresh.
+#
+# Always: captures qa.py BEFORE + AFTER, posts the missing-rate delta
+# to GITHUB_STEP_SUMMARY, re-uploads enriched DuckDB.
 #
 # Trigger from the GitHub UI: Actions tab → "NRFI Weather Backfill"
-# → "Run workflow". Defaults run from 2025-01-01 to today.
+# → "Run workflow" → pick mode → Run.
 
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: "Backfill mode."
+        required: false
+        default: "weather_then_rebuild"
+        type: choice
+        options:
+          - weather_only
+          - force_rebuild
+          - weather_then_rebuild
+          - feature_pipeline
       from_date:
         description: "Start date (YYYY-MM-DD). Default: 2025-01-01."
         required: false
@@ -23,18 +49,18 @@ on:
         required: false
         default: ""
       max_days:
-        description: "Cap on chunk count (safety brake)."
+        description: "Cap on chunk count (feature_pipeline mode only)."
         required: false
         default: ""
       include_odds:
-        description: "Also pull Odds API closing-line snapshots (slower)."
+        description: "Pull Odds API closing-line snapshots (feature_pipeline only)."
         required: false
         default: "false"
 
 jobs:
   weather-backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 240    # heavy backfill; up to ~4hrs for full corpus
+    timeout-minutes: 360    # full historical rebuild can run ~4-6 hrs
     env:
       THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
     steps:
@@ -69,35 +95,49 @@ jobs:
           set -e
           cat "$OUTPUT_FILE"
           if [ $QA_RC -ne 0 ]; then
-            echo "::warning::QA before-snapshot exited $QA_RC — likely no DuckDB present. Backfill will create one."
-            # Write an empty placeholder so the diff section still renders.
+            echo "::warning::QA before-snapshot exited $QA_RC — likely no DuckDB present."
             echo "(no corpus yet; backfill will create one)" > "$OUTPUT_FILE"
           fi
-          # Extract the missing-weather % for the headline diff.
           MISS=$(grep -E "missing weather" "$OUTPUT_FILE" | awk '{print $4}' | tr -d '%' || echo "n/a")
           echo "missing_before=$MISS" >> "$GITHUB_OUTPUT"
 
-      - name: Run backfill (weather-included via reconstruction loop)
+      - name: Run backfill
         run: |
+          MODE="${{ github.event.inputs.mode }}"
           DATE_TO="${{ github.event.inputs.to_date }}"
-          MAX_DAYS_ARG=""
-          ODDS_ARG=""
-          if [ -n "${{ github.event.inputs.max_days }}" ]; then
-            MAX_DAYS_ARG="--max-days ${{ github.event.inputs.max_days }}"
-          fi
-          if [ "${{ github.event.inputs.include_odds }}" != "true" ]; then
-            ODDS_ARG="--no-odds"
-          fi
           DATE_ARGS="--from ${{ github.event.inputs.from_date }}"
           if [ -n "$DATE_TO" ]; then
             DATE_ARGS="$DATE_ARGS --to $DATE_TO"
           fi
-          # The data/backfill.py orchestrator wraps training/backfill.py,
-          # which calls reconstruct_features_for_date — that's where the
-          # weather snapshots are now persisted (PR #101's
-          # backtest.py addition).
-          python -m edge_equation.engines.nrfi.data.backfill \
-              $DATE_ARGS $MAX_DAYS_ARG $ODDS_ARG
+
+          run_weather_only() {
+            python -m edge_equation.engines.nrfi.data.weather_backfill \
+                $DATE_ARGS --pause-seconds 0.05
+          }
+          run_force_rebuild() {
+            python -m edge_equation.engines.nrfi.data.force_rebuild_features \
+                $DATE_ARGS
+          }
+          run_feature_pipeline() {
+            MAX_DAYS_ARG=""
+            ODDS_ARG=""
+            if [ -n "${{ github.event.inputs.max_days }}" ]; then
+              MAX_DAYS_ARG="--max-days ${{ github.event.inputs.max_days }}"
+            fi
+            if [ "${{ github.event.inputs.include_odds }}" != "true" ]; then
+              ODDS_ARG="--no-odds"
+            fi
+            python -m edge_equation.engines.nrfi.data.backfill \
+                $DATE_ARGS $MAX_DAYS_ARG $ODDS_ARG
+          }
+
+          case "$MODE" in
+            weather_only)         run_weather_only ;;
+            force_rebuild)        run_force_rebuild ;;
+            weather_then_rebuild) run_weather_only && run_force_rebuild ;;
+            feature_pipeline)     run_feature_pipeline ;;
+            *) echo "::error::unknown mode: $MODE"; exit 2 ;;
+          esac
 
       - name: Capture corpus QA — AFTER
         id: qa_after
@@ -116,6 +156,8 @@ jobs:
           {
             echo "## NRFI Weather Backfill"
             echo ""
+            echo "**Mode:** \`${{ github.event.inputs.mode }}\`"
+            echo ""
             echo "| Metric | Before | After |"
             echo "|---|---|---|"
             echo "| Missing weather % | ${MISS_BEFORE:-n/a}% | ${MISS_AFTER:-n/a}% |"
@@ -132,13 +174,11 @@ jobs:
             echo ""
             echo "### Next step"
             echo ""
-            echo "Run **NRFI Weekly Retrain** to rebuild the bundle with the"
-            echo "newly-backfilled weather rows, then re-run **NRFI Calibration"
-            echo "Audit** to see if Brier moves."
+            echo "1. Run **NRFI Walkforward Train** (or wait for weekly retrain)"
+            echo "   so the trainer rebuilds the bundle on the enriched corpus."
+            echo "2. Run **NRFI Calibration Audit** to see if Brier moves."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # Re-upload the enriched DuckDB so the daily email + audit + retrain
-      # all see the new weather rows on their next run.
       - name: Re-upload populated DuckDB (latest)
         if: always()
         uses: actions/upload-artifact@v4
