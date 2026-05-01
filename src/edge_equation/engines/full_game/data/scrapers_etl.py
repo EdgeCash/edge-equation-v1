@@ -176,6 +176,46 @@ def backfill_fullgame_actuals(
                 pass
 
     log.info("FG backfill: %d games persisted to fullgame_actuals.", n)
+
+    # Read-back diagnostic — confirms what actually landed in the DB.
+    # Run #28 reported "816 games persisted" but the team-rates query
+    # found 0 rows in the lookback window, suggesting either the rows
+    # never made it (silent upsert failure), or they have NULL
+    # home_team/away_team that the query's IS NOT NULL filter rejects.
+    # This SELECT-after-write tells us definitively.
+    try:
+        df_check = store.query_df(
+            """
+            SELECT COUNT(*) AS n_total,
+                   COUNT(home_team) AS n_with_home_team,
+                   COUNT(home_runs) AS n_with_home_runs,
+                   MIN(event_date) AS min_date,
+                   MAX(event_date) AS max_date,
+                   COUNT(DISTINCT home_team) AS n_distinct_home_teams
+            FROM fullgame_actuals
+            """
+        )
+        if df_check is not None and len(df_check) > 0:
+            row = df_check.iloc[0]
+            log.info(
+                "FG backfill diagnostic: total=%s with_home_team=%s "
+                "with_home_runs=%s date_range=%s..%s distinct_home_teams=%s",
+                row.get("n_total"), row.get("n_with_home_team"),
+                row.get("n_with_home_runs"),
+                row.get("min_date"), row.get("max_date"),
+                row.get("n_distinct_home_teams"),
+            )
+        # Sample first row to see actual values in the columns.
+        df_sample = store.query_df(
+            "SELECT * FROM fullgame_actuals ORDER BY event_date DESC LIMIT 3"
+        )
+        if df_sample is not None and len(df_sample) > 0:
+            for i, r in df_sample.iterrows():
+                log.info("FG backfill sample row: %s", dict(r))
+    except Exception as e:
+        log.warning("FG backfill diagnostic SELECT failed: %s: %s",
+                      type(e).__name__, e)
+
     return n
 
 
