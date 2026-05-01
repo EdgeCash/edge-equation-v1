@@ -115,6 +115,17 @@ export default function GradeHistory({ all, bySport, error }: Props) {
         Every settled pick, bucketed by the grade the engine assigned it.
         Pushes are excluded from denominators; void bets are excluded entirely.
       </p>
+      <div className="mt-5 inline-flex items-center gap-3 rounded-sm border border-conviction-elite/40 bg-conviction-eliteSoft/40 px-4 py-2 text-[12px]">
+        <span className="font-mono uppercase tracking-[0.22em] text-conviction-elite">
+          Looking for the public ledger?
+        </span>
+        <Link
+          href="/track-record"
+          className="font-mono uppercase tracking-[0.22em] text-conviction-elite border-b border-conviction-elite/60 hover:border-conviction-elite pb-0.5"
+        >
+          View Track Record →
+        </Link>
+      </div>
 
       {error && (
         <div className="mt-10 border border-edge-line rounded-sm p-6 bg-ink-900/80">

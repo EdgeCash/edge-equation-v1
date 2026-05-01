@@ -122,48 +122,50 @@ export default function Home({ generatedAt, totalPicks, teaser }: Props) {
 
   return (
     <Layout>
-      {/* Hero */}
-      <section className="pt-6 sm:pt-12">
-        <div className="eyebrow mb-6">
-          Edge Equation · V4
+      {/* Hero — cold-traffic optimized. Product clarity first
+          ("Free Daily MLB Picks · Highest Conviction First"), brand
+          tagline second ("Facts. Not Feelings."), CTAs third. */}
+      <section className="pt-6 sm:pt-10">
+        <div className="eyebrow mb-5">
+          MLB · 2026 Public Testing
         </div>
-        <h1 className="font-display font-light text-[clamp(3rem,9vw,7rem)] leading-[0.92] tracking-tightest">
-          Facts.
+        <h1 className="font-display font-light text-[clamp(2.5rem,8vw,6rem)] leading-[0.96] tracking-tightest">
+          Free Daily MLB Picks.
           <br />
-          <span className="italic text-edge-accent">Not Feelings.</span>
+          <span className="italic text-edge-accent">Highest Conviction First.</span>
         </h1>
-        <p className="mt-8 max-w-prose text-edge-textDim text-lg leading-relaxed">
-          We help people become better bettors by publishing the data — and the
-          reasoning — behind every call. The picks are free. Understanding the{" "}
-          <em className="text-edge-text not-italic">why</em> is the real edge.
+        <p className="mt-6 max-w-prose text-edge-textDim text-base sm:text-lg leading-relaxed">
+          Electric Blue plays + the full board + a transparent track record.
+          <span className="mt-2 block font-mono text-[11px] uppercase tracking-[0.24em] text-edge-textFaint">
+            Facts. Not Feelings.
+          </span>
         </p>
 
-        <div className="mt-10 flex flex-wrap items-center gap-3 sm:gap-4">
+        <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4">
           <Link
             href="/daily-edge"
-            className="group inline-flex items-center gap-3 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs uppercase tracking-[0.22em] hover:bg-edge-text transition-colors"
+            className="group inline-flex items-center gap-3 bg-edge-accent text-ink-950 px-6 py-3 font-mono text-xs font-semibold uppercase tracking-[0.22em] hover:bg-edge-text transition-colors"
           >
-            Free Daily Edge
+            See Today&apos;s Full Free Board
             <span className="group-hover:translate-x-1 transition-transform">→</span>
           </Link>
           <Link
-            href="/premium-edge"
+            href="/track-record"
             className="group inline-flex items-center gap-3 border border-edge-accent text-edge-accent px-6 py-3 font-mono text-xs uppercase tracking-[0.22em] hover:bg-edge-accent hover:text-ink-950 transition-colors"
           >
-            Explore Premium
+            View Full Track Record
             <span className="group-hover:translate-x-1 transition-transform">→</span>
           </Link>
-          <Link
-            href="/about"
-            className="font-mono text-xs uppercase tracking-[0.22em] text-edge-textDim hover:text-edge-accent transition-colors border-b border-transparent hover:border-edge-accent pb-1"
-          >
-            Read Our Story
-          </Link>
+          <span className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-conviction-elite">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-conviction-elite" aria-hidden="true" />
+            Free. Always.
+          </span>
         </div>
       </section>
 
-      {/* Daily Electric Blue teaser */}
-      <section className="mt-20">
+      {/* Electric Blue board — pulled close to the hero so the highest-
+          conviction picks land above the fold for cold X traffic. */}
+      <section className="mt-12 sm:mt-14">
         <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
           <div>
             <div className="eyebrow mb-2">
@@ -186,15 +188,26 @@ export default function Home({ generatedAt, totalPicks, teaser }: Props) {
             ))}
           </div>
         ) : (
-          <div className="border border-edge-line rounded-sm p-8 bg-ink-900/60">
+          <div className="rounded-sm border border-edge-line bg-ink-900/60 p-8">
             <p className="text-edge-textDim max-w-prose">
-              No slate has been published yet today. The full archive and
-              historical hit rates by conviction tier are still available — see{" "}
-              <Link href="/grade-history" className="text-edge-accent border-b border-edge-accent/40 hover:border-edge-accent">
-                grade history
-              </Link>
-              .
+              No slate has been published yet today. While we wait for confirmed
+              lineups + weather + umpires, the past picks and running record
+              live on the public ledger.
             </p>
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              <Link
+                href="/track-record"
+                className="font-mono text-xs uppercase tracking-[0.22em] text-edge-accent border-b border-edge-accent/40 hover:border-edge-accent pb-1"
+              >
+                See full track record →
+              </Link>
+              <Link
+                href="/archive"
+                className="font-mono text-xs uppercase tracking-[0.22em] text-edge-textDim hover:text-edge-accent border-b border-transparent hover:border-edge-accent pb-1"
+              >
+                Browse archive
+              </Link>
+            </div>
           </div>
         )}
 
@@ -204,6 +217,12 @@ export default function Home({ generatedAt, totalPicks, teaser }: Props) {
             className="font-mono text-xs uppercase tracking-[0.22em] text-edge-accent border-b border-edge-accent/40 hover:border-edge-accent pb-1"
           >
             See the full slate →
+          </Link>
+          <Link
+            href="/track-record"
+            className="font-mono text-xs uppercase tracking-[0.22em] text-edge-textDim hover:text-edge-accent border-b border-transparent hover:border-edge-accent pb-1"
+          >
+            View track record →
           </Link>
           <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textFaint">
             Free. Always.
@@ -270,12 +289,13 @@ export default function Home({ generatedAt, totalPicks, teaser }: Props) {
         </div>
       </section>
 
-      {/* Value prop strip */}
+      {/* Value prop strip — three doors. Track Record replaces the
+          old Premium tile during the free public-testing phase. */}
       <section className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-px bg-edge-line">
         {[
           {
             num: "01",
-            title: "Free Daily Edge",
+            title: "Free Daily Board",
             body:
               "The Electric Blue board, every day. No paywall. No upsell to see today’s call.",
             href: "/daily-edge",
@@ -283,11 +303,11 @@ export default function Home({ generatedAt, totalPicks, teaser }: Props) {
           },
           {
             num: "02",
-            title: "Show The Why",
+            title: "Transparent Track Record",
             body:
-              "Each pick comes with the inputs that drove it. Premium subscribers get the full Why notes, deeper analysis, and parlay reasoning.",
-            href: "/premium-edge",
-            cta: "Explore Premium",
+              "Every LEAN-and-above pick we’ve ever published — wins, losses, pushes — logged honestly. The receipts live on a public page.",
+            href: "/track-record",
+            cta: "View track record",
           },
           {
             num: "03",
@@ -319,7 +339,15 @@ export default function Home({ generatedAt, totalPicks, teaser }: Props) {
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-edge-textFaint max-w-prose leading-relaxed">
           Edge Equation publishes data and analysis. We do not sell guaranteed
           winners — they don&apos;t exist. Past performance does not predict
-          future results. Bet within your means. 21+.
+          future results. Bet within your means. 21+. If you or someone you
+          know has a gambling problem, call{" "}
+          <a
+            href="tel:18004262537"
+            className="text-edge-textDim underline underline-offset-2"
+          >
+            1-800-GAMBLER
+          </a>
+          .
         </p>
       </section>
     </Layout>
