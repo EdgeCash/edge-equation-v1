@@ -5,6 +5,7 @@ import CardShell from "@/components/CardShell";
 import ConvictionBadge from "@/components/ConvictionBadge";
 import ConvictionKey from "@/components/ConvictionKey";
 import Layout from "@/components/Layout";
+import MathBackdrop from "@/components/MathBackdrop";
 import StatTile from "@/components/StatTile";
 import { formatAmericanOdds, formatDate, formatPercent } from "@/lib/api";
 import { tierFromGrade, type ConvictionTier } from "@/lib/conviction";
@@ -223,15 +224,20 @@ export default function DailyEdge({ view, error }: Props) {
       title="Daily Edge"
       description="Today's unified board — First Inning, Props, and Full Game — from the Edge Equation engine. Free, every day."
     >
-      <div className="eyebrow mb-4">Free · Every Day</div>
-      <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-[0.95]">
-        Daily <span className="italic text-edge-accent">Edge.</span>
-      </h1>
-      <p className="mt-6 max-w-prose text-edge-textDim text-lg leading-relaxed">
-        One unified board, grouped by market. Every pick carries a single
-        conviction tier — Electric Blue is the top of the ladder, on either
-        side. Most days, most plays sit below it. That&apos;s the point.
-      </p>
+      <section className="relative mb-2 pb-2">
+        <MathBackdrop variant="section" />
+        <div className="relative">
+          <div className="eyebrow mb-4">Free · Every Day</div>
+          <h1 className="font-display font-light text-5xl sm:text-6xl tracking-tightest leading-[0.95]">
+            Daily <span className="italic text-edge-accent">Edge.</span>
+          </h1>
+          <p className="mt-6 max-w-prose text-edge-textDim text-lg leading-relaxed">
+            One unified board, grouped by market. Every pick carries a single
+            conviction tier — Electric Blue is the top of the ladder, on either
+            side. Most days, most plays sit below it. That&apos;s the point.
+          </p>
+        </div>
+      </section>
 
       <TestingDisclaimer placement="top" />
 
