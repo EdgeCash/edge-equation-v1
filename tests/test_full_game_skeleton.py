@@ -213,20 +213,31 @@ def test_load_team_rates_table_falls_back_when_query_raises():
 
 
 def test_load_team_rates_table_uses_lookback_window_in_query():
-    """end - lookback_days should bound the query."""
+    """end - lookback_days should bound the team-rates query."""
     from edge_equation.engines.full_game.data.team_rates import (
         load_team_rates_table,
     )
-    captured: dict = {}
+    captured: list = []
 
     class _Spy:
         def query_df(self, sql, params):
-            captured["params"] = params
+            # Capture every call so the test can assert on the
+            # team-rates query specifically (the loader also runs a
+            # secondary diagnostic query with a different parameter
+            # shape).
+            captured.append((sql, params))
             import pandas as pd
             return pd.DataFrame()
 
     load_team_rates_table(_Spy(), end_date="2026-05-01", lookback_days=14)
-    start, end = captured["params"]
+    # First query is the main team-rates SELECT. Find it by SQL shape.
+    main_query = next(
+        (params for sql, params in captured
+          if "SELECT\n    game_pk" in sql or "game_pk, event_date" in sql),
+        None,
+    )
+    assert main_query is not None, f"team-rates query not found in {captured!r}"
+    start, end = main_query
     assert end == "2026-05-01"
     assert start == "2026-04-17"   # 14 days back
 
