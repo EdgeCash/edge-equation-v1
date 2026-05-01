@@ -172,6 +172,16 @@ class FullGameStore:
         )
         with self.cursor() as cur:
             cur.executemany(sql, [tuple(r[c] for c in cols) for r in rows])
+        # Explicit checkpoint flushes the WAL into the main file so
+        # subsequent subprocess connections see the data. Without
+        # this, the backfill subprocess writes 821 rows, exits, and
+        # the next process opens the file but reads ``COUNT(*) = 0``
+        # — DuckDB's WAL contained the writes but the connection
+        # close didn't promote them. Idempotent + cheap.
+        try:
+            self._conn.execute("CHECKPOINT")
+        except Exception:
+            pass
         return len(rows)
 
     def query_df(self, sql: str, params: Optional[tuple] = None):
@@ -181,6 +191,14 @@ class FullGameStore:
         self._conn.execute(sql, params or ())
 
     def close(self) -> None:
+        # Force a final checkpoint before close so any WAL contents
+        # not yet promoted (e.g. from non-upsert ``execute()`` calls)
+        # land in the main file. Belt-and-suspenders alongside the
+        # per-upsert checkpoint above.
+        try:
+            self._conn.execute("CHECKPOINT")
+        except Exception:
+            pass
         self._conn.close()
 
     # --- Convenience accessors --------------------------------------------

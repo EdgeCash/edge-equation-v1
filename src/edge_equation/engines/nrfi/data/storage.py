@@ -176,6 +176,13 @@ class NRFIStore:
         sql = f"INSERT OR REPLACE INTO {table} ({col_list}) VALUES ({placeholders})"
         with self.cursor() as cur:
             cur.executemany(sql, [tuple(r[c] for c in cols) for r in rows])
+        # Explicit checkpoint flushes the WAL into the main file so
+        # subsequent subprocess connections see the data. Mirrors the
+        # FG / Props store fix for the same WAL-not-promoted issue.
+        try:
+            self._conn.execute("CHECKPOINT")
+        except Exception:
+            pass
         return len(rows)
 
     def query_df(self, sql: str, params: Optional[tuple] = None):
@@ -186,6 +193,12 @@ class NRFIStore:
         self._conn.execute(sql, params or ())
 
     def close(self) -> None:
+        # Force checkpoint before close so any non-upsert writes
+        # land in the main file before the connection releases.
+        try:
+            self._conn.execute("CHECKPOINT")
+        except Exception:
+            pass
         self._conn.close()
 
     # --- Convenience accessors ---------------------------------------------
