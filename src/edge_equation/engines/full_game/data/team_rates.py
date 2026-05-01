@@ -175,15 +175,40 @@ def compute_team_rates_from_actuals(
 # ---------------------------------------------------------------------------
 
 
+# DuckDB's parameter binding doesn't always auto-cast strings to DATE
+# on older versions, and we've seen this query return 0 rows despite
+# the table holding 800+ matching rows. Explicit ``CAST(... AS DATE)``
+# on both column and parameters forces a uniform DATE comparison so
+# the BETWEEN works regardless of how the column was created (DATE in
+# the current schema, but legacy artifacts may have stored it as
+# TIMESTAMP or VARCHAR).
 _TEAM_RATES_QUERY = """
 SELECT
     game_pk, event_date, home_team, away_team, home_runs, away_runs
 FROM fullgame_actuals
-WHERE event_date BETWEEN ? AND ?
+WHERE CAST(event_date AS DATE) BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)
   AND home_team IS NOT NULL
   AND away_team IS NOT NULL
   AND home_runs IS NOT NULL
   AND away_runs IS NOT NULL
+"""
+
+
+# Diagnostic counterpart — returns same row but also breaks down the
+# WHERE clause to isolate which condition is filtering rows out.
+_TEAM_RATES_DIAGNOSTIC = """
+SELECT
+    COUNT(*) AS n_total,
+    COUNT(*) FILTER (
+        WHERE CAST(event_date AS DATE)
+              BETWEEN CAST(? AS DATE) AND CAST(? AS DATE)
+    ) AS n_in_range,
+    COUNT(*) FILTER (WHERE home_team IS NOT NULL) AS n_with_home,
+    COUNT(*) FILTER (WHERE home_runs IS NOT NULL) AS n_with_runs,
+    COUNT(*) FILTER (WHERE CAST(event_date AS DATE) >= CAST(? AS DATE)) AS n_gte_start,
+    COUNT(*) FILTER (WHERE CAST(event_date AS DATE) <= CAST(? AS DATE)) AS n_lte_end,
+    typeof(MIN(event_date)) AS event_date_type
+FROM fullgame_actuals
 """
 
 
@@ -224,6 +249,30 @@ def load_team_rates_table(
         log.warning("FG team rates query failed (%s): %s",
                       type(e).__name__, e)
         df = None
+
+    # Diagnostic — runs always so we can see the breakdown even when
+    # the main query returned 0 rows. Tells us if the issue is the
+    # date filter, the IS NOT NULL filter, or the column type.
+    try:
+        diag = store.query_df(
+            _TEAM_RATES_DIAGNOSTIC,
+            (start.isoformat(), end.isoformat(),
+              start.isoformat(), end.isoformat()),
+        )
+        if diag is not None and len(diag) > 0:
+            r = diag.iloc[0]
+            log.info(
+                "FG team rates diagnostic: total=%s in_range=%s "
+                "with_home=%s with_runs=%s gte_start=%s lte_end=%s "
+                "event_date_type=%s",
+                r.get("n_total"), r.get("n_in_range"),
+                r.get("n_with_home"), r.get("n_with_runs"),
+                r.get("n_gte_start"), r.get("n_lte_end"),
+                r.get("event_date_type"),
+            )
+    except Exception as e:
+        log.debug("FG team rates diagnostic failed (%s): %s",
+                    type(e).__name__, e)
 
     table = default_team_rates_table(
         end_date=end_date, lookback_days=lookback_days,
