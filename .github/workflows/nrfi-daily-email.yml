@@ -153,6 +153,25 @@ jobs:
           path: data/props_cache/
           if_no_artifact_found: warn
 
+      # Hydrate the per-player Statcast parquet cache from the previous
+      # run. Without this, ``email_report.build_card`` re-pulls every
+      # player's rolling Statcast window from pybaseball each run
+      # (~150 players × ~5s each = ~12 minutes wasted on each daily
+      # send). With the cache hydrated, subsequent runs reuse the
+      # parquets and the props orchestrator becomes a one-shot DuckDB
+      # read. The cache busts when the (player_id, end_date,
+      # lookback_days) tuple changes — i.e. naturally rolls forward by
+      # one day's worth of new files per day.
+      - name: Hydrate props parquet cache from latest artifact
+        if: env.SKIP_RUN != '1'
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: nrfi-daily-email.yml
+          name: props-parquet-cache-latest
+          path: data/props_cache/parquet/
+          if_no_artifact_found: warn
+
       # Full-Game uses its own DuckDB at data/fullgame_cache/fullgame.duckdb.
       # Same handoff pattern — yesterday's predictions need to land for
       # today's settle pass + ledger.
@@ -385,6 +404,22 @@ jobs:
         with:
           name: props-duckdb-latest
           path: data/props_cache/props.duckdb
+          if-no-files-found: ignore
+          retention-days: 30
+          overwrite: true
+
+      # Re-upload the per-player Statcast parquet cache so tomorrow's
+      # run reuses today's pulls. Each player gets one parquet file
+      # under ``parquet/statcast_player/`` keyed by
+      # ``{role}_{player_id}_{start}_{end}``. With ~150 distinct
+      # players per slate and ~5s per pybaseball pull, hydrating this
+      # cache cuts the email step from ~12 minutes to under 1.
+      - name: Re-upload props parquet cache (latest)
+        if: always() && env.SKIP_RUN != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: props-parquet-cache-latest
+          path: data/props_cache/parquet/
           if-no-files-found: ignore
           retention-days: 30
           overwrite: true
