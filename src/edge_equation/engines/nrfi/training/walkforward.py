@@ -377,7 +377,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     parser.add_argument("--no-save-bundle", action="store_true")
     parser.add_argument("--calibration-method",
                           choices=("isotonic", "platt", "beta"),
-                          default="beta")
+                          default="isotonic")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args(list(argv) if argv is not None else None)
 

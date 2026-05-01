@@ -35,9 +35,9 @@ on:
         required: false
         default: "7"
       calibration_method:
-        description: "isotonic, platt, or beta (production default)"
+        description: "isotonic (default), platt, or beta. Beta passed the calibration audit but failed the sanity gate on 2026-05-01; opt in with care."
         required: false
-        default: "beta"
+        default: "isotonic"
       run_sanity:
         description: "Run the ML-vs-baseline sanity report after training. Default true."
         required: false

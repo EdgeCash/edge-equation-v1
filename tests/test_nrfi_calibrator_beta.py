@@ -128,10 +128,13 @@ def test_unknown_method_raises():
 # ---------------------------------------------------------------------------
 
 
-def test_default_config_calibration_method_is_beta():
-    """Beta became the production default on 2026-05-01 after the
-    calibration audit. Pin it so a future drive-by edit doesn't
-    silently revert to isotonic."""
+def test_default_config_calibration_method_is_isotonic():
+    """Isotonic is the production default. Beta won the random-split
+    calibration audit on 2026-05-01 but failed the production sanity
+    gate (Walk-Forward Training run #9 — Brier delta +0.0012 vs
+    Poisson baseline). Pinning isotonic here so a future drive-by
+    edit doesn't silently flip the default to beta without re-running
+    sanity. See engines/nrfi/config.py docstring for the full context."""
     from edge_equation.engines.nrfi.config import get_default_config
     cfg = get_default_config()
-    assert cfg.model.calibration_method == "beta"
+    assert cfg.model.calibration_method == "isotonic"

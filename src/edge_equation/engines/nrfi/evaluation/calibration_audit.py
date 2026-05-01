@@ -124,6 +124,15 @@ class AuditReport:
             "",
             "If no calibrator beats raw on Brier AND lifts >=64 above 0, the ceiling is",
             "feature signal (not calibration). See CALIBRATION_AUDIT_INTERPRETATION.md.",
+            "",
+            "Caveat — generalization gap (added after 2026-05-01 incident):",
+            "This audit's split is random within the walkforward window, so the",
+            "train and eval halves have similar statistical conditions. The",
+            "production sanity gate (engines/nrfi/training/sanity.py) holds out",
+            "the recent tail instead, which is harder. A calibrator that wins",
+            "the audit may still regress on the sanity slice. Always re-train",
+            "with the candidate calibrator and verify the sanity gate passes",
+            "before promoting to production.",
         ])
         return "\n".join(lines)
 
