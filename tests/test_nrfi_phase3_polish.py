@@ -80,6 +80,8 @@ def test_build_output_basic_fields():
     assert out.nrfi_pct == 78.0
     assert out.color_band == "Deep Green"
     assert out.signal == "STRONG_NRFI"
+    assert out.tier == "ELITE"
+    assert out.tier_band == "70-100%"
     assert out.headline().startswith("78.")
 
 
@@ -123,7 +125,8 @@ def test_to_email_card_renders_one_liner_plus_drivers():
     )
     s = to_email_card(out)
     assert "74.0% NRFI" in s
-    assert "[ Deep Green]" in s or "[Deep Green]" in s
+    assert "ELITE" in s
+    assert "Deep Green" in s
     assert "drivers:" in s
 
 
@@ -143,8 +146,26 @@ def test_to_dashboard_row_has_preformatted_strings():
                        market_american_odds=-115, mc_low=0.58, mc_high=0.66)
     row = to_dashboard_row(out)
     assert row["NRFI %"] == "62.0%"
+    assert row["Tier"] == "MODERATE"
     assert row["MC ±"].startswith("±")
-    assert "u" in row["Stake"] or row["Stake"] == "—"
+    assert "u" in row["Kelly"] or row["Kelly"] in {"Pass", "No bet"}
+
+
+def test_build_output_includes_elite_daily_fields():
+    from edge_equation.engines.nrfi.output import build_output, to_api_dict
+    out = build_output(
+        game_id="g1", blended_p=0.71, lambda_total=0.52,
+        market_american_odds=-110, mc_low=0.67, mc_high=0.75,
+        shap_drivers=[("away_top3_xwoba", 0.04), ("park_factor_runs", -0.02)],
+    )
+    d = to_api_dict(out)
+    assert d["tier"] == "ELITE"
+    assert d["tier_basis"] == "raw_probability"
+    assert d["tier_band"] == "70-100%"
+    assert d["mc_band_pp"] == 4.0
+    assert d["edge_pp"] is not None
+    assert d["kelly_suggestion"].endswith("u")
+    assert d["driver_text"]
 
 
 # ---------------------------------------------------------------------------

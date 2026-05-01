@@ -130,8 +130,20 @@ class ModelConfig:
     # Convex blend between the ML classifier output and the Poisson
     # baseline (P_NRFI = exp(-λ_total)). 0.0 = pure Poisson, 1.0 = pure ML.
     ml_blend_weight: float = 0.65
-    # Calibration method: "isotonic" or "platt".
-    calibration_method: str = "isotonic"
+    # Dynamic blend boost lets strong raw tree signal move the final probability
+    # farther away from the deterministic baseline while still capping ML
+    # dominance. This widens honest high-signal slates without simply lowering
+    # tier thresholds.
+    signal_blend_boost: float = 0.20
+    max_dynamic_ml_weight: float = 0.85
+    # Conservative residual push from raw XGBoost signal after calibration.
+    # Evaluation showed alpha=0.05 adds useful spread with minimal Brier/log-loss
+    # degradation; higher values create prettier tiers but less honest calibration.
+    raw_signal_residual_alpha: float = 0.05
+    # Calibration method: "isotonic", "platt", or "hybrid".
+    # Hybrid averages a light isotonic fit with Platt scaling so calibration
+    # stays honest without collapsing all live probabilities into a narrow band.
+    calibration_method: str = "hybrid"
     # Holdout fraction used to fit the calibrator.
     calibration_holdout_frac: float = 0.20
     # Min samples per calibration bucket for diagnostic plots.

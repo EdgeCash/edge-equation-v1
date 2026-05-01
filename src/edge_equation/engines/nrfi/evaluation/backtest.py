@@ -87,6 +87,25 @@ def _season_from_date(target_date: str) -> int:
     return int(target_date[:4])
 
 
+def _persist_weather_snapshot(store: NRFIStore, game_pk: int, wx, roof_open) -> None:
+    """Persist weather used for feature construction into DuckDB."""
+    if wx is None:
+        return
+    store.upsert("weather", [{
+        "game_pk": int(game_pk),
+        "source": wx.source,
+        "as_of_ts": None,
+        "temperature_f": float(wx.temperature_f),
+        "wind_speed_mph": float(wx.wind_speed_mph),
+        "wind_dir_deg": float(wx.wind_dir_deg),
+        "humidity_pct": float(wx.humidity_pct),
+        "dew_point_f": float(wx.dew_point_f),
+        "air_density": float(wx.air_density_kg_m3),
+        "precip_prob": float(wx.precip_prob),
+        "roof_open": roof_open,
+    }])
+
+
 def _abs_active_for_season(season: int) -> bool:
     """ABS Challenge System became league-wide in 2026."""
     return season >= 2026

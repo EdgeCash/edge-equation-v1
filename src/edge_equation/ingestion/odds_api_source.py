@@ -24,7 +24,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional
 
-from edge_equation.ingestion.odds_api_client import TheOddsApiClient
+from edge_equation.engines.core.data.odds_api_client import TheOddsApiClient
 
 
 ODDS_API_SPORT_MAP = {

@@ -59,13 +59,23 @@ from dataclasses import asdict
 from datetime import date as _date, datetime, timezone
 from typing import Any, Iterable, Optional
 
+from edge_equation.engines.core.posting.conviction import (
+    conviction_band,
+    electric_indices,
+    format_conviction_line,
+    render_conviction_key,
+)
+from edge_equation.utils.logging import get_logger
+
 from .config import get_default_config
+from .data.odds import lookup_closing_odds
 from .data.scrapers_etl import daily_etl
 from .data.storage import NRFIStore
 from .evaluation.backtest import reconstruct_features_for_date
 from .integration.engine_bridge import NRFIEngineBridge
-from .output import build_output, to_email_card
-from edge_equation.utils.logging import get_logger
+from .ledger import render_ledger_section
+from .output import build_output
+from .output.drivers import format_driver_notes
 
 log = get_logger(__name__, "INFO")
 
@@ -77,7 +87,13 @@ SUBJECT_PREFIX = "Edge Equation — NRFI/YRFI Daily"
 # Card construction
 # ---------------------------------------------------------------------------
 
-def build_card(target_date: str, *, run_etl: bool = True) -> dict:
+def build_card(
+    target_date: str,
+    *,
+    run_etl: bool = True,
+    run_settlement: bool = True,
+    pull_live_odds: bool = True,
+) -> dict:
     """Build the EmailPublisher-compatible card dict for `target_date`.
 
     Returns a dict with `card_type`, `headline`, `subhead`, `tagline`,
@@ -94,6 +110,13 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
             daily_etl(target_date, store, config=cfg)
         except Exception as e:
             log.warning("daily_etl failed (%s) — proceeding with cached games", e)
+    if pull_live_odds:
+        try:
+            from .data.odds import capture_closing_lines
+            capture_closing_lines(store, target_date, config=cfg)
+        except Exception as e:
+            log.warning("live odds capture skipped (%s): %s",
+                        type(e).__name__, e)
 
     # Build features for every game on the slate, then run the engine.
     # Live daily run → forecast weather (the archive endpoint lags ~5
@@ -111,31 +134,46 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
 
     picks: list[dict] = []
     if feats_per_game:
+        market_probs, american_odds, market_probs_by_side, american_odds_by_side = _market_inputs_for_games(
+            store,
+            [pk for pk, _ in feats_per_game],
+        )
         # Engine-bridge produces NRFI + YRFI rows per game
         outputs = bridge.predict_for_features(
             [f for _, f in feats_per_game],
             game_ids=[str(pk) for pk, _ in feats_per_game],
+            market_probs=market_probs,
+            american_odds=american_odds,
+            yrfi_market_probs=[
+                market_probs_by_side.get((str(pk), "YRFI"))
+                for pk, _ in feats_per_game
+            ],
+            yrfi_american_odds=[
+                american_odds_by_side.get((str(pk), "YRFI"), -105.0)
+                for pk, _ in feats_per_game
+            ],
         )
         # Rebuild canonical NRFIOutput so we get all the email-friendly
         # fields (mc_band_pp, driver_text, etc.).
         for o in outputs:
-            picks.append(_to_card_pick(o, engine_label, label_map))
+            picks.append(_to_card_pick(
+                o, engine_label, label_map,
+                market_prob=market_probs_by_side.get((str(o.game_id), o.market_type)),
+                american_odds=american_odds_by_side.get((str(o.game_id), o.market_type)),
+            ))
 
-    # Sort: NRFI side first (descending NRFI%), then YRFI side.
-    picks.sort(key=lambda p: (
-        0 if p["market_type"] == "NRFI" else 1,
-        -float(p.get("pct", 0.0)),
-    ))
+    picks = _top_first_inning_board(picks, limit=10)
 
     # Settle yesterday's slate before rendering today's so the YTD
     # ledger reflects last night's results. Best-effort — a network
     # blip on actuals shouldn't block the daily email.
     ledger_text = ""
     try:
-        from .ledger import render_ledger_section, settle_predictions
+        from .ledger import settle_predictions
         season = int(target_date[:4])
-        settle_predictions(store, season=season, cutoff_date=target_date,
-                            config=cfg, pull_actuals=True)
+        if run_settlement:
+            settle_predictions(store, season=season, cutoff_date=target_date,
+                                config=cfg, pull_actuals=True)
         ledger_text = render_ledger_section(store, season=season)
     except Exception as e:
         log.warning("ledger settlement skipped (%s): %s",
@@ -156,59 +194,137 @@ def build_card(target_date: str, *, run_etl: bool = True) -> dict:
         log.warning("parlay block skipped (%s): %s",
                       type(e).__name__, e)
 
-    # Props integration (Props-3): build today's props card and append
-    # the polished top-N-by-edge block + props YTD ledger to the email
-    # body. Best-effort — any failure (Odds API down, pybaseball not
-    # installed, props DuckDB missing) returns empty strings and the
-    # NRFI email proceeds untouched.
-    props_top_text = ""
-    props_ledger_text = ""
-    try:
-        from edge_equation.engines.props_prizepicks.daily import build_props_card
-        props_card = build_props_card(target_date)
-        props_top_text = props_card.top_board_text
-        props_ledger_text = props_card.ledger_text
-    except Exception as e:
-        log.warning("props daily card skipped (%s): %s",
-                      type(e).__name__, e)
-
-    # Full-game integration (FG-3): build today's full-game card and
-    # append the polished top-N-by-edge block + per-tier YTD ledger
-    # below the props block. Best-effort — Odds API errors / missing
-    # rates / DuckDB issues all degrade silently.
-    fullgame_top_text = ""
-    fullgame_ledger_text = ""
-    try:
-        from edge_equation.engines.full_game.daily import build_full_game_card
-        fullgame_card = build_full_game_card(target_date)
-        fullgame_top_text = fullgame_card.top_board_text
-        fullgame_ledger_text = fullgame_card.ledger_text
-    except Exception as e:
-        log.warning("full-game daily card skipped (%s): %s",
-                      type(e).__name__, e)
-
     subject_date = target_date
     return {
         "card_type": CARD_TYPE,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "headline": f"NRFI/YRFI Daily — {subject_date}",
-        "subhead": "Facts. Not Feelings.",
+        "subhead": _report_subhead(engine_label, ledger_text),
         "tagline": _footer_text(engine_label),
         "engine": engine_label,
         "target_date": subject_date,
         "picks": picks,
+        "props": [],
+        "full_game": [],
         "ledger_text": ledger_text,
         "parlay_text": parlay_text,
         "parlay_ledger_text": parlay_ledger_text,
-        "props_top_text": props_top_text,
-        "props_ledger_text": props_ledger_text,
-        "fullgame_top_text": fullgame_top_text,
-        "fullgame_ledger_text": fullgame_ledger_text,
     }
 
 
-def _to_card_pick(bridge_output, engine_label: str,
-                   label_map: dict[str, str] | None = None) -> dict:
+def _report_subhead(engine_label: str, ledger_text: str) -> str:
+    """Short professional header for the daily report."""
+    disclaimer = ""
+    if engine_label != "ml":
+        disclaimer = " | BASELINE FALLBACK: trained bundle unavailable"
+    ledger_headline = _ledger_headline(ledger_text)
+    return f"Facts. Not Feelings.{disclaimer}{ledger_headline}"
+
+
+def _ledger_headline(ledger_text: str) -> str:
+    """Compress the YTD ALL/ALL row into a one-line header, if present."""
+    if not ledger_text:
+        return ""
+    for line in ledger_text.splitlines():
+        parts = line.split()
+        if len(parts) >= 4 and parts[0] == "ALL" and parts[1] == "ALL":
+            return f" | YTD {parts[2]} {parts[3]}"
+    return ""
+
+
+def _top_six_by_edge(picks: list[dict]) -> list[dict]:
+    """Backward-compatible alias for older tests/callers."""
+    return _top_first_inning_board(picks, limit=6)
+
+
+def _top_first_inning_board(picks: list[dict], *, limit: int = 10) -> list[dict]:
+    """Unified NRFI/YRFI board sorted by edge, then raw side probability."""
+    def _strength(pick: dict) -> float:
+        edge_pp = pick.get("edge_pp")
+        if edge_pp is not None:
+            return float(edge_pp)
+        return float(pick.get("pct", 0.0))
+
+    ranked = sorted(picks, key=_strength, reverse=True)[:limit]
+    _annotate_conviction(ranked)
+    return ranked
+
+
+def _annotate_conviction(picks: list[dict]) -> None:
+    """Attach shared conviction color fields across NRFI and YRFI rows."""
+    rows = []
+    for pick in picks:
+        edge_pp = pick.get("edge_pp")
+        rows.append({
+            "model_probability": float(pick.get("pct", 0.0)) / 100.0,
+            "edge": (float(edge_pp) / 100.0) if edge_pp is not None else None,
+        })
+    electric = electric_indices(rows, top_n=3, min_probability=0.58)
+    for idx, pick in enumerate(picks):
+        edge_pp = pick.get("edge_pp")
+        band = conviction_band(
+            float(pick.get("pct", 0.0)) / 100.0,
+            edge=(float(edge_pp) / 100.0) if edge_pp is not None else None,
+            is_electric=idx in electric,
+        )
+        pick["conviction_color"] = band.label
+        pick["conviction_hex"] = band.hex_color
+
+
+def _market_inputs_for_games(
+    store: NRFIStore, game_pks: list[int],
+) -> tuple[
+    list[float | None],
+    list[float],
+    dict[tuple[str, str], float | None],
+    dict[tuple[str, str], float | None],
+]:
+    """Return market inputs for bridge prediction and side-specific display.
+
+    The bridge consumes NRFI-side market probabilities for its paired game
+    forecasts. The final email rows use side-specific NRFI/YRFI odds so Kelly
+    for a YRFI recommendation is based on the posted Over 0.5 price, not
+    ``1 - NRFI implied``.
+    """
+    market_probs: list[float | None] = []
+    american_odds: list[float] = []
+    probs_by_side: dict[tuple[str, str], float | None] = {}
+    odds_by_side: dict[tuple[str, str], float | None] = {}
+    for game_pk in game_pks:
+        gkey = str(game_pk)
+        nrfi_odds = _lookup_side_odds_safe(store, int(game_pk), "NRFI")
+        yrfi_odds = _lookup_side_odds_safe(store, int(game_pk), "YRFI")
+        market_probs.append(_implied_prob(nrfi_odds) if nrfi_odds is not None else None)
+        american_odds.append(float(nrfi_odds) if nrfi_odds is not None else -110.0)
+        for side, odds in (("NRFI", nrfi_odds), ("YRFI", yrfi_odds)):
+            odds_by_side[(gkey, side)] = float(odds) if odds is not None else None
+            probs_by_side[(gkey, side)] = (
+                _implied_prob(odds) if odds is not None else None
+            )
+    return market_probs, american_odds, probs_by_side, odds_by_side
+
+
+def _lookup_side_odds_safe(store: NRFIStore, game_pk: int, market_type: str) -> float | None:
+    try:
+        return lookup_closing_odds(store, int(game_pk), market_type)
+    except Exception:
+        return None
+
+
+def _implied_prob(american_odds: float) -> float:
+    if american_odds < 0:
+        return abs(float(american_odds)) / (abs(float(american_odds)) + 100.0)
+    return 100.0 / (float(american_odds) + 100.0)
+
+
+def _to_card_pick(
+    bridge_output,
+    engine_label: str,
+    label_map: dict[str, str] | None = None,
+    *,
+    market_prob: float | None = None,
+    american_odds: float | None = None,
+) -> dict:
     """Map an `NRFIBridgeOutput` to the dict shape expected by
     `EmailPublisher.build_body` + our richer custom renderer.
 
@@ -237,7 +353,8 @@ def _to_card_pick(bridge_output, engine_label: str,
         shap_drivers=bridge_output.shap_drivers,
         mc_low=bridge_output.mc_low,
         mc_high=bridge_output.mc_high,
-        market_prob=bridge_output.market_prob,
+        market_prob=market_prob if market_prob is not None else bridge_output.market_prob,
+        market_american_odds=american_odds,
         grade=bridge_output.grade,
         realization=bridge_output.realization,
         engine=engine_label,
@@ -250,13 +367,11 @@ def _to_card_pick(bridge_output, engine_label: str,
         market_type=out.market_type,
         side_probability=out.nrfi_prob,
     )
-
-    pretty = to_email_card(out)
-    if tier_clf.tier.is_qualifying:
-        # Prepend the tier tag so the operator sees conviction at a glance.
-        pretty_lines = pretty.split("\n", 1)
-        pretty_lines[0] = f"[{tier_clf.tier.value:<8}] {pretty_lines[0]}"
-        pretty = "\n".join(pretty_lines)
+    readable_drivers = format_driver_notes(
+        bridge_output.shap_drivers,
+        max_drivers=4,
+    )
+    rendered = f"{out.game_id} · {out.market_type} {out.nrfi_pct:.1f}%"
 
     return {
         "game_id": out.game_id,
@@ -270,187 +385,23 @@ def _to_card_pick(bridge_output, engine_label: str,
         "lambda_total": out.lambda_total,
         "mc_band_pp": out.mc_band_pp,
         "edge": (f"{out.edge_pp:+.1f}pp" if out.edge_pp is not None else None),
-        # Phase NRFI-elite: keep the raw numeric edge so the top-board
-        # renderer can sort by it without parsing the formatted string back.
-        "edge_pp_raw": float(out.edge_pp) if out.edge_pp is not None else None,
+        "edge_pp": out.edge_pp,
         "kelly": (f"{out.kelly_units:.2f}u" if (out.kelly_units or 0) > 0 else None),
-        "kelly_units_raw": float(out.kelly_units) if out.kelly_units is not None else None,
+        "kelly_suggestion": out.kelly_suggestion,
         "grade": out.grade,
         "tier": tier_clf.tier.value,
         "tier_basis": tier_clf.basis,
-        "drivers": out.driver_text,
-        "rendered": pretty,
+        "drivers": readable_drivers,
+        "why": _why_note(readable_drivers, out.lambda_total, out.mc_band_pp),
+        "rendered": rendered,
     }
 
 
-# ---------------------------------------------------------------------------
-# NRFI-elite polish: top-N-by-edge board with cleaner one-liner format.
-# ---------------------------------------------------------------------------
-
-
-# Operator-friendly labels for the most common SHAP feature names. The
-# raw column names are descriptive but unreadable in a public-facing
-# email ("home_p_xera_t30"); this map converts to phrases a casual
-# reader can parse at first glance. Unmapped features fall through
-# unchanged so the renderer never hides information.
-_DRIVER_NAME_MAP: dict[str, str] = {
-    "home_p_xera":           "home pitcher xERA",
-    "away_p_xera":           "away pitcher xERA",
-    "home_p_xera_t30":       "home pitcher xERA (30d)",
-    "away_p_xera_t30":       "away pitcher xERA (30d)",
-    "home_xwoba_t90":        "home offense xwOBA (90d)",
-    "away_xwoba_t90":        "away offense xwOBA (90d)",
-    "home_k_pct":            "home K%",
-    "away_k_pct":            "away K%",
-    "home_bb_pct":           "home BB%",
-    "away_bb_pct":           "away BB%",
-    "k_pct":                 "strikeout rate",
-    "bb_pct":                "walk rate",
-    "ump_zone_idx":          "umpire zone size",
-    "ump_run_environment":   "umpire run environment",
-    "abs_overturn_rate":     "ABS challenge rate",
-    "bb_pct_uplift":         "ABS walk uplift",
-    "park_factor_runs":      "park run factor",
-    "weather_temp_f":        "temperature",
-    "weather_wind_speed":    "wind speed",
-    "weather_wind_dir_deg":  "wind direction",
-    "humidity_pct":          "humidity",
-    "air_density":           "air density",
-    "roof_open":             "roof status",
-    "home_lineup_xwoba":     "home lineup xwOBA",
-    "away_lineup_xwoba":     "away lineup xwOBA",
-    "home_p_first_inn_era":  "home pitcher 1st-inning ERA",
-    "away_p_first_inn_era":  "away pitcher 1st-inning ERA",
-    "poisson_p_nrfi":        "baseline NRFI prior",
-}
-
-
-def _humanize_driver(driver: str) -> str:
-    """Translate one `+4.2 home_xwoba_t90` driver string into something
-    a casual reader can parse: "+4.2 home offense xwOBA (90d)".
-    Unmapped features pass through unchanged.
-    """
-    # driver_text rows look like "+4.2 feature_name" or "−2.1 feature_name".
-    parts = driver.split(" ", 1)
-    if len(parts) != 2:
-        return driver
-    delta, name = parts
-    friendly = _DRIVER_NAME_MAP.get(name.strip(), name.strip())
-    return f"{delta} {friendly}"
-
-
-def _polished_pick_line(pick: dict) -> str:
-    """Render one pick in the elite-polish format used by the top board.
-
-    Layout::
-
-        BOS @ NYY · NRFI                                 [ELITE   ]
-        78.4% Conviction · Electric Blue · λ 1.20  MC ±3.2pp  edge +5.1pp  stake 0.50u
-        Why: home offense soft (+4.2), umpire pitcher-friendly (+2.1),
-              cool air boost (+1.5)
-
-    Side-aware color: Strong YRFI rows render the band as **Red** to
-    match the "red-hot opportunity" framing. Every other tier/market
-    falls through to the standard ladder.
-
-    Robust to missing fields — every optional metric (MC, edge, Kelly,
-    drivers) drops out cleanly when not present.
-    """
-    matchup = str(pick.get("game_id", "—"))
-    tier = pick.get("tier", "")
-    market = pick.get("market_type", "NRFI")
-    pct = pick.get("pct", 0.0)
-    lam = pick.get("lambda_total")
-
-    # Side-aware band label — Strong YRFI gets Red.
-    try:
-        from edge_equation.engines.tiering import (
-            Tier, color_band_label_for_pick,
-        )
-        tier_obj = Tier(tier) if tier else None
-        band = color_band_label_for_pick(tier_obj, market) if tier_obj else ""
-    except (ValueError, ImportError):
-        band = pick.get("color_band", "")
-
-    # Top line: matchup + market token + right-justified tier tag.
-    headline = f"{matchup} · {market}" if market else matchup
-    tier_tag = f"[{tier:<8}]" if tier else ""
-    head = f"{headline:<48}{tier_tag}".rstrip()
-
-    # Headline metric line — branding mandates "% Conviction" rather
-    # than "% NRFI / % YRFI" so the brand voice stays analytical
-    # ("we have 78.4% conviction") instead of result-flavored.
-    metric_parts = [f"{pct:.1f}% Conviction"]
-    if band:
-        metric_parts.append(band)
-    if isinstance(lam, (int, float)):
-        metric_parts.append(f"λ {lam:.2f}")
-    metric_line = " · ".join(metric_parts)
-
-    extras: list[str] = []
-    mc = pick.get("mc_band_pp")
-    if isinstance(mc, (int, float)):
-        extras.append(f"MC ±{mc:.1f}pp")
-    edge = pick.get("edge")
-    if edge:
-        extras.append(f"edge {edge}")
-    kelly = pick.get("kelly")
-    if kelly:
-        extras.append(f"stake {kelly}")
-    if extras:
-        metric_line += "  " + "  ".join(extras)
-
-    drivers = pick.get("drivers") or []
-    lines = [head, metric_line]
-    if drivers:
-        why = ", ".join(_humanize_driver(d) for d in drivers[:4])
-        lines.append(f"  Why: {why}")
-    return "\n".join(lines)
-
-
-def _select_top_picks_by_edge(picks: list[dict], *, n: int = 8) -> list[dict]:
-    """Pick the higher-tier side per game, sort by edge desc (NRFI%
-    desc as tiebreak), return the top `n`.
-
-    Falls back gracefully when no edge values are present (no live odds
-    yet) — sorts purely by tier rank then NRFI%.
-    """
-    if not picks:
-        return []
-    # Group by game_id and keep the higher-tier side per game.
-    tier_rank = {"ELITE": 4, "STRONG": 3, "MODERATE": 2,
-                   "LEAN": 1, "NO_PLAY": 0}
-    by_game: dict[str, dict] = {}
-    for p in picks:
-        gid = p.get("game_id", "")
-        cur = by_game.get(gid)
-        if cur is None:
-            by_game[gid] = p
-            continue
-        if tier_rank.get(p.get("tier", ""), 0) > tier_rank.get(
-                cur.get("tier", ""), 0):
-            by_game[gid] = p
-    one_per_game = list(by_game.values())
-    one_per_game.sort(key=lambda p: (
-        -tier_rank.get(p.get("tier", ""), 0),
-        -(p.get("edge_pp_raw") or 0.0),
-        -float(p.get("pct", 0.0)),
-    ))
-    return one_per_game[:n]
-
-
-def _render_top_board(picks: list[dict], *, n: int = 8) -> str:
-    """Plain-text top-N board with the polished pick lines."""
-    top = _select_top_picks_by_edge(picks, n=n)
-    if not top:
-        return ""
-    lines = [f"TOP BOARD — Top {len(top)} by Edge", "═" * 60]
-    for i, pick in enumerate(top, 1):
-        lines.append(f"{i:>2}.  {_polished_pick_line(pick)}".replace(
-            "\n", "\n     ",  # indent continuation lines under the rank
-        ))
-        lines.append("")
-    return "\n".join(lines)
+def _why_note(drivers: list[str], lambda_total: float, mc_band_pp: float | None) -> str:
+    """Compact operator-facing explanation for a daily report row."""
+    lead = "; ".join(drivers[:3]) if drivers else "model drivers pending"
+    mc = f", MC +/-{mc_band_pp:.1f}pp" if mc_band_pp is not None else ""
+    return f"{lead}; lambda={lambda_total:.2f}{mc}"
 
 
 def _build_parlay_block(
@@ -554,138 +505,104 @@ def _footer_text(engine: str) -> str:
 def render_body(card: dict) -> str:
     """Render the full plain-text email body from a card dict.
 
-    Layout (production-elite ordering, post-rebrand):
-      1. Header + Conviction key (legend explaining color tokens)
-      2. YTD per-tier ledger (always rendered)
-      3. TOP BOARD — top 8 picks by edge with polished one-liner
-      4. Per-side NRFI / YRFI boards (full slate)
-      5. Parlay candidates (Phase 6)
-      6. Parlay ledger (Phase 6)
-      7. Props block + props ledger
-      8. Full-game block + full-game ledger
-      9. Footer (premium disclaimer when card_type=premium)
+    We bypass `EmailPublisher.build_body` because its default renderer
+    is shaped for ML/Total/HR picks, not first-inning markets with
+    SHAP drivers + MC bands.
     """
-    from edge_equation.engines.tiering import (
-        render_conviction_key, render_premium_disclaimer,
-    )
-
     lines = [
         f"Edge Equation — {card.get('headline', 'NRFI/YRFI Daily')}",
         card.get("subhead", "Facts. Not Feelings."),
         "",
     ]
-
-    # 1b. Conviction key — operator + forwarded reader can decode the
-    # color tokens at a glance. Stays at the top so the rest of the
-    # body can reference the language without re-explaining.
-    lines.append(render_conviction_key())
-    lines.append("")
-
-    # 2. YTD per-tier ledger — top of page so the operator sees
-    # conviction history before today's picks. Always rendered, even
-    # when empty, with a friendly placeholder so the section exists.
-    ledger_text = card.get("ledger_text", "")
-    if ledger_text:
-        lines.append(ledger_text)
-        lines.append("")
-    else:
-        season = (card.get("target_date") or "")[:4] or "—"
-        lines.append(f"YTD LEDGER ({season})")
-        lines.append("─" * 60)
-        lines.append("  (no settled picks yet — ledger populates after "
-                       "the first qualifying game finishes)")
-        lines.append("")
-
     picks = card.get("picks", []) or []
     if not picks:
         lines.append("(No games on the slate or feature reconstruction failed.)")
         lines.append("")
     else:
-        # 3. TOP BOARD — top N (default 8) by edge then NRFI%, polished
-        # one-liner with tier + color + λ + MC + edge + Kelly. The
-        # operator's eye lands here first.
-        top_text = _render_top_board(picks, n=8)
-        if top_text:
-            lines.append(top_text)
+        lines.append(f"FIRST INNING BOARD - Top {min(10, len(picks))} by Edge")
+        lines.append("-" * 60)
+        for p in picks:
+            lines.append(_render_first_inning_row(p))
+            if p.get("why"):
+                lines.append(f"  Why: {p['why']}")
             lines.append("")
 
-        # 4. Per-side boards — classic full-slate rendering (kept for
-        # operators who want every game's NRFI + YRFI rows to scan).
-        nrfi = [p for p in picks if p["market_type"] == "NRFI"]
-        yrfi = [p for p in picks if p["market_type"] == "YRFI"]
-        if nrfi:
-            lines.append(f"NRFI BOARD ({len(nrfi)} games)")
-            lines.append("─" * 60)
-            for p in nrfi:
-                rendered = p.get("rendered") or _render_fallback(p)
-                lines.append(rendered)
-                lines.append("")
-        if yrfi:
-            lines.append(f"YRFI BOARD ({len(yrfi)} games)")
-            lines.append("─" * 60)
-            for p in yrfi:
-                rendered = p.get("rendered") or _render_fallback(p)
-                lines.append(rendered)
-                lines.append("")
+    _append_generic_board(lines, "PROPS BOARD", card.get("props") or [])
+    _append_generic_board(lines, "FULL-GAME BOARD", card.get("full_game") or [])
 
-    # 5. Parlay candidates (already top-2 capped in _build_parlay_block).
+    # YTD per-tier ledger — appended below the day's picks so the
+    # operator's eye lands on conviction history while reading the new
+    # board. Skipped silently when no picks have settled yet.
+    ledger_text = card.get("ledger_text", "")
+    if ledger_text:
+        lines.append("")
+        lines.append(ledger_text)
+        lines.append("")
+
+    # Parlay candidates ("Special Drops") — typically 0 on a normal
+    # slate, 1-2 when the model lines up multiple elite-tier games.
     parlay_text = card.get("parlay_text", "")
     if parlay_text:
         lines.append("")
         lines.append(parlay_text)
         lines.append("")
 
-    # 6. Parlay ledger summary (Phase 6).
+    # Parlay ledger — only renders once the operator has recorded a
+    # ticket via the CLI. Empty until then.
     parlay_ledger_text = card.get("parlay_ledger_text", "")
     if parlay_ledger_text:
         lines.append("")
         lines.append(parlay_ledger_text)
         lines.append("")
 
-    # 7. Props block (Props-3). Top picks by edge + per-tier YTD ledger.
-    # Lives below the NRFI parlay section so the operator sees first-
-    # inning conviction first, then cross-market edges, then the props
-    # YTD record.
-    props_top_text = card.get("props_top_text", "")
-    if props_top_text:
-        lines.append("")
-        lines.append(props_top_text)
-        lines.append("")
-
-    props_ledger_text = card.get("props_ledger_text", "")
-    if props_ledger_text:
-        lines.append("")
-        lines.append(props_ledger_text)
-        lines.append("")
-
-    # 8. Full-game block (FG-3). Top picks by edge across the four
-    # supported full-game markets + per-tier YTD ledger. Lives below
-    # props so the email reads top → bottom: NRFI → parlays → props
-    # → full-game → footer.
-    fullgame_top_text = card.get("fullgame_top_text", "")
-    if fullgame_top_text:
-        lines.append("")
-        lines.append(fullgame_top_text)
-        lines.append("")
-
-    fullgame_ledger_text = card.get("fullgame_ledger_text", "")
-    if fullgame_ledger_text:
-        lines.append("")
-        lines.append(fullgame_ledger_text)
-        lines.append("")
+    lines.append("")
+    lines.append(render_conviction_key())
+    lines.append("")
 
     lines.append(card.get("tagline", "")
                   or _footer_text(card.get("engine", "unknown")))
-
-    # Premium disclaimer — surfaced when the operator has flagged the
-    # card as the premium tier. Free-tier emails skip this block; the
-    # `Facts. Not Feelings.` subhead at the top already carries the
-    # voice for the public daily.
-    if card.get("card_type") == "premium" or card.get("premium"):
-        lines.append("")
-        lines.append(render_premium_disclaimer())
-
     return "\n".join(lines)
+
+
+def _render_first_inning_row(p: dict) -> str:
+    label = f"{p.get('game_id', '?')} · {p.get('market_type', '?')}"
+    model_probability = float(p.get("pct", 0.0)) / 100.0
+    edge_pp = p.get("edge_pp")
+    band = conviction_band(
+        model_probability,
+        edge=(float(edge_pp) / 100.0) if edge_pp is not None else None,
+        is_electric=p.get("conviction_color") == "Electric Blue",
+    )
+    line = format_conviction_line(
+        label=label,
+        model_probability=model_probability,
+        band=band,
+        stake_units=_kelly_units_for_display(p),
+    )
+    return f"{line} · lambda {float(p.get('lambda_total', 0.0)):.2f}"
+
+
+def _kelly_units_for_display(p: dict) -> Optional[float]:
+    raw = p.get("kelly")
+    if not raw:
+        return None
+    try:
+        return float(str(raw).replace("u", ""))
+    except ValueError:
+        return None
+
+
+def _append_generic_board(lines: list[str], title: str, rows: list[dict]) -> None:
+    lines.append("")
+    lines.append(title)
+    lines.append("-" * 60)
+    if not rows:
+        lines.append("  (no qualifying plays today)")
+        lines.append("")
+        return
+    for row in rows[:10]:
+        lines.append(str(row.get("rendered") or row))
+    lines.append("")
 
 
 def _render_fallback(p: dict) -> str:
@@ -763,9 +680,18 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                         help="Build the card and print to stdout; skip SMTP")
     parser.add_argument("--no-etl", action="store_true",
                         help="Skip the daily schedule fetch (use cached games)")
+    parser.add_argument("--no-settle", action="store_true",
+                        help="Skip settlement/actuals refresh; useful for previews")
+    parser.add_argument("--no-live-odds", action="store_true",
+                        help="Skip best-effort live odds capture")
     args = parser.parse_args(list(argv) if argv is not None else None)
 
-    card = build_card(args.date, run_etl=not args.no_etl)
+    card = build_card(
+        args.date,
+        run_etl=not args.no_etl,
+        run_settlement=not args.no_settle,
+        pull_live_odds=not args.no_live_odds,
+    )
     result = send_email(card, recipient=args.to, dry_run=args.dry_run)
 
     if result.get("success"):

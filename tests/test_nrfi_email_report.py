@@ -66,14 +66,15 @@ def _make_card_with_picks(n_nrfi=2, n_yrfi=1):
     }
 
 
-def test_render_body_groups_nrfi_then_yrfi():
+def test_render_body_uses_unified_first_inning_board():
     from edge_equation.engines.nrfi.email_report import render_body
     card = _make_card_with_picks(n_nrfi=3, n_yrfi=2)
     body = render_body(card)
-    assert "NRFI BOARD (3 games)" in body
-    assert "YRFI BOARD (2 games)" in body
-    # NRFI section appears before YRFI section.
-    assert body.index("NRFI BOARD") < body.index("YRFI BOARD")
+    assert "FIRST INNING BOARD - Top 5 by Edge" in body
+    assert "NRFI BOARD" not in body
+    assert "YRFI BOARD" not in body
+    assert "MLB-2026-04-28-NYY-BOS-0 · NRFI" in body
+    assert "MLB-2026-04-28-COL-LAD-0 · YRFI" in body
     # Footer present.
     assert "Internal testing" in body
 
@@ -168,6 +169,7 @@ class _FakeBridge:
 
     def predict_for_features(self, feature_dicts, *, game_ids,
                               market_probs=None, american_odds=None,
+                              yrfi_market_probs=None, yrfi_american_odds=None,
                               pitcher_bf_each=None):
         out = []
         for gid in game_ids:
@@ -199,14 +201,12 @@ def test_build_card_uses_bridge_and_builds_picks(monkeypatch):
     assert card["card_type"] == "nrfi-daily"
     assert card["target_date"] == "2026-04-28"
     assert card["engine"] == "ml"
-    assert len(card["picks"]) == 4    # 2 games × (NRFI + YRFI)
+    assert len(card["picks"]) == 4    # 2 games x (NRFI + YRFI)
     nrfi = [p for p in card["picks"] if p["market_type"] == "NRFI"]
     yrfi = [p for p in card["picks"] if p["market_type"] == "YRFI"]
     assert len(nrfi) == 2
     assert len(yrfi) == 2
-    # Sorted: NRFI first, then YRFI; within each, descending pct.
-    assert card["picks"][0]["market_type"] == "NRFI"
-    assert card["picks"][2]["market_type"] == "YRFI"
+    assert any(p["conviction_color"] == "Electric Blue" for p in card["picks"])
 
 
 def test_build_card_handles_no_games(monkeypatch):
@@ -370,3 +370,51 @@ def test_build_card_threads_label_map_into_picks(monkeypatch):
     # NRFI and YRFI are complements (sum to 100), not duplicates.
     assert abs(nrfi["pct"] + yrfi["pct"] - 100.0) < 1.0
     assert nrfi["pct"] != yrfi["pct"]
+
+
+def test_build_card_can_skip_settlement_and_live_odds(monkeypatch):
+    import edge_equation.engines.nrfi.email_report as mod
+
+    monkeypatch.setattr(mod, "daily_etl", lambda *a, **kw: None)
+    monkeypatch.setattr(mod, "reconstruct_features_for_date", lambda *a, **kw: [])
+
+    class _FakeStore:
+        def __init__(self, *a, **kw): pass
+
+    monkeypatch.setattr(mod, "NRFIStore", _FakeStore)
+    monkeypatch.setattr(mod.NRFIEngineBridge, "try_load",
+                          classmethod(lambda cls, cfg=None: _FakeBridge()))
+
+    def _boom(*a, **kw):
+        raise AssertionError("should be skipped")
+
+    monkeypatch.setattr(mod, "settle_predictions", _boom, raising=False)
+
+    card = mod.build_card(
+        "2026-04-27",
+        run_etl=False,
+        run_settlement=False,
+        pull_live_odds=False,
+    )
+    assert card["picks"] == []
+
+
+def test_market_inputs_include_side_specific_yrfi_odds(monkeypatch):
+    import edge_equation.engines.nrfi.email_report as mod
+
+    def _lookup(_store, game_pk, market_type):
+        if market_type == "NRFI":
+            return -120.0
+        if market_type == "YRFI":
+            return +105.0
+        return None
+
+    monkeypatch.setattr(mod, "lookup_closing_odds", _lookup)
+    nrfi_probs, nrfi_odds, probs_by_side, odds_by_side = mod._market_inputs_for_games(
+        object(), [123],
+    )
+
+    assert nrfi_probs[0] == mod._implied_prob(-120.0)
+    assert nrfi_odds[0] == -120.0
+    assert probs_by_side[("123", "YRFI")] == mod._implied_prob(+105.0)
+    assert odds_by_side[("123", "YRFI")] == +105.0

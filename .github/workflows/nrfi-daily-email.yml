@@ -40,6 +40,11 @@ jobs:
       # Recipient precedence: NRFI_EMAIL_TO -> EMAIL_TO -> hard default.
       EMAIL_TO:         ${{ secrets.NRFI_EMAIL_TO || secrets.EMAIL_TO || 'ProfessorEdgeCash@gmail.com' }}
       SMTP_TO:          ${{ secrets.NRFI_EMAIL_TO || secrets.SMTP_TO || 'ProfessorEdgeCash@gmail.com' }}
+      THE_ODDS_API_KEY: ${{ secrets.THE_ODDS_API_KEY }}
+      R2_ACCESS_KEY_ID:     ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_ENDPOINT_URL:      ${{ secrets.R2_ENDPOINT_URL }}
+      R2_BUCKET_NAME:       ${{ secrets.R2_BUCKET_NAME }}
       EDGE_EQUATION_FAILSAFE_DIR: ${{ github.workspace }}/data/failsafes
       # Required by the props + full-game engine fetchers invoked from
       # build_card. Without this the orchestrators short-circuit with
@@ -102,13 +107,23 @@ jobs:
           path: data/nrfi_cache/
           if_no_artifact_found: warn
 
+      - name: Hydrate DuckDB from latest odds snapshot artifact
+        if: env.SKIP_RUN != '1'
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: nrfi-daily-odds-snapshot.yml
+          name: nrfi-duckdb-latest
+          path: data/nrfi_cache/
+          if_no_artifact_found: warn
+
       - name: Build & send NRFI email
         if: env.SKIP_RUN != '1'
         run: |
           DRY_RUN_ARG=""
           DATE_ARG=""
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            DRY_RUN_ARG="--dry-run"
+            DRY_RUN_ARG="--dry-run --no-settle"
           fi
           if [ -n "${{ github.event.inputs.target_date }}" ]; then
             DATE_ARG="--date ${{ github.event.inputs.target_date }}"
