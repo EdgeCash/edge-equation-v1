@@ -495,8 +495,19 @@ def _render_first_inning_section(
         return ""
 
     n_games = len(one_per_game)
-    top = one_per_game[:top_n]
-    rest = one_per_game[top_n:]
+    # The polished top section is the operator-facing headline — show
+    # only LEAN-and-above tiers there (anything below is a no-play
+    # by design and shouldn't sit in the spotlight). NO_PLAY rows
+    # still appear in the "Rest of slate" compact list so the operator
+    # has full-slate context.
+    qualifying_tiers = {"ELITE", "STRONG", "MODERATE", "LEAN"}
+    polished = [
+        p for p in one_per_game
+        if str(p.get("tier", "")).upper() in qualifying_tiers
+    ][:top_n]
+    polished_ids = {id(p) for p in polished}
+    top = polished
+    rest = [p for p in one_per_game if id(p) not in polished_ids]
 
     lines = [
         f"FIRST INNING — {n_games} games on the slate",
