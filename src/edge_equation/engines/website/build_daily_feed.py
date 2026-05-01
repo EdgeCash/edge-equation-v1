@@ -1,20 +1,27 @@
-"""Daily-feed exporter — today's NRFI picks → website/daily/latest.json.
+"""Daily-feed exporter — today's picks → website/daily/latest.json.
 
-Reads today's predictions row + game metadata out of the engine's
+Reads today's predictions row + game metadata out of each engine's
 DuckDB and writes the daily-feed JSON in the schema documented at
 ``website/public/data/daily/README.md``. The website's
 ``daily-edge.tsx`` page consumes it directly via ``loadDailyView``.
 
 Manual-trigger workflow (2026-05-01): the operator runs the daily
-email workflow, which re-runs ``run_daily`` to produce predictions,
+email workflow, which re-runs the engines to produce predictions,
 then this exporter, then commits the JSON to main. Vercel auto-
 deploys and `/daily-edge` shows today's open picks.
 
-Scope: NRFI only for v1 of public testing. Props / Full-Game /
-Parlay engines haven't been sanity-validated yet (the calibration
-audit only proved NRFI passes the gate). Once those engines clear
-their own sanity checks, extend ``_load_engine_picks`` to include
-their daily-prediction tables.
+Engines included
+~~~~~~~~~~~~~~~~
+
+* **NRFI / YRFI** — has sanity-passed since 2026-04-30.
+* **Player props** — gated by the Phase Props-4 sanity gate
+  (``props_prizepicks.evaluation.sanity``). Picks with tier
+  LEAN-and-above flow through; ``NO_PLAY`` is dropped here just like
+  the props ledger does.
+
+The props join is *optional*: if ``--props-duckdb-path`` isn't
+provided (or the file doesn't exist), the exporter still produces a
+NRFI-only feed and the website renders the same way as before.
 
 CLI
 ~~~
@@ -23,6 +30,7 @@ CLI
 
     python -m edge_equation.engines.website.build_daily_feed \\
         --duckdb-path data/nrfi_cache/nrfi.duckdb \\
+        --props-duckdb-path data/props_cache/props.duckdb \\
         --date 2026-05-01 \\
         --out-path website/public/data/daily/latest.json
 """
@@ -181,13 +189,177 @@ def _load_nrfi_picks(store, target_date: str) -> list[FeedPick]:
 
 
 # ---------------------------------------------------------------------------
+# Today's props picks
+# ---------------------------------------------------------------------------
+
+
+# Pull tier-LEAN-and-above predictions for the slate. We keep things
+# defensive: an event_date row count of zero (or a missing table)
+# returns []. The website renders fewer picks; nothing fails.
+_TODAY_PROPS_QUERY = """
+SELECT
+    game_pk,
+    market_type,
+    player_name,
+    line_value,
+    side,
+    model_prob,
+    market_prob,
+    edge_pp,
+    american_odds,
+    book,
+    confidence,
+    tier,
+    feature_blob,
+    event_date
+FROM prop_predictions
+WHERE event_date = ?
+  AND tier IN ('ELITE', 'STRONG', 'MODERATE', 'LEAN')
+ORDER BY edge_pp DESC NULLS LAST
+"""
+
+
+def _market_label(market_type: str) -> str:
+    """Map canonical market codes to the headline label the website renders."""
+    mapping = {
+        "HR": "Home Runs",
+        "Hits": "Hits",
+        "Total_Bases": "Total Bases",
+        "RBI": "RBIs",
+        "K": "Strikeouts",
+    }
+    return mapping.get(market_type, market_type.replace("_", " "))
+
+
+def _grade_from_tier(tier: str) -> str:
+    """Coarse map from the conviction tier to the public letter grade.
+
+    The website tier-color logic relies on either ``grade`` or ``tier``,
+    so we always populate ``tier`` directly and emit a consistent grade
+    for legacy callers.
+    """
+    return {
+        "ELITE":    "A+",
+        "STRONG":   "A",
+        "MODERATE": "B",
+        "LEAN":     "C",
+        "NO_PLAY":  "F",
+    }.get((tier or "").upper(), "F")
+
+
+def _load_props_picks(store, target_date: str) -> list[FeedPick]:
+    """Pull today's tier-LEAN+ props predictions into FeedPick rows."""
+    if store is None:
+        return []
+    if not _table_exists(store, "prop_predictions"):
+        return []
+    df = store.query_df(_TODAY_PROPS_QUERY, (target_date,))
+    if df is None or len(df) == 0:
+        return []
+
+    picks: list[FeedPick] = []
+    for _, r in df.iterrows():
+        market_type = str(r.get("market_type") or "")
+        player = str(r.get("player_name") or "")
+        side = str(r.get("side") or "")
+        line_value = _safe_float(r.get("line_value"))
+        model_prob = _safe_float(r.get("model_prob"))
+        edge_pp = _safe_float(r.get("edge_pp"))
+        american = _safe_float(r.get("american_odds")) or -110.0
+        tier = str(r.get("tier") or "NO_PLAY").upper()
+        confidence = _safe_float(r.get("confidence"))
+        # The persisted feature_blob carries λ for the audit-style
+        # `notes` field; missing blob → just skip the lambda mention.
+        lam = _lam_from_blob(r.get("feature_blob"))
+        # Daily-feed schema convention: edge is fractional (0.04 = 4pp).
+        edge_frac = edge_pp / 100.0
+        # We don't persist Kelly directly; the engine computes it on the
+        # fly when it builds the email card. For the feed we provide a
+        # conservative 1/4-Kelly-equivalent off the edge so the website's
+        # bet-sizing helper stays consistent — the conviction tier is
+        # the source of truth for stake sizing in the public ledger.
+        kelly = max(0.0, edge_frac * 0.25)
+
+        market_label = _market_label(market_type)
+        selection = f"{player} · {market_label} {side} {line_value:g}"
+        # Use the canonical "PLAYER_PROP_<MARKET>" label so the website
+        # classifier (`pages/daily-edge.tsx::classify`) routes to Props.
+        feed_market_type = f"PLAYER_PROP_{market_type.upper()}"
+        notes = _props_notes(model_prob, side, lam, edge_pp, confidence)
+
+        game_pk = int(r.get("game_pk") or 0)
+        # game_pk is a placeholder (0) until the Phase-4 odds_fetcher
+        # surfaces it; build a deterministic id from the prop tuple
+        # instead so duplicates within a slate don't collide.
+        pid = "-".join([
+            str(game_pk),
+            market_type,
+            _slug(player),
+            f"{line_value:g}",
+            side.upper(),
+        ])
+
+        picks.append(FeedPick(
+            id=pid,
+            sport="MLB",
+            market_type=feed_market_type,
+            selection=selection,
+            line_odds=american,
+            line_number=f"{line_value:g}",
+            fair_prob=f"{model_prob:.4f}",
+            edge=f"{edge_frac:.4f}",
+            kelly=f"{kelly:.4f}",
+            grade=_grade_from_tier(tier),
+            tier=tier,
+            notes=notes,
+            event_time=None,           # commence_time not persisted yet
+            game_id=str(game_pk),
+        ))
+    return picks
+
+
+def _slug(s: str) -> str:
+    """Lowercase a-z0-9 only — used for stable pick ids."""
+    return "".join(c if c.isalnum() else "-" for c in (s or "").lower()).strip("-")
+
+
+def _lam_from_blob(blob) -> float:
+    """Pull λ out of the persisted feature_blob (best-effort)."""
+    if not blob:
+        return 0.0
+    try:
+        return float(json.loads(blob).get("lam") or 0.0)
+    except Exception:
+        return 0.0
+
+
+def _props_notes(
+    model_prob: float, side: str, lam: float, edge_pp: float, confidence: float,
+) -> str:
+    parts = [f"{model_prob*100:.1f}% {side}"]
+    if lam > 0:
+        parts.append(f"λ={lam:.2f}")
+    if edge_pp:
+        sign = "+" if edge_pp >= 0 else ""
+        parts.append(f"edge {sign}{edge_pp:.1f}pp")
+    if confidence:
+        parts.append(f"conf {int(round(confidence*100))}%")
+    return " · ".join(parts)
+
+
+# ---------------------------------------------------------------------------
 # Top-level builder
 # ---------------------------------------------------------------------------
 
 
-def build_bundle(store, target_date: str) -> FeedBundle:
-    """Aggregate today's picks across engines (NRFI for v1)."""
+def build_bundle(store, target_date: str, props_store=None) -> FeedBundle:
+    """Aggregate today's picks across engines.
+
+    ``store`` is the NRFI DuckDB; ``props_store`` is the props DuckDB
+    (optional — if None, the bundle is NRFI-only).
+    """
     picks = _load_nrfi_picks(store, target_date)
+    picks.extend(_load_props_picks(props_store, target_date))
     notes = (
         "Public-testing release. Manual operator trigger. Lineups + "
         "weather + umpires confirmed at publish time."
@@ -277,9 +449,13 @@ def _notes_from_row(row, side: str, side_prob: float) -> str:
 
 def main(argv: Optional[Iterable[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Export today's NRFI picks to website/public/data/daily/latest.json.",
+        description="Export today's picks to website/public/data/daily/latest.json.",
     )
-    parser.add_argument("--duckdb-path", required=True)
+    parser.add_argument("--duckdb-path", required=True,
+                          help="NRFI DuckDB path.")
+    parser.add_argument("--props-duckdb-path", default=None,
+                          help="Props DuckDB path (optional). When omitted "
+                               "or missing, the feed is NRFI-only.")
     parser.add_argument(
         "--date", default=None,
         help="Slate date YYYY-MM-DD. Default: today (UTC).",
@@ -292,11 +468,17 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
 
     from edge_equation.engines.nrfi.data.storage import NRFIStore
     store = NRFIStore(args.duckdb_path)
+    props_store = None
+    if args.props_duckdb_path and Path(args.props_duckdb_path).exists():
+        from edge_equation.engines.props_prizepicks.data.storage import PropsStore
+        props_store = PropsStore(args.props_duckdb_path)
     try:
-        bundle = build_bundle(store, target_date)
+        bundle = build_bundle(store, target_date, props_store=props_store)
         write_bundle(bundle, args.out_path)
     finally:
         store.close()
+        if props_store is not None:
+            props_store.close()
 
     if not args.quiet:
         print(

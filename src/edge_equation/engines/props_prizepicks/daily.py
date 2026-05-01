@@ -32,12 +32,15 @@ from edge_equation.utils.logging import get_logger
 from .config import PropsConfig, get_default_config
 from .data.statcast_loader import (
     BatterRollingRates,
+    LEAGUE_BATTER_PRIOR_PER_PA,
+    LEAGUE_PITCHER_PRIOR_PER_BF,
     PitcherRollingRates,
     load_batter_rates,
     load_pitcher_rates,
 )
 from .data.storage import PropsStore
 from .edge import build_edge_picks
+from .explain import decomposition_drivers, poisson_mc_band
 from .ledger import (
     init_ledger_tables, render_ledger_section, settle_predictions,
 )
@@ -127,16 +130,35 @@ def build_props_card(
 
     # 5. Convert each edge-pick into a PropOutput. We need the matching
     # ProjectedSide so we carry lam / blend_n / confidence into the
-    # output payload's audit trail.
+    # output payload's audit trail. Run the MC band + decomposition
+    # helpers here so every payload carries the audit data the email
+    # card and feed publisher consume.
     proj_index = _index_projections(lines, projections)
     outputs: list[PropOutput] = []
     for pick in picks_edge:
         proj = proj_index.get(_proj_key(pick))
+        if proj is not None:
+            band = poisson_mc_band(proj)
+            drivers = decomposition_drivers(
+                proj,
+                league_prior_rate=_league_prior_for(proj),
+                expected_volume=_expected_volume_for(proj, cfg),
+                prior_weight=_prior_weight_for(proj, cfg),
+                market_prob=float(pick.market_prob_devigged),
+                edge_pp=float(pick.edge_pp),
+            )
+        else:
+            band = None
+            drivers = []
         outputs.append(build_prop_output(
             pick,
             confidence=proj.confidence if proj else 0.30,
             lam=proj.lam if proj else 0.0,
             blend_n=proj.blend_n if proj else 0,
+            driver_text=drivers,
+            mc_low=band.low if band else 0.0,
+            mc_high=band.high if band else 0.0,
+            mc_band_pp=band.band_pp if band else 0.0,
         ))
     card.picks = outputs
     card.n_qualifying_picks = len(outputs)
@@ -191,6 +213,30 @@ def render_top_props_block(
 # ---------------------------------------------------------------------------
 # Internals
 # ---------------------------------------------------------------------------
+
+
+def _league_prior_for(proj: ProjectedSide) -> float:
+    """League-prior per-PA / per-BF rate for the projection's market."""
+    market = proj.market.canonical
+    if proj.market.role == "batter":
+        return float(LEAGUE_BATTER_PRIOR_PER_PA.get(market, 0.0))
+    return float(LEAGUE_PITCHER_PRIOR_PER_BF.get(market, 0.0))
+
+
+def _expected_volume_for(proj: ProjectedSide, cfg: PropsConfig) -> float:
+    """Expected per-game volume (PAs for batters, BFs for pitchers)."""
+    return float(
+        cfg.projection.expected_batter_pa if proj.market.role == "batter"
+        else cfg.projection.expected_pitcher_bf
+    )
+
+
+def _prior_weight_for(proj: ProjectedSide, cfg: PropsConfig) -> float:
+    """Bayesian-prior pseudo-count for the projection's role."""
+    return float(
+        cfg.projection.prior_weight_pa if proj.market.role == "batter"
+        else cfg.projection.prior_weight_bf
+    )
 
 
 def _proj_key(item) -> tuple:

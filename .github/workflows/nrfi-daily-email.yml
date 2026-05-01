@@ -130,6 +130,20 @@ jobs:
           path: data/nrfi_cache/
           if_no_artifact_found: warn
 
+      # Props uses a separate DuckDB at data/props_cache/props.duckdb.
+      # Hydrate from the previous run of THIS workflow so yesterday's
+      # predictions are already on disk for today's settle pass + ledger.
+      # `continue-on-error` so first-ever runs don't fail.
+      - name: Hydrate props DuckDB from latest artifact
+        if: env.SKIP_RUN != '1'
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          workflow: nrfi-daily-email.yml
+          name: props-duckdb-latest
+          path: data/props_cache/
+          if_no_artifact_found: warn
+
       - name: Build & send NRFI email
         if: env.SKIP_RUN != '1'
         run: |
@@ -143,11 +157,53 @@ jobs:
           fi
           python -m edge_equation.engines.nrfi.email_report $DATE_ARG $DRY_RUN_ARG
 
+      # Build today's props card. Best-effort: any failure (Odds API
+      # down, no qualifying picks) just leaves the props DuckDB
+      # unchanged. The website feed step downstream will gracefully
+      # render NRFI-only when no props rows exist for today.
+      - name: Build props daily card
+        if: env.SKIP_RUN != '1'
+        continue-on-error: true
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ github.event.inputs.target_date }}" ]; then
+            DATE_ARG="--date ${{ github.event.inputs.target_date }}"
+          fi
+          python -m edge_equation.engines.props_prizepicks.daily $DATE_ARG
+
+      # Props sanity gate. Runs the projection-vs-market /
+      # projection-vs-league-prior calibration check on the historical
+      # window and prints the verdict. Soft failure (continue-on-error)
+      # for now — once we accumulate >=50 settled picks the gate's
+      # exit code can be promoted to a hard precondition for the
+      # publish step below.
+      - name: Run props sanity gate
+        if: env.SKIP_RUN != '1'
+        continue-on-error: true
+        run: |
+          if [ -f data/props_cache/props.duckdb ]; then
+            END_DATE=$(date -u +%Y-%m-%d)
+            if [ -n "${{ github.event.inputs.target_date }}" ]; then
+              END_DATE="${{ github.event.inputs.target_date }}"
+            fi
+            START_DATE=$(date -u -d "$END_DATE - 365 days" +%Y-%m-%d 2>/dev/null \
+              || python -c "from datetime import date, timedelta; \
+                              print((date.fromisoformat('$END_DATE') - timedelta(days=365)).isoformat())")
+            python -m edge_equation.engines.props_prizepicks.evaluation.sanity \
+              --duckdb-path data/props_cache/props.duckdb \
+              --from "$START_DATE" \
+              --to "$END_DATE" \
+              --json-out data/props_cache/sanity_report.json || true
+          else
+            echo "No props DuckDB on disk yet — skipping sanity gate."
+          fi
+
       # Manual-mode publishing: after the email sends successfully,
       # write today's picks to website/public/data/daily/latest.json
       # and commit. Vercel auto-deploys; /daily-edge updates within
       # ~2 minutes. Skipped on dry-run since dry-runs don't represent
-      # a real published slate.
+      # a real published slate. Now includes the props DuckDB when
+      # present so /daily-edge surfaces today's tier-LEAN+ props.
       - name: Publish daily feed to website
         if: env.SKIP_RUN != '1' && github.event.inputs.dry_run != 'true'
         run: |
@@ -155,8 +211,13 @@ jobs:
           if [ -n "${{ github.event.inputs.target_date }}" ]; then
             DATE_ARG="--date ${{ github.event.inputs.target_date }}"
           fi
+          PROPS_ARG=""
+          if [ -f data/props_cache/props.duckdb ]; then
+            PROPS_ARG="--props-duckdb-path data/props_cache/props.duckdb"
+          fi
           python -m edge_equation.engines.website.build_daily_feed \
             --duckdb-path data/nrfi_cache/nrfi.duckdb \
+            $PROPS_ARG \
             $DATE_ARG \
             --out-path website/public/data/daily/latest.json
 
@@ -202,5 +263,19 @@ jobs:
           name: nrfi-duckdb-latest
           path: data/nrfi_cache/nrfi.duckdb
           if-no-files-found: warn
+          retention-days: 30
+          overwrite: true
+
+      # Same handoff for props — today's predictions need to land in
+      # tomorrow's run for the auto-settle pass + ledger render. We
+      # use a separate artifact so the props DB lifecycle is decoupled
+      # from the NRFI DB.
+      - name: Re-upload populated props DuckDB (latest)
+        if: always() && env.SKIP_RUN != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: props-duckdb-latest
+          path: data/props_cache/props.duckdb
+          if-no-files-found: ignore
           retention-days: 30
           overwrite: true
