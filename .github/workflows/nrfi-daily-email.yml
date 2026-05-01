@@ -220,6 +220,27 @@ jobs:
             echo "No props DuckDB on disk yet — skipping sanity gate."
           fi
 
+      # Backfill yesterday's full-game results into ``fullgame_actuals``
+      # so the per-team rolling rates loader has fresh data for the
+      # next ``build full-game card`` step. Pull the trailing 60 days
+      # so a fresh DB or a missed-day run still catches up. Idempotent
+      # (upsert on game_pk) so the daily call is cheap.
+      - name: Backfill full-game actuals (last 60 days)
+        if: env.SKIP_RUN != '1'
+        continue-on-error: true
+        run: |
+          END_DATE=$(date -u +%Y-%m-%d)
+          if [ -n "${{ github.event.inputs.target_date }}" ]; then
+            END_DATE="${{ github.event.inputs.target_date }}"
+          fi
+          START_DATE=$(date -u -d "$END_DATE - 60 days" +%Y-%m-%d 2>/dev/null \
+            || python -c "from datetime import date, timedelta; \
+                            print((date.fromisoformat('$END_DATE') - timedelta(days=60)).isoformat())")
+          python -m edge_equation.engines.full_game.data.scrapers_etl \
+            --duckdb-path data/fullgame_cache/fullgame.duckdb \
+            --from "$START_DATE" \
+            --to "$END_DATE"
+
       # Build today's full-game card (ML / Run_Line / Total / F5 / Team_Total).
       # Same best-effort posture as the props step.
       - name: Build full-game daily card

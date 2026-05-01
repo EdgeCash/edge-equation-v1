@@ -160,3 +160,69 @@ def compute_team_rates_from_actuals(
         runs_per_game=runs_for / n,
         runs_allowed_per_game=runs_allowed / n,
     )
+
+
+# ---------------------------------------------------------------------------
+# DuckDB-backed loader (real per-team rates from fullgame_actuals)
+# ---------------------------------------------------------------------------
+
+
+_TEAM_RATES_QUERY = """
+SELECT
+    game_pk, event_date, home_team, away_team, home_runs, away_runs
+FROM fullgame_actuals
+WHERE event_date BETWEEN ? AND ?
+  AND home_team IS NOT NULL
+  AND away_team IS NOT NULL
+  AND home_runs IS NOT NULL
+  AND away_runs IS NOT NULL
+"""
+
+
+def load_team_rates_table(
+    store, *,
+    end_date: str,
+    lookback_days: int = 45,
+) -> dict[str, TeamRollingRates]:
+    """Build the per-tricode rates dict from the engine's own DuckDB.
+
+    Pulls every ``fullgame_actuals`` row in the trailing window and
+    aggregates per-team runs scored / runs allowed. Tricodes that
+    appear in actuals get real ``n_games > 0`` rates; tricodes that
+    don't (early-season teams, teams that haven't played in the
+    window) get the league prior (``n_games = 0``) so callers always
+    receive a complete table for every supported MLB team.
+
+    The returned dict can be passed straight to
+    ``project_all(rates_by_team=...)``. Tricodes with ``n_games == 0``
+    yield ``confidence == 0.30`` projections, which the edge module's
+    confidence floor (introduced 2026-05-01) skips before publishing.
+    """
+    from datetime import date as _date, timedelta
+    end = _date.fromisoformat(end_date)
+    start = end - timedelta(days=int(lookback_days))
+
+    df = None
+    try:
+        df = store.query_df(_TEAM_RATES_QUERY, (start.isoformat(),
+                                                    end.isoformat()))
+    except Exception:
+        # Schema not migrated yet, table empty, anything else — fall
+        # through to the league-prior table. The orchestrator's
+        # confidence floor still keeps publication honest.
+        df = None
+
+    table = default_team_rates_table(
+        end_date=end_date, lookback_days=lookback_days,
+    )
+    if df is None or len(df) == 0:
+        return table
+
+    for tri in list(table.keys()):
+        rates = compute_team_rates_from_actuals(
+            df, team_tricode=tri, end_date=end_date,
+            lookback_days=lookback_days,
+        )
+        if rates.n_games > 0:
+            table[tri] = rates
+    return table
