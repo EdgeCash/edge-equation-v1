@@ -15,9 +15,15 @@ name: Premium Daily (10am CT)
 # change needed to broaden.
 
 on:
-  schedule:
-    - cron: "0 15 * * *"   # 10:00 CT during CDT (Mar-Nov)
-    - cron: "0 16 * * *"   # 10:00 CT during CST (Nov-Mar)
+  # MANUAL TRIGGER MODE — public-testing phase (2026-05-01).
+  # Operator triggers this workflow via the GitHub Actions UI's
+  # "Run workflow" button after verifying lineups + weather + umpires
+  # are posted. See docs/MANUAL_DAILY_RELEASE.md for the full SOP.
+  # To re-enable automatic cron, uncomment the schedule block below.
+  #
+  # schedule:
+  #   - cron: "0 15 * * *"   # 10:00 CT during CDT (Mar-Nov)
+  #   - cron: "0 16 * * *"   # 10:00 CT during CST (Nov-Mar)
   workflow_dispatch:
     inputs:
       prefer_mock:
