@@ -328,3 +328,161 @@ def test_build_bundle_combines_nrfi_and_props():
     market_types = {p.market_type for p in bundle.picks}
     assert "NRFI" in market_types or "YRFI" in market_types
     assert "PLAYER_PROP_HR" in market_types
+
+
+# ---------------------------------------------------------------------------
+# Full-Game extension
+# ---------------------------------------------------------------------------
+
+
+class _FakeFullGameStore:
+    """Mimics FullGameStore.query_df for the full-game exporter tests."""
+
+    def __init__(self, rows: list[dict] | None = None,
+                  has_table: bool = True):
+        self._rows = rows or []
+        self._has_table = has_table
+
+    def query_df(self, sql: str, params: tuple = ()):
+        import pandas as pd
+        if "LIMIT 1" in sql:
+            if "FROM fullgame_predictions" in sql and not self._has_table:
+                raise RuntimeError("fullgame_predictions missing")
+            return pd.DataFrame([{"col": 1}])
+        return pd.DataFrame(self._rows)
+
+
+def _fg_row(**overrides: Any) -> dict:
+    base = {
+        "game_pk": 778899,
+        "market_type": "Total",
+        "side": "Over",
+        "team_tricode": "",
+        "line_value": 8.5,
+        "model_prob": 0.55,
+        "market_prob": 0.50,
+        "edge_pp": 4.5,
+        "american_odds": -110,
+        "book": "draftkings",
+        "confidence": 0.65,
+        "tier": "STRONG",
+        "feature_blob": '{"lam_used": 9.10}',
+        "event_date": "2026-05-01",
+    }
+    base.update(overrides)
+    return base
+
+
+def test_fullgame_total_uses_TOTAL_market_type():
+    """Full-Game classifier groups Total picks under MONEYLINE/TOTAL/etc."""
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    store = _FakeFullGameStore([_fg_row(market_type="Total")])
+    picks = _load_fullgame_picks(store, "2026-05-01")
+    assert len(picks) == 1
+    assert picks[0].market_type == "TOTAL"
+
+
+def test_fullgame_ml_uses_MONEYLINE_market_type():
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    store = _FakeFullGameStore([_fg_row(market_type="ML", side="NYY",
+                                          team_tricode="NYY", line_value=0.0)])
+    pick = _load_fullgame_picks(store, "2026-05-01")[0]
+    assert pick.market_type == "MONEYLINE"
+
+
+def test_fullgame_run_line_uses_RUN_LINE_market_type():
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    store = _FakeFullGameStore([_fg_row(market_type="Run_Line", side="NYY",
+                                          team_tricode="NYY", line_value=-1.5)])
+    pick = _load_fullgame_picks(store, "2026-05-01")[0]
+    assert pick.market_type == "RUN_LINE"
+
+
+def test_fullgame_total_selection_label_is_human_readable():
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    store = _FakeFullGameStore([_fg_row(market_type="Total", side="Over",
+                                          line_value=8.5)])
+    pick = _load_fullgame_picks(store, "2026-05-01")[0]
+    assert "Total Runs Over 8.5" in pick.selection
+
+
+def test_fullgame_ml_selection_label_includes_team():
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    store = _FakeFullGameStore([_fg_row(market_type="ML", side="NYY",
+                                          team_tricode="NYY", line_value=0.0)])
+    pick = _load_fullgame_picks(store, "2026-05-01")[0]
+    assert "NYY" in pick.selection
+    assert "Moneyline" in pick.selection
+
+
+def test_fullgame_run_line_selection_includes_signed_spread():
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    store = _FakeFullGameStore([
+        _fg_row(market_type="Run_Line", side="NYY", team_tricode="NYY",
+                  line_value=-1.5),
+        _fg_row(market_type="Run_Line", side="BOS", team_tricode="BOS",
+                  line_value=+1.5),
+    ])
+    picks = _load_fullgame_picks(store, "2026-05-01")
+    by_team = {p.selection.split(" · ")[0]: p.selection for p in picks}
+    assert "-1.5" in by_team["NYY"]
+    assert "+1.5" in by_team["BOS"]
+
+
+def test_fullgame_pick_grade_follows_tier_mapping():
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    store = _FakeFullGameStore([_fg_row(tier="STRONG")])
+    pick = _load_fullgame_picks(store, "2026-05-01")[0]
+    assert pick.grade == "A"
+    assert pick.tier == "STRONG"
+
+
+def test_fullgame_edge_serialized_as_fraction_string():
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    store = _FakeFullGameStore([_fg_row(edge_pp=4.5)])
+    pick = _load_fullgame_picks(store, "2026-05-01")[0]
+    assert pick.edge == "0.0450"
+    assert pick.fair_prob == "0.5500"
+
+
+def test_fullgame_ml_omits_line_number():
+    """ML / F5_ML picks have no line value to render."""
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    store = _FakeFullGameStore([_fg_row(market_type="ML", side="NYY",
+                                          team_tricode="NYY", line_value=0.0)])
+    pick = _load_fullgame_picks(store, "2026-05-01")[0]
+    assert pick.to_dict()["line"]["number"] is None
+
+
+def test_fullgame_total_includes_line_number():
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    store = _FakeFullGameStore([_fg_row(market_type="Total", line_value=8.5)])
+    pick = _load_fullgame_picks(store, "2026-05-01")[0]
+    assert pick.to_dict()["line"]["number"] == "8.5"
+
+
+def test_fullgame_returns_empty_when_table_missing():
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    store = _FakeFullGameStore(has_table=False)
+    assert _load_fullgame_picks(store, "2026-05-01") == []
+
+
+def test_fullgame_returns_empty_when_store_is_none():
+    from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
+    assert _load_fullgame_picks(None, "2026-05-01") == []
+
+
+def test_build_bundle_combines_nrfi_props_fullgame():
+    from edge_equation.engines.website.build_daily_feed import build_bundle
+    nrfi_store = _FakeStore([_row()])
+    props_store = _FakePropsStore([_prop_row()])
+    fg_store = _FakeFullGameStore([_fg_row()])
+    bundle = build_bundle(
+        nrfi_store, "2026-05-01",
+        props_store=props_store,
+        fullgame_store=fg_store,
+    )
+    market_types = {p.market_type for p in bundle.picks}
+    assert "NRFI" in market_types or "YRFI" in market_types
+    assert "PLAYER_PROP_HR" in market_types
+    assert "TOTAL" in market_types

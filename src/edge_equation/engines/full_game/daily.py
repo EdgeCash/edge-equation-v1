@@ -35,6 +35,7 @@ from .config import FullGameConfig, get_default_config
 from .data.storage import FullGameStore
 from .data.team_rates import TeamRollingRates, default_team_rates_table
 from .edge import build_edge_picks
+from .explain import decomposition_drivers, mc_band
 from .ledger import (
     init_ledger_tables, render_ledger_section, settle_predictions,
 )
@@ -122,11 +123,32 @@ def build_full_game_card(
     picks_edge = build_edge_picks(lines, projections, min_tier=Tier.LEAN)
 
     # 5. Convert each edge-pick into a FullGameOutput, carrying λ +
-    # blend counts from the matching projection.
+    # blend counts + MC band + Why-notes from the matching projection.
     proj_index = _index_projections(lines, projections)
     outputs: list[FullGameOutput] = []
     for pick in picks_edge:
         proj = proj_index.get(_proj_key_for_pick(pick))
+        if proj is not None:
+            is_home_side = bool(
+                pick.team_tricode and pick.team_tricode == pick.home_tricode
+            )
+            band = mc_band(
+                proj,
+                line_value=pick.line_value,
+                is_home_side=is_home_side,
+                f5_share=cfg.projection.f5_share_of_total,
+            )
+            drivers = decomposition_drivers(
+                proj,
+                home_tricode=pick.home_tricode,
+                away_tricode=pick.away_tricode,
+                prior_weight=cfg.projection.prior_weight_games,
+                market_prob=float(pick.market_prob_devigged),
+                edge_pp=float(pick.edge_pp),
+            )
+        else:
+            band = None
+            drivers = []
         outputs.append(build_full_game_output(
             pick,
             confidence=proj.confidence if proj else 0.30,
@@ -135,6 +157,10 @@ def build_full_game_card(
             lam_away=proj.lam_away if proj else 0.0,
             blend_n_home=proj.blend_n_home if proj else 0,
             blend_n_away=proj.blend_n_away if proj else 0,
+            driver_text=drivers,
+            mc_low=band.low if band else 0.0,
+            mc_high=band.high if band else 0.0,
+            mc_band_pp=band.band_pp if band else 0.0,
             event_id=str(pick.market_canonical),  # placeholder until per-event id mapping lands
         ))
     card.picks = outputs
