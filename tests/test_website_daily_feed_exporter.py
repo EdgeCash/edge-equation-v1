@@ -296,13 +296,27 @@ def test_props_pick_id_is_stable_and_includes_tuple():
 
 
 def test_props_picks_filter_no_play_tier():
-    """NO_PLAY rows are dropped so the public ledger never shows them."""
+    """NO_PLAY rows are dropped so the public ledger never shows them.
+
+    The exporter re-classifies every row against the current tier
+    ladder before publishing — so the persisted ``tier`` column is
+    informational only. We construct rows with edge values that
+    map cleanly to LEAN and STRONG under the active thresholds, plus
+    one row whose edge is sub-threshold and should be dropped.
+    """
     from edge_equation.engines.website.build_daily_feed import _load_props_picks
-    # The DB filter is part of the SQL; emulate that here by primitive
-    # filtering — the helper trusts the store to honor the WHERE clause.
-    store = _FakePropsStore([_prop_row(tier="LEAN"), _prop_row(tier="STRONG")])
+    store = _FakePropsStore([
+        # 3.0pp edge + 0.55 prob → LEAN under current ladder.
+        _prop_row(edge_pp=3.0, model_prob=0.55, tier="LEAN",
+                    player_name="Player A"),
+        # 9.0pp edge + 0.65 prob → STRONG under current ladder.
+        _prop_row(edge_pp=9.0, model_prob=0.65, tier="STRONG",
+                    player_name="Player B"),
+        # 1.0pp edge → NO_PLAY (sub-threshold), should be filtered.
+        _prop_row(edge_pp=1.0, model_prob=0.40, tier="LEAN",
+                    player_name="Player C"),
+    ])
     picks = _load_props_picks(store, "2026-05-01")
-    # Both LEAN + STRONG are kept (NO_PLAY would have been filtered in SQL).
     assert {p.tier for p in picks} == {"LEAN", "STRONG"}
 
 
@@ -316,7 +330,10 @@ def test_props_pick_grade_follows_tier_mapping():
     assert _grade_from_tier("LEAN") == "C"
     assert _grade_from_tier("NO_PLAY") == "F"
 
-    store = _FakePropsStore([_prop_row(tier="STRONG")])
+    # 9.0pp edge + 0.65 model_prob re-classifies to STRONG under
+    # the current ladder; persisted tier is informational only.
+    store = _FakePropsStore([_prop_row(edge_pp=9.0, model_prob=0.65,
+                                          tier="STRONG")])
     pick = _load_props_picks(store, "2026-05-01")[0]
     assert pick.grade == "A"
     assert pick.tier == "STRONG"
@@ -483,7 +500,9 @@ def test_fullgame_run_line_selection_includes_signed_spread():
 
 def test_fullgame_pick_grade_follows_tier_mapping():
     from edge_equation.engines.website.build_daily_feed import _load_fullgame_picks
-    store = _FakeFullGameStore([_fg_row(tier="STRONG")])
+    # 9.0pp edge + 0.65 model_prob re-classifies to STRONG.
+    store = _FakeFullGameStore([_fg_row(edge_pp=9.0, model_prob=0.65,
+                                          tier="STRONG")])
     pick = _load_fullgame_picks(store, "2026-05-01")[0]
     assert pick.grade == "A"
     assert pick.tier == "STRONG"

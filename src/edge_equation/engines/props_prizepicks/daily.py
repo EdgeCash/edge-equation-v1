@@ -452,6 +452,22 @@ def _persist_predictions(
             "confidence": o.confidence,
         }),
     } for o in outputs]
+    # Clear any rows from a prior orchestrator run for this same
+    # date before inserting. ``upsert`` only replaces matching primary
+    # keys; rows produced under older thresholds that no longer
+    # qualify under the current ladder would otherwise persist and
+    # leak onto the website. Delete-then-insert makes today's table
+    # state a function of today's run alone.
+    try:
+        store.execute(
+            "DELETE FROM prop_predictions WHERE event_date = ?",
+            (target_date,),
+        )
+    except Exception as e:
+        log.debug(
+            "props persist: pre-insert delete skipped (%s): %s",
+            type(e).__name__, e,
+        )
     store.upsert("prop_predictions", rows)
 
 
