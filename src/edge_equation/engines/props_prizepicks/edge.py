@@ -173,8 +173,15 @@ def build_edge_picks(
             line=line, projection=proj,
             devig_total=devig.get(_key_for_pair(line)),
         )
-        clf = classify_tier(market_type=line.market.canonical,
-                              edge=edge_pp / 100.0)
+        # Pass model prob alongside edge so the tiering ELITE floor
+        # (model_prob >= 0.62) can demote large-edge / low-conviction
+        # picks (e.g. RBI Over 0.5 at 37% conviction) from ELITE to
+        # STRONG. See engines.tiering.ELITE_MIN_MODEL_PROB.
+        clf = classify_tier(
+            market_type=line.market.canonical,
+            edge=edge_pp / 100.0,
+            side_probability=float(proj.model_prob),
+        )
         if rank[clf.tier] < floor:
             continue
         picks.append(PropEdgePick(

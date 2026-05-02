@@ -549,7 +549,8 @@ def test_build_edge_picks_keeps_high_confidence_picks():
     assert len(picks) == 1
 
 
-def test_build_edge_picks_classifies_strong_at_5pp():
+def test_build_edge_picks_classifies_moderate_at_5pp():
+    """Post 2026-05-02 ladder: 12/8/5/2.5pp edge. ~5.5pp lands in MODERATE."""
     line = _line(side="Over", line_value=8.5, american_odds=-110)
     from edge_equation.engines.full_game.projection import (
         ProjectedFullGameSide,
@@ -560,8 +561,39 @@ def test_build_edge_picks_classifies_strong_at_5pp():
     )
     picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
     assert len(picks) == 1
-    assert picks[0].tier == Tier.STRONG
+    assert picks[0].tier == Tier.MODERATE
     assert picks[0].edge_pp > 5.0
+
+
+def test_build_edge_picks_classifies_strong_at_8pp_with_high_prob():
+    """8pp edge with model_prob above the 0.62 ELITE floor → STRONG."""
+    line = _line(side="Over", line_value=8.5, american_odds=-110)
+    from edge_equation.engines.full_game.projection import (
+        ProjectedFullGameSide,
+    )
+    proj = ProjectedFullGameSide(
+        market=line.market, side="Over", line_value=8.5,
+        model_prob=0.62, confidence=0.55,
+    )
+    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
+    assert len(picks) == 1
+    assert picks[0].tier == Tier.STRONG
+
+
+def test_build_edge_picks_demotes_elite_when_model_prob_below_floor():
+    """A 14pp edge with model_prob 0.46 → demote ELITE → STRONG."""
+    line = _line(side="Over", line_value=8.5, american_odds=+200)
+    from edge_equation.engines.full_game.projection import (
+        ProjectedFullGameSide,
+    )
+    proj = ProjectedFullGameSide(
+        market=line.market, side="Over", line_value=8.5,
+        model_prob=0.47, confidence=0.55,
+    )
+    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
+    assert len(picks) == 1
+    assert picks[0].tier == Tier.STRONG
+    assert picks[0].edge_pp > 12.0
 
 
 def test_build_edge_picks_sorts_by_edge_desc():

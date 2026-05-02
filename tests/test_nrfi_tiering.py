@@ -87,23 +87,55 @@ def test_nrfi_classifier_requires_probability():
 
 @pytest.mark.parametrize("market_type", ["ML", "Total", "Run_Line", "HR", "K"])
 @pytest.mark.parametrize("edge,expected_tier", [
-    (0.12,  "ELITE"),
-    (0.08,  "ELITE"),
-    (0.07,  "STRONG"),
-    (0.05,  "STRONG"),
-    (0.04,  "MODERATE"),
-    (0.03,  "MODERATE"),
-    (0.02,  "LEAN"),
-    (0.01,  "LEAN"),
-    (0.005, "NO_PLAY"),
-    (0.0,   "NO_PLAY"),
-    (-0.05, "NO_PLAY"),  # negative edge → NO_PLAY
+    # Tightened ladder (post 2026-05-02): ELITE 12pp, STRONG 8pp,
+    # MODERATE 5pp, LEAN 2.5pp. ELITE-tier additionally requires a
+    # ``model_prob >= 0.62`` floor — these tests pass an explicit
+    # 0.7 model_prob on each call so the edge ladder isolates cleanly.
+    (0.20,   "ELITE"),
+    (0.12,   "ELITE"),
+    (0.10,   "STRONG"),
+    (0.08,   "STRONG"),
+    (0.07,   "MODERATE"),
+    (0.05,   "MODERATE"),
+    (0.04,   "LEAN"),
+    (0.025,  "LEAN"),
+    (0.02,   "NO_PLAY"),
+    (0.01,   "NO_PLAY"),
+    (0.0,    "NO_PLAY"),
+    (-0.05,  "NO_PLAY"),  # negative edge → NO_PLAY
 ])
 def test_classify_edge_ladder(market_type, edge, expected_tier):
     from edge_equation.engines.tiering import classify_tier
-    clf = classify_tier(market_type=market_type, edge=edge)
+    clf = classify_tier(
+        market_type=market_type, edge=edge,
+        side_probability=0.70,   # above ELITE floor — isolate the ladder
+    )
     assert clf.tier.value == expected_tier
     assert clf.basis == "edge"
+
+
+def test_classify_edge_elite_demoted_when_model_prob_below_floor():
+    """A 15pp edge with a sub-coin-flip model probability is informative
+    but shouldn't be the operator's top conviction call. Demote to STRONG."""
+    from edge_equation.engines.tiering import classify_tier
+    clf = classify_tier(
+        market_type="ML", edge=0.15, side_probability=0.40,
+    )
+    assert clf.tier.value == "STRONG"
+    # Above the floor, the same edge stays ELITE.
+    clf2 = classify_tier(
+        market_type="ML", edge=0.15, side_probability=0.65,
+    )
+    assert clf2.tier.value == "ELITE"
+
+
+def test_classify_edge_no_prob_passed_keeps_legacy_behavior():
+    """Callers that don't pass ``side_probability`` (legacy path) get
+    the raw edge ladder result without the ELITE floor demotion —
+    preserves backwards-compat with existing call sites."""
+    from edge_equation.engines.tiering import classify_tier
+    clf = classify_tier(market_type="ML", edge=0.15)
+    assert clf.tier.value == "ELITE"
 
 
 def test_edge_classifier_requires_edge():
