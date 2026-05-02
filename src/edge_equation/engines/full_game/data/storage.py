@@ -138,6 +138,33 @@ class FullGameStore:
         self._duckdb = _import_duckdb()
         self._conn = self._duckdb.connect(self.db_path)
         self._init_schema()
+        # Aggressive diagnostic: chasing why data written by one
+        # subprocess isn't visible to the next subprocess opening the
+        # same path. Logs the resolved path, file size, and WAL
+        # presence so we can see whether two subprocesses are looking
+        # at different files or seeing different states.
+        try:
+            resolved = str(Path(self.db_path).resolve())
+            size = (
+                Path(self.db_path).stat().st_size
+                if Path(self.db_path).exists() else -1
+            )
+            wal = Path(self.db_path + ".wal")
+            wal_size = wal.stat().st_size if wal.exists() else -1
+            n_actuals = -1
+            try:
+                n_actuals = self._conn.execute(
+                    "SELECT COUNT(*) FROM fullgame_actuals"
+                ).fetchone()[0]
+            except Exception:
+                pass
+            log.info(
+                "FullGameStore opened: path=%s size=%d wal_size=%d "
+                "fullgame_actuals_count=%d",
+                resolved, size, wal_size, n_actuals,
+            )
+        except Exception as e:
+            log.debug("FullGameStore open-diagnostic failed: %s", e)
 
     def _init_schema(self) -> None:
         for stmt in _SCHEMA:
@@ -172,16 +199,37 @@ class FullGameStore:
         )
         with self.cursor() as cur:
             cur.executemany(sql, [tuple(r[c] for c in cols) for r in rows])
-        # Explicit checkpoint flushes the WAL into the main file so
-        # subsequent subprocess connections see the data. Without
-        # this, the backfill subprocess writes 821 rows, exits, and
-        # the next process opens the file but reads ``COUNT(*) = 0``
-        # — DuckDB's WAL contained the writes but the connection
-        # close didn't promote them. Idempotent + cheap.
+        # Explicit checkpoint with verbose error reporting — chasing
+        # the cross-subprocess durability bug where data written here
+        # isn't visible to a sibling subprocess that opens the same
+        # path. If CHECKPOINT raises, we want to know why.
         try:
             self._conn.execute("CHECKPOINT")
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning(
+                "CHECKPOINT failed for table=%s after upsert: %s: %s",
+                table, type(e).__name__, e,
+            )
+        # Read-back diagnostic on the SAME connection — if this shows
+        # the rows but a fresh connection can't see them, the issue
+        # is durability/visibility, not the upsert itself.
+        try:
+            n = self._conn.execute(
+                f"SELECT COUNT(*) FROM {table}"
+            ).fetchone()[0]
+            size = (
+                Path(self.db_path).stat().st_size
+                if Path(self.db_path).exists() else -1
+            )
+            wal = Path(self.db_path + ".wal")
+            wal_size = wal.stat().st_size if wal.exists() else -1
+            log.info(
+                "FullGameStore upsert post-checkpoint: table=%s "
+                "this_conn_count=%d file_size=%d wal_size=%d",
+                table, n, size, wal_size,
+            )
+        except Exception as e:
+            log.debug("upsert post-diagnostic failed: %s", e)
         return len(rows)
 
     def query_df(self, sql: str, params: Optional[tuple] = None):
@@ -194,11 +242,34 @@ class FullGameStore:
         # Force a final checkpoint before close so any WAL contents
         # not yet promoted (e.g. from non-upsert ``execute()`` calls)
         # land in the main file. Belt-and-suspenders alongside the
-        # per-upsert checkpoint above.
+        # per-upsert checkpoint above. Verbose error reporting —
+        # chasing cross-subprocess durability bug.
         try:
             self._conn.execute("CHECKPOINT")
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning(
+                "CHECKPOINT-on-close failed: %s: %s",
+                type(e).__name__, e,
+            )
+        # Diagnostic: log final file size + WAL state right before
+        # closing. Compare with what the next subprocess sees on open.
+        try:
+            n = self._conn.execute(
+                "SELECT COUNT(*) FROM fullgame_actuals"
+            ).fetchone()[0]
+            size = (
+                Path(self.db_path).stat().st_size
+                if Path(self.db_path).exists() else -1
+            )
+            wal = Path(self.db_path + ".wal")
+            wal_size = wal.stat().st_size if wal.exists() else -1
+            log.info(
+                "FullGameStore closing: path=%s count=%d "
+                "file_size=%d wal_size=%d",
+                str(Path(self.db_path).resolve()), n, size, wal_size,
+            )
+        except Exception as e:
+            log.debug("close diagnostic failed: %s", e)
         self._conn.close()
 
     # --- Convenience accessors --------------------------------------------
