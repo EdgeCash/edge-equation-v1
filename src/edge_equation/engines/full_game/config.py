@@ -25,8 +25,20 @@ def _find_repo_root(start: Path) -> Path:
 
 
 _REPO_ROOT = _find_repo_root(Path(__file__))
-_DEFAULT_CACHE_DIR = _REPO_ROOT / "data" / "full_game_cache"
-_DEFAULT_DB_PATH = _DEFAULT_CACHE_DIR / "full_game.duckdb"
+# Cache dir + DuckDB path use the no-underscore form to match the
+# rest of the codebase. Every workflow CLI invocation, the artifact
+# upload/download paths, the docstrings in scrapers_etl.py and
+# evaluation/sanity.py, and the daily-feed exporter's
+# ``--fullgame-duckdb-path`` flag all reference
+# ``data/fullgame_cache/fullgame.duckdb``. The default config used
+# to point at ``full_game_cache/full_game.duckdb`` (with
+# underscores), which meant inline calls from ``email_report``
+# silently opened a different (empty) file than the workflow CLI
+# wrote to — every backfill landed in one path, every read came
+# from another. The diagnostic logs in PR #132 surfaced the path
+# divergence directly. Fix: use the canonical no-underscore form.
+_DEFAULT_CACHE_DIR = _REPO_ROOT / "data" / "fullgame_cache"
+_DEFAULT_DB_PATH = _DEFAULT_CACHE_DIR / "fullgame.duckdb"
 
 
 # ---------------------------------------------------------------------------
