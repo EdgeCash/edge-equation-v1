@@ -267,7 +267,27 @@ def _grade_from_tier(tier: str) -> str:
 
 
 def _load_props_picks(store, target_date: str) -> list[FeedPick]:
-    """Pull today's tier-LEAN+ props predictions into FeedPick rows."""
+    """Pull today's tier-LEAN+ props predictions into FeedPick rows.
+
+    Re-classifies every row using ``engines.tiering.classify_tier``
+    with the CURRENT thresholds before publishing — the persisted
+    ``tier`` column may reflect older thresholds from a previous run
+    on the same slate, which would otherwise leak stale ELITE picks
+    onto the website even after we tightened the ladder. The
+    re-classification is cheap, idempotent, and keeps the feed
+    self-healing against any persisted-with-stale-tier data.
+
+    After re-classification the feed:
+    * drops any pick whose updated tier is ``NO_PLAY``
+      (was qualifying under old rules, isn't under new)
+    * caps at ``PROPS_FEED_MAX_PICKS`` rows sorted by
+      (tier rank, edge desc, conviction desc) so the website
+      surfaces the operator's most actionable picks first.
+    """
+    from edge_equation.engines.tiering import (
+        Tier, classify_tier,
+    )
+
     if store is None:
         return []
     if not _table_exists(store, "prop_predictions"):
@@ -276,7 +296,10 @@ def _load_props_picks(store, target_date: str) -> list[FeedPick]:
     if df is None or len(df) == 0:
         return []
 
-    picks: list[FeedPick] = []
+    tier_rank = {Tier.ELITE: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
+                   Tier.LEAN: 1, Tier.NO_PLAY: 0}
+
+    candidates: list[tuple[int, float, float, FeedPick]] = []
     for _, r in df.iterrows():
         market_type = str(r.get("market_type") or "")
         player = str(r.get("player_name") or "")
@@ -285,13 +308,23 @@ def _load_props_picks(store, target_date: str) -> list[FeedPick]:
         model_prob = _safe_float(r.get("model_prob"))
         edge_pp = _safe_float(r.get("edge_pp"))
         american = _safe_float(r.get("american_odds")) or -110.0
-        tier = str(r.get("tier") or "NO_PLAY").upper()
         confidence = _safe_float(r.get("confidence"))
-        # The persisted feature_blob carries λ for the audit-style
-        # `notes` field; missing blob → just skip the lambda mention.
         lam = _lam_from_blob(r.get("feature_blob"))
-        # Daily-feed schema convention: edge is fractional (0.04 = 4pp).
         edge_frac = edge_pp / 100.0
+
+        # Re-classify with current thresholds.
+        try:
+            clf = classify_tier(
+                market_type=market_type or "Hits",
+                edge=edge_frac,
+                side_probability=model_prob,
+            )
+            fresh_tier = clf.tier
+        except Exception:
+            fresh_tier = Tier.NO_PLAY
+        if fresh_tier == Tier.NO_PLAY:
+            continue
+        tier_str = fresh_tier.value
         # We don't persist Kelly directly; the engine computes it on the
         # fly when it builds the email card. For the feed we provide a
         # conservative 1/4-Kelly-equivalent off the edge so the website's
@@ -318,7 +351,7 @@ def _load_props_picks(store, target_date: str) -> list[FeedPick]:
             side.upper(),
         ])
 
-        picks.append(FeedPick(
+        pick_obj = FeedPick(
             id=pid,
             sport="MLB",
             market_type=feed_market_type,
@@ -328,13 +361,34 @@ def _load_props_picks(store, target_date: str) -> list[FeedPick]:
             fair_prob=f"{model_prob:.4f}",
             edge=f"{edge_frac:.4f}",
             kelly=f"{kelly:.4f}",
-            grade=_grade_from_tier(tier),
-            tier=tier,
+            grade=_grade_from_tier(tier_str),
+            tier=tier_str,
             notes=notes,
             event_time=None,           # commence_time not persisted yet
             game_id=str(game_pk),
+        )
+        # Sort key: tier rank desc, then edge desc, then prob desc
+        candidates.append((
+            -tier_rank.get(fresh_tier, 0),
+            -edge_pp,
+            -model_prob,
+            pick_obj,
         ))
-    return picks
+
+    candidates.sort(key=lambda t: (t[0], t[1], t[2]))
+    capped = [t[3] for t in candidates[:PROPS_FEED_MAX_PICKS]]
+    return capped
+
+
+# Hard cap on the number of props rows the website renders. The
+# props orchestrator routinely produces 200+ LEAN+ picks on a typical
+# slate (lots of player-line combos beat the vig); shipping all of
+# them turns the page into a wall of low-conviction noise. 30 is
+# enough to surface every ELITE + STRONG pick on a typical day plus
+# the top of the MODERATE band; LEAN-tier picks effectively become
+# email-only at this cap (which matches their "content-only"
+# semantics in the conviction key).
+PROPS_FEED_MAX_PICKS: int = 30
 
 
 def _slug(s: str) -> str:
@@ -434,6 +488,13 @@ def _load_fullgame_picks(store, target_date: str) -> list[FeedPick]:
     if df is None or len(df) == 0:
         return []
 
+    # Same self-healing re-classification as the props side: trust
+    # the model_prob + edge fields, ignore the persisted ``tier``
+    # column (which may have been written under older thresholds).
+    from edge_equation.engines.tiering import (
+        Tier, classify_tier,
+    )
+
     picks: list[FeedPick] = []
     for _, r in df.iterrows():
         market_type = str(r.get("market_type") or "")
@@ -443,10 +504,23 @@ def _load_fullgame_picks(store, target_date: str) -> list[FeedPick]:
         model_prob = _safe_float(r.get("model_prob"))
         edge_pp = _safe_float(r.get("edge_pp"))
         american = _safe_float(r.get("american_odds")) or -110.0
-        tier = str(r.get("tier") or "NO_PLAY").upper()
         confidence = _safe_float(r.get("confidence"))
         lam_used = _fullgame_lam_from_blob(r.get("feature_blob"))
         edge_frac = edge_pp / 100.0
+
+        try:
+            clf = classify_tier(
+                market_type=market_type or "ML",
+                edge=edge_frac,
+                side_probability=model_prob,
+            )
+            fresh_tier = clf.tier
+        except Exception:
+            fresh_tier = Tier.NO_PLAY
+        if fresh_tier == Tier.NO_PLAY:
+            continue
+        tier_str = fresh_tier.value
+
         # Conservative 1/4-Kelly proxy off the edge — tier is the
         # source of truth for stake sizing in the public ledger.
         kelly = max(0.0, edge_frac * 0.25)
@@ -460,9 +534,6 @@ def _load_fullgame_picks(store, target_date: str) -> list[FeedPick]:
         notes = _props_notes(model_prob, side, lam_used, edge_pp, confidence)
 
         game_pk = int(r.get("game_pk") or 0)
-        # game_pk is a placeholder (0) until the FG odds_fetcher
-        # surfaces it; build a deterministic id from the prop tuple
-        # so duplicates within a slate don't collide.
         pid = "-".join([
             str(game_pk),
             market_type,
@@ -480,8 +551,8 @@ def _load_fullgame_picks(store, target_date: str) -> list[FeedPick]:
             fair_prob=f"{model_prob:.4f}",
             edge=f"{edge_frac:.4f}",
             kelly=f"{kelly:.4f}",
-            grade=_grade_from_tier(tier),
-            tier=tier,
+            grade=_grade_from_tier(tier_str),
+            tier=tier_str,
             notes=notes,
             event_time=None,
             game_id=str(game_pk),

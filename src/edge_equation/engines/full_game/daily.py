@@ -347,6 +347,19 @@ def _persist_predictions(
             "confidence": o.confidence,
         }),
     } for o in outputs]
+    # Same staleness fix as the props side: clear today's rows
+    # before inserting, so a re-run under tightened thresholds
+    # doesn't leave dropped picks lying around in DuckDB.
+    try:
+        store.execute(
+            "DELETE FROM fullgame_predictions WHERE event_date = ?",
+            (target_date,),
+        )
+    except Exception as e:
+        log.debug(
+            "fullgame persist: pre-insert delete skipped (%s): %s",
+            type(e).__name__, e,
+        )
     store.upsert("fullgame_predictions", rows)
 
 
