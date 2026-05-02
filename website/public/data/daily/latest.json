@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-02T00:29:44+00:00",
+  "generated_at": "2026-05-02T01:29:18+00:00",
   "date": "2026-05-02",
   "source": "run_daily.py",
   "notes": "Public-testing release. Manual operator trigger. Lineups + weather + umpires confirmed at publish time.",
@@ -14,12 +14,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5154",
+      "fair_prob": "0.5273",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "D",
       "tier": null,
-      "notes": "51.5% NRFI (\u03bb=0.66) \u00b7 band: Yellow",
+      "notes": "52.7% NRFI (\u03bb=0.64) \u00b7 band: Yellow",
       "event_time": "2026-05-02T17:35:00",
       "game_id": "823554"
     },
@@ -32,12 +32,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5393",
+      "fair_prob": "0.5397",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "D",
       "tier": null,
-      "notes": "53.9% NRFI (\u03bb=0.62) \u00b7 band: Yellow",
+      "notes": "54.0% NRFI (\u03bb=0.62) \u00b7 band: Yellow",
       "event_time": "2026-05-02T18:10:00",
       "game_id": "823715"
     },
@@ -50,12 +50,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5533",
+      "fair_prob": "0.5499",
       "edge": "0.0000",
       "kelly": "0.0000",
-      "grade": "C",
+      "grade": "D",
       "tier": null,
-      "notes": "55.3% NRFI (\u03bb=0.59) \u00b7 band: Light Green",
+      "notes": "55.0% NRFI (\u03bb=0.60) \u00b7 band: Yellow",
       "event_time": "2026-05-02T18:20:00",
       "game_id": "824685"
     },
@@ -68,12 +68,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5584",
+      "fair_prob": "0.5569",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "C",
       "tier": null,
-      "notes": "55.8% NRFI (\u03bb=0.58) \u00b7 band: Light Green",
+      "notes": "55.7% NRFI (\u03bb=0.59) \u00b7 band: Light Green",
       "event_time": "2026-05-02T20:05:00",
       "game_id": "823388"
     },
@@ -86,12 +86,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5557",
+      "fair_prob": "0.5469",
       "edge": "0.0000",
       "kelly": "0.0000",
-      "grade": "C",
+      "grade": "D",
       "tier": null,
-      "notes": "55.6% NRFI (\u03bb=0.59) \u00b7 band: Light Green",
+      "notes": "54.7% NRFI (\u03bb=0.60) \u00b7 band: Yellow",
       "event_time": "2026-05-02T20:05:00",
       "game_id": "822746"
     },
@@ -104,12 +104,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5466",
+      "fair_prob": "0.5449",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "D",
       "tier": null,
-      "notes": "54.7% NRFI (\u03bb=0.60) \u00b7 band: Yellow",
+      "notes": "54.5% NRFI (\u03bb=0.61) \u00b7 band: Yellow",
       "event_time": "2026-05-02T20:05:00",
       "game_id": "825014"
     },
@@ -122,7 +122,7 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5287",
+      "fair_prob": "0.5293",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "D",
@@ -140,12 +140,12 @@
         "number": null,
         "odds": -110.0
       },
-      "fair_prob": "0.5121",
+      "fair_prob": "0.5098",
       "edge": "0.0000",
       "kelly": "0.0000",
       "grade": "D",
       "tier": null,
-      "notes": "51.2% NRFI (\u03bb=0.67) \u00b7 band: Yellow",
+      "notes": "51.0% NRFI (\u03bb=0.67) \u00b7 band: Yellow",
       "event_time": "2026-05-02T20:10:00",
       "game_id": "824771"
     },
@@ -294,20 +294,164 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-george-springer-1.5-UNDER",
+      "id": "0-Total_Bases-mickey-moniak-5.5-UNDER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "George Springer \u00b7 Hits Under 1.5",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Mickey Moniak \u00b7 Total Bases Under 5.5",
       "line": {
-        "number": "1.5",
-        "odds": 130.0
+        "number": "5.5",
+        "odds": -115.0
       },
-      "fair_prob": "0.7626",
-      "edge": "0.3531",
-      "kelly": "0.0883",
+      "fair_prob": "0.9884",
+      "edge": "0.4884",
+      "kelly": "0.1221",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "76.3% Under \u00b7 \u03bb=0.93 \u00b7 edge +35.3pp \u00b7 conf 61%",
+      "notes": "98.8% Under \u00b7 \u03bb=1.84 \u00b7 edge +48.8pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-mickey-moniak-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Mickey Moniak \u00b7 Hits Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -115.0
+      },
+      "fair_prob": "0.9165",
+      "edge": "0.4165",
+      "kelly": "0.1041",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "91.7% Under \u00b7 \u03bb=1.02 \u00b7 edge +41.7pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-alec-burleson-4.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Alec Burleson \u00b7 Total Bases Under 4.5",
+      "line": {
+        "number": "4.5",
+        "odds": -148.0
+      },
+      "fair_prob": "0.9780",
+      "edge": "0.4161",
+      "kelly": "0.1040",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "97.8% Under \u00b7 \u03bb=1.57 \u00b7 edge +41.6pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-byron-buxton-4.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Byron Buxton \u00b7 Total Bases Under 4.5",
+      "line": {
+        "number": "4.5",
+        "odds": -142.0
+      },
+      "fair_prob": "0.9585",
+      "edge": "0.4065",
+      "kelly": "0.1016",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "95.8% Under \u00b7 \u03bb=1.87 \u00b7 edge +40.6pp \u00b7 conf 65%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-grant-holmes-2.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Grant Holmes \u00b7 Strikeouts Over 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -105.0
+      },
+      "fair_prob": "0.8738",
+      "edge": "0.3941",
+      "kelly": "0.0985",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "87.4% Over \u00b7 \u03bb=4.98 \u00b7 edge +39.4pp \u00b7 conf 53%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-nick-gonzales-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Nick Gonzales \u00b7 Hits Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -135.0
+      },
+      "fair_prob": "0.8976",
+      "edge": "0.3568",
+      "kelly": "0.0892",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "89.8% Under \u00b7 \u03bb=1.11 \u00b7 edge +35.7pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-kazuma-okamoto-8.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Kazuma Okamoto \u00b7 Total Bases Under 8.5",
+      "line": {
+        "number": "8.5",
+        "odds": -218.0
+      },
+      "fair_prob": "1.0000",
+      "edge": "0.3550",
+      "kelly": "0.0888",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "100.0% Under \u00b7 \u03bb=1.45 \u00b7 edge +35.5pp \u00b7 conf 65%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-mitch-keller-7.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Mitch Keller \u00b7 Strikeouts Under 7.5",
+      "line": {
+        "number": "7.5",
+        "odds": -135.0
+      },
+      "fair_prob": "0.8838",
+      "edge": "0.3430",
+      "kelly": "0.0857",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "88.4% Under \u00b7 \u03bb=4.83 \u00b7 edge +34.3pp \u00b7 conf 53%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-jordan-walker-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Jordan Walker \u00b7 Hits Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -168.0
+      },
+      "fair_prob": "0.9210",
+      "edge": "0.3306",
+      "kelly": "0.0826",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "92.1% Under \u00b7 \u03bb=0.99 \u00b7 edge +33.1pp \u00b7 conf 67%",
       "event_time": null,
       "game_id": "0"
     },
@@ -330,6 +474,114 @@
       "game_id": "0"
     },
     {
+      "id": "0-Total_Bases-henry-davis-4.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Henry Davis \u00b7 Total Bases Under 4.5",
+      "line": {
+        "number": "4.5",
+        "odds": -255.0
+      },
+      "fair_prob": "0.9908",
+      "edge": "0.3152",
+      "kelly": "0.0788",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "99.1% Under \u00b7 \u03bb=1.25 \u00b7 edge +31.5pp \u00b7 conf 61%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-bryan-reynolds-7.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Bryan Reynolds \u00b7 Total Bases Under 7.5",
+      "line": {
+        "number": "7.5",
+        "odds": -270.0
+      },
+      "fair_prob": "0.9999",
+      "edge": "0.3135",
+      "kelly": "0.0784",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "100.0% Under \u00b7 \u03bb=1.31 \u00b7 edge +31.3pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-kazuma-okamoto-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Kazuma Okamoto \u00b7 Hits Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -218.0
+      },
+      "fair_prob": "0.9397",
+      "edge": "0.2947",
+      "kelly": "0.0737",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "94.0% Under \u00b7 \u03bb=0.88 \u00b7 edge +29.5pp \u00b7 conf 65%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-nolan-gorman-4.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Nolan Gorman \u00b7 Total Bases Under 4.5",
+      "line": {
+        "number": "4.5",
+        "odds": -270.0
+      },
+      "fair_prob": "0.9798",
+      "edge": "0.2934",
+      "kelly": "0.0734",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "98.0% Under \u00b7 \u03bb=1.53 \u00b7 edge +29.3pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-nathan-church-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Nathan Church \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 176.0
+      },
+      "fair_prob": "0.6199",
+      "edge": "0.2790",
+      "kelly": "0.0698",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "62.0% Over \u00b7 \u03bb=0.97 \u00b7 edge +27.9pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-nick-gonzales-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Nick Gonzales \u00b7 Total Bases Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -135.0
+      },
+      "fair_prob": "0.8183",
+      "edge": "0.2775",
+      "kelly": "0.0694",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "81.8% Under \u00b7 \u03bb=1.46 \u00b7 edge +27.8pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-K-jose-quintana-2.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_K",
@@ -348,20 +600,308 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-ryan-jeffers-1.5-UNDER",
+      "id": "0-Hits-hunter-goodman-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
-      "selection": "Ryan Jeffers \u00b7 Hits Under 1.5",
+      "selection": "Hunter Goodman \u00b7 Hits Under 1.5",
       "line": {
         "number": "1.5",
-        "odds": 105.0
+        "odds": -105.0
       },
-      "fair_prob": "0.7258",
-      "edge": "0.2666",
-      "kelly": "0.0667",
+      "fair_prob": "0.7446",
+      "edge": "0.2649",
+      "kelly": "0.0662",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "72.6% Under \u00b7 \u03bb=1.03 \u00b7 edge +26.7pp \u00b7 conf 64%",
+      "notes": "74.5% Under \u00b7 \u03bb=0.98 \u00b7 edge +26.5pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-brandon-lowe-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Brandon Lowe \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 185.0
+      },
+      "fair_prob": "0.5934",
+      "edge": "0.2634",
+      "kelly": "0.0659",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "59.3% Over \u00b7 \u03bb=0.90 \u00b7 edge +26.3pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-bryan-reynolds-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Bryan Reynolds \u00b7 Hits Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -270.0
+      },
+      "fair_prob": "0.9438",
+      "edge": "0.2574",
+      "kelly": "0.0643",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "94.4% Under \u00b7 \u03bb=0.86 \u00b7 edge +25.7pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-nathaniel-lowe-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Nathaniel Lowe \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 145.0
+      },
+      "fair_prob": "0.6399",
+      "edge": "0.2552",
+      "kelly": "0.0638",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "64.0% Over \u00b7 \u03bb=1.02 \u00b7 edge +25.5pp \u00b7 conf 60%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-spencer-steer-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Spencer Steer \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 176.0
+      },
+      "fair_prob": "0.5911",
+      "edge": "0.2502",
+      "kelly": "0.0626",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "59.1% Over \u00b7 \u03bb=0.89 \u00b7 edge +25.0pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-brooks-lee-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Brooks Lee \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -110.0
+      },
+      "fair_prob": "0.7388",
+      "edge": "0.2489",
+      "kelly": "0.0622",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "73.9% Under \u00b7 \u03bb=0.99 \u00b7 edge +24.9pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-miguel-rojas-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Miguel Rojas \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 110.0
+      },
+      "fair_prob": "0.6958",
+      "edge": "0.2478",
+      "kelly": "0.0619",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "69.6% Over \u00b7 \u03bb=1.19 \u00b7 edge +24.8pp \u00b7 conf 58%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-matt-mclain-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Matt McLain \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 145.0
+      },
+      "fair_prob": "0.6316",
+      "edge": "0.2469",
+      "kelly": "0.0617",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "63.2% Over \u00b7 \u03bb=1.00 \u00b7 edge +24.7pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-james-outman-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "James Outman \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 176.0
+      },
+      "fair_prob": "0.5809",
+      "edge": "0.2400",
+      "kelly": "0.0600",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "58.1% Over \u00b7 \u03bb=0.87 \u00b7 edge +24.0pp \u00b7 conf 55%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-luke-keaschall-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Luke Keaschall \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 140.0
+      },
+      "fair_prob": "0.6300",
+      "edge": "0.2377",
+      "kelly": "0.0594",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "63.0% Over \u00b7 \u03bb=0.99 \u00b7 edge +23.8pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-hunter-goodman-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Hunter Goodman \u00b7 Total Bases Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -105.0
+      },
+      "fair_prob": "0.7108",
+      "edge": "0.2311",
+      "kelly": "0.0578",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "71.1% Under \u00b7 \u03bb=1.87 \u00b7 edge +23.1pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-james-outman-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "James Outman \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 525.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.2253",
+      "kelly": "0.0563",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +22.5pp \u00b7 conf 55%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-tyler-freeman-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Tyler Freeman \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -120.0
+      },
+      "fair_prob": "0.7345",
+      "edge": "0.2244",
+      "kelly": "0.0561",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "73.5% Under \u00b7 \u03bb=1.00 \u00b7 edge +22.4pp \u00b7 conf 59%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-spencer-horwitz-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Spencer Horwitz \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 170.0
+      },
+      "fair_prob": "0.5717",
+      "edge": "0.2231",
+      "kelly": "0.0558",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "57.2% Over \u00b7 \u03bb=0.85 \u00b7 edge +22.3pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-hunter-goodman-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Hunter Goodman \u00b7 RBIs Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -285.0
+      },
+      "fair_prob": "0.9183",
+      "edge": "0.2218",
+      "kelly": "0.0555",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "91.8% Under \u00b7 \u03bb=0.47 \u00b7 edge +22.2pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-tj-rumfield-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "TJ Rumfield \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -125.0
+      },
+      "fair_prob": "0.7409",
+      "edge": "0.2206",
+      "kelly": "0.0552",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "74.1% Under \u00b7 \u03bb=0.99 \u00b7 edge +22.1pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-tyler-heineman-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Tyler Heineman \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 500.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.2189",
+      "kelly": "0.0547",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +21.9pp \u00b7 conf 56%",
       "event_time": null,
       "game_id": "0"
     },
@@ -384,6 +924,186 @@
       "game_id": "0"
     },
     {
+      "id": "0-RBI-byron-buxton-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Byron Buxton \u00b7 RBIs Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -455.0
+      },
+      "fair_prob": "0.9877",
+      "edge": "0.2170",
+      "kelly": "0.0542",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "98.8% Under \u00b7 \u03bb=0.47 \u00b7 edge +21.7pp \u00b7 conf 65%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-tyler-heineman-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Tyler Heineman \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 145.0
+      },
+      "fair_prob": "0.6008",
+      "edge": "0.2161",
+      "kelly": "0.0540",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "60.1% Over \u00b7 \u03bb=0.92 \u00b7 edge +21.6pp \u00b7 conf 56%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-nathan-church-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Nathan Church \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 475.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.2118",
+      "kelly": "0.0530",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +21.2pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-nick-gonzales-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Nick Gonzales \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 475.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.2118",
+      "kelly": "0.0530",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +21.2pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-spencer-horwitz-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Spencer Horwitz \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 475.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.2118",
+      "kelly": "0.0530",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +21.2pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-miguel-rojas-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Miguel Rojas \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 450.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.2045",
+      "kelly": "0.0511",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +20.5pp \u00b7 conf 58%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-lenyn-sosa-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Lenyn Sosa \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 450.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.2045",
+      "kelly": "0.0511",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +20.5pp \u00b7 conf 60%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-marcell-ozuna-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Marcell Ozuna \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 450.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.2045",
+      "kelly": "0.0511",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +20.5pp \u00b7 conf 65%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-kyle-tucker-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Kyle Tucker \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 140.0
+      },
+      "fair_prob": "0.5967",
+      "edge": "0.2044",
+      "kelly": "0.0511",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "59.7% Over \u00b7 \u03bb=0.91 \u00b7 edge +20.4pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-mickey-moniak-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Mickey Moniak \u00b7 RBIs Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -320.0
+      },
+      "fair_prob": "0.9183",
+      "edge": "0.2029",
+      "kelly": "0.0507",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "91.8% Under \u00b7 \u03bb=0.47 \u00b7 edge +20.3pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-RBI-bryan-reynolds-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
@@ -402,6 +1122,24 @@
       "game_id": "0"
     },
     {
+      "id": "0-Total_Bases-daulton-varsho-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Daulton Varsho \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 185.0
+      },
+      "fair_prob": "0.5322",
+      "edge": "0.2022",
+      "kelly": "0.0506",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "53.2% Over \u00b7 \u03bb=1.78 \u00b7 edge +20.2pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-K-cole-ragans-6.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_K",
@@ -416,6 +1154,348 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "66.4% Under \u00b7 \u03bb=5.64 \u00b7 edge +20.1pp \u00b7 conf 53%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-tj-friedl-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "TJ Friedl \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -162.0
+      },
+      "fair_prob": "0.7828",
+      "edge": "0.1999",
+      "kelly": "0.0500",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "78.3% Under \u00b7 \u03bb=0.87 \u00b7 edge +20.0pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-elly-de-la-cruz-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Elly De La Cruz \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 120.0
+      },
+      "fair_prob": "0.6274",
+      "edge": "0.1989",
+      "kelly": "0.0497",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "62.7% Over \u00b7 \u03bb=0.99 \u00b7 edge +19.9pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-masyn-winn-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Masyn Winn \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 425.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1965",
+      "kelly": "0.0491",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +19.6pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-daulton-varsho-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Daulton Varsho \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 425.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1965",
+      "kelly": "0.0491",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +19.6pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-luke-keaschall-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Luke Keaschall \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 425.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1965",
+      "kelly": "0.0491",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +19.6pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-spencer-steer-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Spencer Steer \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 425.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1965",
+      "kelly": "0.0491",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +19.6pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-byron-buxton-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Byron Buxton \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -142.0
+      },
+      "fair_prob": "0.7479",
+      "edge": "0.1958",
+      "kelly": "0.0490",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "74.8% Under \u00b7 \u03bb=0.97 \u00b7 edge +19.6pp \u00b7 conf 65%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-sal-stewart-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Sal Stewart \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 120.0
+      },
+      "fair_prob": "0.6243",
+      "edge": "0.1958",
+      "kelly": "0.0490",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "62.4% Over \u00b7 \u03bb=0.98 \u00b7 edge +19.6pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-konnor-griffin-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Konnor Griffin \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 145.0
+      },
+      "fair_prob": "0.5779",
+      "edge": "0.1932",
+      "kelly": "0.0483",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "57.8% Over \u00b7 \u03bb=0.86 \u00b7 edge +19.3pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-josh-bell-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Josh Bell \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 145.0
+      },
+      "fair_prob": "0.5768",
+      "edge": "0.1921",
+      "kelly": "0.0480",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "57.7% Over \u00b7 \u03bb=0.86 \u00b7 edge +19.2pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-connor-prielipp-3.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Connor Prielipp \u00b7 Strikeouts Over 3.5",
+      "line": {
+        "number": "3.5",
+        "odds": -160.0
+      },
+      "fair_prob": "0.7670",
+      "edge": "0.1919",
+      "kelly": "0.0480",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "76.7% Over \u00b7 \u03bb=5.24 \u00b7 edge +19.2pp \u00b7 conf 39%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-masyn-winn-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Masyn Winn \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -175.0
+      },
+      "fair_prob": "0.7885",
+      "edge": "0.1893",
+      "kelly": "0.0473",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "78.9% Under \u00b7 \u03bb=0.86 \u00b7 edge +18.9pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-santiago-espinal-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Santiago Espinal \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 115.0
+      },
+      "fair_prob": "0.6262",
+      "edge": "0.1882",
+      "kelly": "0.0470",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "62.6% Over \u00b7 \u03bb=0.98 \u00b7 edge +18.8pp \u00b7 conf 54%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-andy-pages-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Andy Pages \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 400.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1876",
+      "kelly": "0.0469",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +18.8pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-royce-lewis-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Royce Lewis \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 400.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1876",
+      "kelly": "0.0469",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +18.8pp \u00b7 conf 63%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-matt-mclain-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Matt McLain \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 400.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1876",
+      "kelly": "0.0469",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +18.8pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-santiago-espinal-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Santiago Espinal \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 400.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1876",
+      "kelly": "0.0469",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +18.8pp \u00b7 conf 54%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-oneil-cruz-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Oneil Cruz \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 400.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1876",
+      "kelly": "0.0469",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +18.8pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-brandon-lowe-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Brandon Lowe \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 400.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1876",
+      "kelly": "0.0469",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +18.8pp \u00b7 conf 66%",
       "event_time": null,
       "game_id": "0"
     },
@@ -456,6 +1536,114 @@
       "game_id": "0"
     },
     {
+      "id": "0-Hits-jorge-mateo-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Jorge Mateo \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 110.0
+      },
+      "fair_prob": "0.6320",
+      "edge": "0.1840",
+      "kelly": "0.0460",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "63.2% Over \u00b7 \u03bb=1.00 \u00b7 edge +18.4pp \u00b7 conf 55%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-brooks-lee-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Brooks Lee \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 390.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1836",
+      "kelly": "0.0459",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +18.4pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-george-springer-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "George Springer \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 390.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1836",
+      "kelly": "0.0459",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +18.4pp \u00b7 conf 61%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-josh-bell-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Josh Bell \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 390.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1836",
+      "kelly": "0.0459",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +18.4pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-kyle-tucker-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Kyle Tucker \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 390.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1836",
+      "kelly": "0.0459",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +18.4pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-nathaniel-lowe-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Nathaniel Lowe \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 390.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1836",
+      "kelly": "0.0459",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +18.4pp \u00b7 conf 60%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-Hits-steven-kwan-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -470,6 +1658,42 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "79.8% Under \u00b7 \u03bb=0.83 \u00b7 edge +18.2pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-george-springer-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "George Springer \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -162.0
+      },
+      "fair_prob": "0.7626",
+      "edge": "0.1797",
+      "kelly": "0.0449",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "76.3% Under \u00b7 \u03bb=0.93 \u00b7 edge +18.0pp \u00b7 conf 61%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-freddie-freeman-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Freddie Freeman \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 105.0
+      },
+      "fair_prob": "0.6388",
+      "edge": "0.1796",
+      "kelly": "0.0449",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "63.9% Over \u00b7 \u03bb=1.02 \u00b7 edge +18.0pp \u00b7 conf 67%",
       "event_time": null,
       "game_id": "0"
     },
@@ -492,6 +1716,96 @@
       "game_id": "0"
     },
     {
+      "id": "0-RBI-kazuma-okamoto-3.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Kazuma Okamoto \u00b7 RBIs Under 3.5",
+      "line": {
+        "number": "3.5",
+        "odds": -675.0
+      },
+      "fair_prob": "0.9986",
+      "edge": "0.1780",
+      "kelly": "0.0445",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "99.9% Under \u00b7 \u03bb=0.47 \u00b7 edge +17.8pp \u00b7 conf 65%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-jordan-walker-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Jordan Walker \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 375.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1778",
+      "kelly": "0.0444",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +17.8pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-max-muncy-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Max Muncy \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -135.0
+      },
+      "fair_prob": "0.7162",
+      "edge": "0.1754",
+      "kelly": "0.0438",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "71.6% Under \u00b7 \u03bb=1.05 \u00b7 edge +17.5pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-austin-martin-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Austin Martin \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -148.0
+      },
+      "fair_prob": "0.7373",
+      "edge": "0.1753",
+      "kelly": "0.0438",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "73.7% Under \u00b7 \u03bb=1.00 \u00b7 edge +17.5pp \u00b7 conf 63%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-marcell-ozuna-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Marcell Ozuna \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 145.0
+      },
+      "fair_prob": "0.5579",
+      "edge": "0.1732",
+      "kelly": "0.0433",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "55.8% Over \u00b7 \u03bb=0.82 \u00b7 edge +17.3pp \u00b7 conf 65%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-K-michael-mcgreevy-3.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_K",
@@ -506,6 +1820,60 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "67.9% Over \u00b7 \u03bb=4.63 \u00b7 edge +17.3pp \u00b7 conf 53%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-austin-martin-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Austin Martin \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 360.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1715",
+      "kelly": "0.0429",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +17.2pp \u00b7 conf 63%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-will-smith-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Will Smith \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -154.0
+      },
+      "fair_prob": "0.7416",
+      "edge": "0.1701",
+      "kelly": "0.0425",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "74.2% Under \u00b7 \u03bb=0.98 \u00b7 edge +17.0pp \u00b7 conf 62%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-konnor-griffin-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Konnor Griffin \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 350.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1667",
+      "kelly": "0.0417",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +16.7pp \u00b7 conf 64%",
       "event_time": null,
       "game_id": "0"
     },
@@ -528,6 +1896,42 @@
       "game_id": "0"
     },
     {
+      "id": "0-Hits-royce-lewis-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Royce Lewis \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 160.0
+      },
+      "fair_prob": "0.5260",
+      "edge": "0.1646",
+      "kelly": "0.0411",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "52.6% Over \u00b7 \u03bb=0.75 \u00b7 edge +16.5pp \u00b7 conf 63%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-alec-burleson-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Alec Burleson \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -148.0
+      },
+      "fair_prob": "0.7260",
+      "edge": "0.1640",
+      "kelly": "0.0410",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "72.6% Under \u00b7 \u03bb=1.03 \u00b7 edge +16.4pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-RBI-isaac-collins-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
@@ -546,20 +1950,92 @@
       "game_id": "0"
     },
     {
-      "id": "0-Total_Bases-andy-pages-1.5-OVER",
+      "id": "0-RBI-ryan-jeffers-0.5-OVER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_TOTAL_BASES",
-      "selection": "Andy Pages \u00b7 Total Bases Over 1.5",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Ryan Jeffers \u00b7 RBIs Over 0.5",
       "line": {
-        "number": "1.5",
-        "odds": 155.0
+        "number": "0.5",
+        "odds": 340.0
       },
-      "fair_prob": "0.5310",
-      "edge": "0.1622",
-      "kelly": "0.0405",
+      "fair_prob": "0.3759",
+      "edge": "0.1616",
+      "kelly": "0.0404",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "53.1% Over \u00b7 \u03bb=1.78 \u00b7 edge +16.2pp \u00b7 conf 67%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +16.2pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-will-smith-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Will Smith \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 340.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1616",
+      "kelly": "0.0404",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +16.2pp \u00b7 conf 62%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-tj-rumfield-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "TJ Rumfield \u00b7 RBIs Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -420.0
+      },
+      "fair_prob": "0.9183",
+      "edge": "0.1593",
+      "kelly": "0.0398",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "91.8% Under \u00b7 \u03bb=0.47 \u00b7 edge +15.9pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-bryan-reynolds-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Bryan Reynolds \u00b7 RBIs Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -725.0
+      },
+      "fair_prob": "0.9877",
+      "edge": "0.1591",
+      "kelly": "0.0398",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "98.8% Under \u00b7 \u03bb=0.47 \u00b7 edge +15.9pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-nolan-gorman-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Nolan Gorman \u00b7 RBIs Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -725.0
+      },
+      "fair_prob": "0.9877",
+      "edge": "0.1591",
+      "kelly": "0.0398",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "98.8% Under \u00b7 \u03bb=0.47 \u00b7 edge +15.9pp \u00b7 conf 66%",
       "event_time": null,
       "game_id": "0"
     },
@@ -578,6 +2054,204 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +15.6pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-jorge-mateo-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Jorge Mateo \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 325.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1542",
+      "kelly": "0.0386",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +15.4pp \u00b7 conf 55%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-tyler-stephenson-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Tyler Stephenson \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 325.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1542",
+      "kelly": "0.0386",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +15.4pp \u00b7 conf 63%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-elly-de-la-cruz-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Elly De La Cruz \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 325.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1542",
+      "kelly": "0.0386",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +15.4pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-jj-wetherholt-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "JJ Wetherholt \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 120.0
+      },
+      "fair_prob": "0.5819",
+      "edge": "0.1534",
+      "kelly": "0.0384",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "58.2% Over \u00b7 \u03bb=0.87 \u00b7 edge +15.3pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-ryan-o-hearn-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Ryan O'Hearn \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 190.0
+      },
+      "fair_prob": "0.4759",
+      "edge": "0.1516",
+      "kelly": "0.0379",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "47.6% Over \u00b7 \u03bb=1.60 \u00b7 edge +15.2pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-travis-bazzana-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Travis Bazzana \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 143.0
+      },
+      "fair_prob": "0.5350",
+      "edge": "0.1496",
+      "kelly": "0.0374",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "53.5% Over \u00b7 \u03bb=1.79 \u00b7 edge +15.0pp \u00b7 conf 42%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-tyler-freeman-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Tyler Freeman \u00b7 RBIs Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -455.0
+      },
+      "fair_prob": "0.9183",
+      "edge": "0.1476",
+      "kelly": "0.0369",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "91.8% Under \u00b7 \u03bb=0.47 \u00b7 edge +14.8pp \u00b7 conf 59%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-jordan-walker-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Jordan Walker \u00b7 Total Bases Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -168.0
+      },
+      "fair_prob": "0.7381",
+      "edge": "0.1476",
+      "kelly": "0.0369",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "73.8% Under \u00b7 \u03bb=1.77 \u00b7 edge +14.8pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-edouard-julien-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Edouard Julien \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -120.0
+      },
+      "fair_prob": "0.6568",
+      "edge": "0.1467",
+      "kelly": "0.0367",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "65.7% Over \u00b7 \u03bb=1.07 \u00b7 edge +14.7pp \u00b7 conf 62%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-sal-stewart-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Sal Stewart \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 310.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1466",
+      "kelly": "0.0367",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +14.7pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-andy-pages-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Andy Pages \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 145.0
+      },
+      "fair_prob": "0.5310",
+      "edge": "0.1463",
+      "kelly": "0.0366",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "53.1% Over \u00b7 \u03bb=1.78 \u00b7 edge +14.6pp \u00b7 conf 67%",
       "event_time": null,
       "game_id": "0"
     },
@@ -636,6 +2310,24 @@
       "game_id": "0"
     },
     {
+      "id": "0-K-keider-montero-4.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Keider Montero \u00b7 Strikeouts Over 4.5",
+      "line": {
+        "number": "4.5",
+        "odds": 132.0
+      },
+      "fair_prob": "0.5526",
+      "edge": "0.1457",
+      "kelly": "0.0364",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "55.3% Over \u00b7 \u03bb=4.96 \u00b7 edge +14.6pp \u00b7 conf 46%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-Hits-ozzie-albies-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -650,6 +2342,24 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "70.4% Under \u00b7 \u03bb=1.09 \u00b7 edge +14.5pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-ryan-jeffers-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Ryan Jeffers \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -162.0
+      },
+      "fair_prob": "0.7258",
+      "edge": "0.1430",
+      "kelly": "0.0357",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "72.6% Under \u00b7 \u03bb=1.03 \u00b7 edge +14.3pp \u00b7 conf 64%",
       "event_time": null,
       "game_id": "0"
     },
@@ -672,6 +2382,96 @@
       "game_id": "0"
     },
     {
+      "id": "0-Hits-drake-baldwin-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Drake Baldwin \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -130.0
+      },
+      "fair_prob": "0.6725",
+      "edge": "0.1419",
+      "kelly": "0.0355",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "67.2% Over \u00b7 \u03bb=1.12 \u00b7 edge +14.2pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-troy-johnston-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Troy Johnston \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 300.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1412",
+      "kelly": "0.0353",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +14.1pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-henry-davis-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Henry Davis \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -255.0
+      },
+      "fair_prob": "0.8162",
+      "edge": "0.1405",
+      "kelly": "0.0351",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "81.6% Under \u00b7 \u03bb=0.78 \u00b7 edge +14.1pp \u00b7 conf 61%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-max-muncy-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Max Muncy \u00b7 RBIs Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -475.0
+      },
+      "fair_prob": "0.9183",
+      "edge": "0.1400",
+      "kelly": "0.0350",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "91.8% Under \u00b7 \u03bb=0.47 \u00b7 edge +14.0pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-shohei-ohtani-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Shohei Ohtani \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 100.0
+      },
+      "fair_prob": "0.6085",
+      "edge": "0.1391",
+      "kelly": "0.0348",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "60.8% Over \u00b7 \u03bb=0.94 \u00b7 edge +13.9pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-Hits-kyle-isbel-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -686,6 +2486,42 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "64.6% Over \u00b7 \u03bb=1.04 \u00b7 edge +13.9pp \u00b7 conf 62%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-max-muncy-2.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Max Muncy \u00b7 Total Bases Under 2.5",
+      "line": {
+        "number": "2.5",
+        "odds": -135.0
+      },
+      "fair_prob": "0.6794",
+      "edge": "0.1386",
+      "kelly": "0.0347",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "67.9% Under \u00b7 \u03bb=1.99 \u00b7 edge +13.9pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-josh-jung-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Josh Jung \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 118.0
+      },
+      "fair_prob": "0.5670",
+      "edge": "0.1382",
+      "kelly": "0.0345",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "56.7% Over \u00b7 \u03bb=1.90 \u00b7 edge +13.8pp \u00b7 conf 64%",
       "event_time": null,
       "game_id": "0"
     },
@@ -708,10 +2544,10 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-ke-bryan-hayes-0.5-OVER",
+      "id": "0-RBI-tj-friedl-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Ke'Bryan Hayes \u00b7 RBIs Over 0.5",
+      "selection": "TJ Friedl \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 290.0
@@ -721,15 +2557,15 @@
       "kelly": "0.0337",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +13.5pp \u00b7 conf 63%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +13.5pp \u00b7 conf 67%",
       "event_time": null,
       "game_id": "0"
     },
     {
-      "id": "0-RBI-masyn-winn-0.5-OVER",
+      "id": "0-RBI-freddie-freeman-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Masyn Winn \u00b7 RBIs Over 0.5",
+      "selection": "Freddie Freeman \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 290.0
@@ -739,7 +2575,7 @@
       "kelly": "0.0337",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +13.5pp \u00b7 conf 66%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +13.5pp \u00b7 conf 67%",
       "event_time": null,
       "game_id": "0"
     },
@@ -772,10 +2608,28 @@
       },
       "fair_prob": "0.3759",
       "edge": "0.1302",
-      "kelly": "0.0325",
+      "kelly": "0.0326",
       "grade": "A+",
       "tier": "ELITE",
       "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +13.0pp \u00b7 conf 61%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-tyler-stephenson-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Tyler Stephenson \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 130.0
+      },
+      "fair_prob": "0.5397",
+      "edge": "0.1301",
+      "kelly": "0.0325",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "54.0% Over \u00b7 \u03bb=0.78 \u00b7 edge +13.0pp \u00b7 conf 63%",
       "event_time": null,
       "game_id": "0"
     },
@@ -798,10 +2652,10 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-austin-martin-0.5-OVER",
+      "id": "0-RBI-jonah-heim-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Austin Martin \u00b7 RBIs Over 0.5",
+      "selection": "Jonah Heim \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 280.0
@@ -811,61 +2665,7 @@
       "kelly": "0.0321",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +12.8pp \u00b7 conf 63%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-tyler-heineman-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Tyler Heineman \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 280.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.1284",
-      "kelly": "0.0321",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +12.8pp \u00b7 conf 56%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-james-outman-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "James Outman \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 280.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.1284",
-      "kelly": "0.0321",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +12.8pp \u00b7 conf 55%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-nathan-church-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Nathan Church \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 280.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.1284",
-      "kelly": "0.0321",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +12.8pp \u00b7 conf 64%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +12.8pp \u00b7 conf 54%",
       "event_time": null,
       "game_id": "0"
     },
@@ -888,6 +2688,24 @@
       "game_id": "0"
     },
     {
+      "id": "0-K-matthew-liberatore-4.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Matthew Liberatore \u00b7 Strikeouts Over 4.5",
+      "line": {
+        "number": "4.5",
+        "odds": 160.0
+      },
+      "fair_prob": "0.4893",
+      "edge": "0.1279",
+      "kelly": "0.0320",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "48.9% Over \u00b7 \u03bb=4.61 \u00b7 edge +12.8pp \u00b7 conf 52%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-K-brady-singer-4.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_K",
@@ -902,6 +2720,42 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "57.5% Under \u00b7 \u03bb=4.28 \u00b7 edge +12.7pp \u00b7 conf 54%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-ryne-nelson-4.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Ryne Nelson \u00b7 Strikeouts Over 4.5",
+      "line": {
+        "number": "4.5",
+        "odds": 100.0
+      },
+      "fair_prob": "0.5947",
+      "edge": "0.1270",
+      "kelly": "0.0317",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "59.5% Over \u00b7 \u03bb=5.21 \u00b7 edge +12.7pp \u00b7 conf 53%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-drew-romo-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Drew Romo \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -120.0
+      },
+      "fair_prob": "0.6355",
+      "edge": "0.1265",
+      "kelly": "0.0316",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "63.6% Over \u00b7 \u03bb=1.01 \u00b7 edge +12.6pp \u00b7 conf 43%",
       "event_time": null,
       "game_id": "0"
     },
@@ -924,38 +2778,74 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-james-outman-0.5-OVER",
+      "id": "0-RBI-sam-antonacci-0.5-OVER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "James Outman \u00b7 Hits Over 0.5",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Sam Antonacci \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": 105.0
+        "odds": 271.0
       },
-      "fair_prob": "0.5809",
-      "edge": "0.1216",
-      "kelly": "0.0304",
+      "fair_prob": "0.3759",
+      "edge": "0.1236",
+      "kelly": "0.0309",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "58.1% Over \u00b7 \u03bb=0.87 \u00b7 edge +12.2pp \u00b7 conf 55%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +12.4pp \u00b7 conf 53%",
       "event_time": null,
       "game_id": "0"
     },
     {
-      "id": "0-RBI-chase-meidroth-0.5-OVER",
+      "id": "0-RBI-alec-burleson-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Chase Meidroth \u00b7 RBIs Over 0.5",
+      "selection": "Alec Burleson \u00b7 RBIs Under 1.5",
       "line": {
-        "number": "0.5",
-        "odds": 267.0
+        "number": "1.5",
+        "odds": -550.0
       },
-      "fair_prob": "0.3759",
-      "edge": "0.1211",
-      "kelly": "0.0303",
+      "fair_prob": "0.9183",
+      "edge": "0.1227",
+      "kelly": "0.0307",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +12.1pp \u00b7 conf 68%",
+      "notes": "91.8% Under \u00b7 \u03bb=0.47 \u00b7 edge +12.3pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-ke-bryan-hayes-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Ke'Bryan Hayes \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 135.0
+      },
+      "fair_prob": "0.5233",
+      "edge": "0.1226",
+      "kelly": "0.0306",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "52.3% Over \u00b7 \u03bb=0.74 \u00b7 edge +12.3pp \u00b7 conf 63%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-oneil-cruz-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Oneil Cruz \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -204.0
+      },
+      "fair_prob": "0.7517",
+      "edge": "0.1205",
+      "kelly": "0.0301",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "75.2% Under \u00b7 \u03bb=0.96 \u00b7 edge +12.1pp \u00b7 conf 66%",
       "event_time": null,
       "game_id": "0"
     },
@@ -966,14 +2856,14 @@
       "selection": "Drew Romo \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": 267.0
+        "odds": 266.0
       },
       "fair_prob": "0.3759",
-      "edge": "0.1211",
-      "kelly": "0.0303",
+      "edge": "0.1203",
+      "kelly": "0.0301",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +12.1pp \u00b7 conf 43%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +12.0pp \u00b7 conf 43%",
       "event_time": null,
       "game_id": "0"
     },
@@ -1032,24 +2922,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-sam-antonacci-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Sam Antonacci \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 262.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.1175",
-      "kelly": "0.0294",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +11.7pp \u00b7 conf 53%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Total_Bases-sal-stewart-1.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_TOTAL_BASES",
@@ -1064,6 +2936,24 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "53.4% Over \u00b7 \u03bb=1.79 \u00b7 edge +11.7pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-eli-white-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Eli White \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -130.0
+      },
+      "fair_prob": "0.6471",
+      "edge": "0.1165",
+      "kelly": "0.0291",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "64.7% Over \u00b7 \u03bb=1.04 \u00b7 edge +11.7pp \u00b7 conf 55%",
       "event_time": null,
       "game_id": "0"
     },
@@ -1104,10 +2994,10 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-tj-friedl-0.5-OVER",
+      "id": "0-RBI-ke-bryan-hayes-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "TJ Friedl \u00b7 RBIs Over 0.5",
+      "selection": "Ke'Bryan Hayes \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 260.0
@@ -1117,25 +3007,61 @@
       "kelly": "0.0288",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +11.5pp \u00b7 conf 67%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +11.5pp \u00b7 conf 63%",
       "event_time": null,
       "game_id": "0"
     },
     {
-      "id": "0-RBI-matt-mclain-0.5-OVER",
+      "id": "0-RBI-bryce-johnson-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Matt McLain \u00b7 RBIs Over 0.5",
+      "selection": "Bryce Johnson \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": 260.0
+        "odds": 258.0
       },
       "fair_prob": "0.3759",
-      "edge": "0.1151",
-      "kelly": "0.0288",
+      "edge": "0.1147",
+      "kelly": "0.0287",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +11.5pp \u00b7 conf 54%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-chase-meidroth-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Chase Meidroth \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 258.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.1147",
+      "kelly": "0.0287",
       "grade": "A+",
       "tier": "ELITE",
       "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +11.5pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-xander-bogaerts-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Xander Bogaerts \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 148.0
+      },
+      "fair_prob": "0.4914",
+      "edge": "0.1138",
+      "kelly": "0.0284",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "49.1% Over \u00b7 \u03bb=1.65 \u00b7 edge +11.4pp \u00b7 conf 65%",
       "event_time": null,
       "game_id": "0"
     },
@@ -1176,24 +3102,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-Total_Bases-munetaka-murakami-1.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_TOTAL_BASES",
-      "selection": "Munetaka Murakami \u00b7 Total Bases Over 1.5",
-      "line": {
-        "number": "1.5",
-        "odds": 129.0
-      },
-      "fair_prob": "0.5206",
-      "edge": "0.1122",
-      "kelly": "0.0280",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "52.1% Over \u00b7 \u03bb=1.75 \u00b7 edge +11.2pp \u00b7 conf 66%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Total_Bases-mickey-moniak-1.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_TOTAL_BASES",
@@ -1208,24 +3116,6 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "55.0% Over \u00b7 \u03bb=1.84 \u00b7 edge +11.1pp \u00b7 conf 64%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-Hits-matt-mclain-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Matt McLain \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -125.0
-      },
-      "fair_prob": "0.6316",
-      "edge": "0.1113",
-      "kelly": "0.0278",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "63.2% Over \u00b7 \u03bb=1.00 \u00b7 edge +11.1pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
@@ -1266,42 +3156,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-drew-romo-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Drew Romo \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -128.0
-      },
-      "fair_prob": "0.6355",
-      "edge": "0.1102",
-      "kelly": "0.0276",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "63.6% Over \u00b7 \u03bb=1.01 \u00b7 edge +11.0pp \u00b7 conf 43%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-freddy-fermin-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Freddy Fermin \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 251.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.1097",
-      "kelly": "0.0274",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +11.0pp \u00b7 conf 59%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Hits-bo-bichette-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -1320,28 +3174,10 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-bryce-johnson-0.5-OVER",
+      "id": "0-RBI-drake-baldwin-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Bryce Johnson \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 248.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.1074",
-      "kelly": "0.0268",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +10.7pp \u00b7 conf 54%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-jj-wetherholt-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "JJ Wetherholt \u00b7 RBIs Over 0.5",
+      "selection": "Drake Baldwin \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 250.0
@@ -1356,10 +3192,10 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-jordan-walker-0.5-OVER",
+      "id": "0-RBI-eli-white-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Jordan Walker \u00b7 RBIs Over 0.5",
+      "selection": "Eli White \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 250.0
@@ -1369,25 +3205,25 @@
       "kelly": "0.0268",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +10.7pp \u00b7 conf 67%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +10.7pp \u00b7 conf 55%",
       "event_time": null,
       "game_id": "0"
     },
     {
-      "id": "0-RBI-luke-keaschall-0.5-OVER",
+      "id": "0-RBI-henry-davis-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Luke Keaschall \u00b7 RBIs Over 0.5",
+      "selection": "Henry Davis \u00b7 RBIs Under 1.5",
       "line": {
-        "number": "0.5",
-        "odds": 250.0
+        "number": "1.5",
+        "odds": -625.0
       },
-      "fair_prob": "0.3759",
-      "edge": "0.1073",
-      "kelly": "0.0268",
+      "fair_prob": "0.9183",
+      "edge": "0.1066",
+      "kelly": "0.0267",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +10.7pp \u00b7 conf 68%",
+      "notes": "91.8% Under \u00b7 \u03bb=0.47 \u00b7 edge +10.7pp \u00b7 conf 61%",
       "event_time": null,
       "game_id": "0"
     },
@@ -1428,24 +3264,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-Total_Bases-xander-bogaerts-1.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_TOTAL_BASES",
-      "selection": "Xander Bogaerts \u00b7 Total Bases Over 1.5",
-      "line": {
-        "number": "1.5",
-        "odds": 143.0
-      },
-      "fair_prob": "0.4914",
-      "edge": "0.1061",
-      "kelly": "0.0265",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "49.1% Over \u00b7 \u03bb=1.65 \u00b7 edge +10.6pp \u00b7 conf 65%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Hits-nolan-gorman-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -1460,24 +3278,6 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "59.6% Over \u00b7 \u03bb=0.91 \u00b7 edge +10.6pp \u00b7 conf 66%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-Hits-miguel-rojas-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Miguel Rojas \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -168.0
-      },
-      "fair_prob": "0.6958",
-      "edge": "0.1053",
-      "kelly": "0.0263",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "69.6% Over \u00b7 \u03bb=1.19 \u00b7 edge +10.5pp \u00b7 conf 58%",
       "event_time": null,
       "game_id": "0"
     },
@@ -1500,38 +3300,74 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-tristan-peters-0.5-OVER",
+      "id": "0-Total_Bases-oneil-cruz-2.5-UNDER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Tristan Peters \u00b7 Hits Over 0.5",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Oneil Cruz \u00b7 Total Bases Under 2.5",
       "line": {
-        "number": "0.5",
-        "odds": -128.0
+        "number": "2.5",
+        "odds": -204.0
       },
-      "fair_prob": "0.6298",
-      "edge": "0.1046",
-      "kelly": "0.0261",
+      "fair_prob": "0.7359",
+      "edge": "0.1048",
+      "kelly": "0.0262",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "63.0% Over \u00b7 \u03bb=0.99 \u00b7 edge +10.5pp \u00b7 conf 61%",
+      "notes": "73.6% Under \u00b7 \u03bb=1.78 \u00b7 edge +10.5pp \u00b7 conf 66%",
       "event_time": null,
       "game_id": "0"
     },
     {
-      "id": "0-RBI-jake-mccarthy-0.5-OVER",
+      "id": "0-Hits-jonah-heim-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Jonah Heim \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -115.0
+      },
+      "fair_prob": "0.6036",
+      "edge": "0.1036",
+      "kelly": "0.0259",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "60.4% Over \u00b7 \u03bb=0.93 \u00b7 edge +10.4pp \u00b7 conf 54%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-freddy-fermin-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Jake McCarthy \u00b7 RBIs Over 0.5",
+      "selection": "Freddy Fermin \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 243.0
       },
       "fair_prob": "0.3759",
-      "edge": "0.1037",
+      "edge": "0.1035",
       "kelly": "0.0259",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +10.4pp \u00b7 conf 62%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +10.4pp \u00b7 conf 59%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-alejandro-osuna-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Alejandro Osuna \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -154.0
+      },
+      "fair_prob": "0.6705",
+      "edge": "0.1035",
+      "kelly": "0.0259",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "67.1% Over \u00b7 \u03bb=1.11 \u00b7 edge +10.4pp \u00b7 conf 46%",
       "event_time": null,
       "game_id": "0"
     },
@@ -1608,24 +3444,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-josh-bell-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Josh Bell \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 240.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0989",
-      "kelly": "0.0247",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +9.9pp \u00b7 conf 67%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-RBI-henry-davis-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
@@ -1644,10 +3462,10 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-nick-gonzales-0.5-OVER",
+      "id": "0-RBI-shohei-ohtani-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Nick Gonzales \u00b7 RBIs Over 0.5",
+      "selection": "Shohei Ohtani \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 240.0
@@ -1657,25 +3475,7 @@
       "kelly": "0.0247",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +9.9pp \u00b7 conf 64%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-santiago-espinal-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Santiago Espinal \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 240.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0989",
-      "kelly": "0.0247",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +9.9pp \u00b7 conf 54%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +9.9pp \u00b7 conf 66%",
       "event_time": null,
       "game_id": "0"
     },
@@ -1752,6 +3552,42 @@
       "game_id": "0"
     },
     {
+      "id": "0-Hits-tristan-peters-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Tristan Peters \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -133.0
+      },
+      "fair_prob": "0.6298",
+      "edge": "0.0968",
+      "kelly": "0.0242",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "63.0% Over \u00b7 \u03bb=0.99 \u00b7 edge +9.7pp \u00b7 conf 61%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-jose-quintana-3.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Jose Quintana \u00b7 Strikeouts Over 3.5",
+      "line": {
+        "number": "3.5",
+        "odds": -135.0
+      },
+      "fair_prob": "0.6374",
+      "edge": "0.0966",
+      "kelly": "0.0242",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "63.7% Over \u00b7 \u03bb=4.38 \u00b7 edge +9.7pp \u00b7 conf 48%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-Total_Bases-george-springer-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_TOTAL_BASES",
@@ -1784,6 +3620,24 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "61.8% Over \u00b7 \u03bb=2.09 \u00b7 edge +9.5pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-bryce-johnson-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Bryce Johnson \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -137.0
+      },
+      "fair_prob": "0.6344",
+      "edge": "0.0945",
+      "kelly": "0.0236",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "63.4% Over \u00b7 \u03bb=1.01 \u00b7 edge +9.4pp \u00b7 conf 54%",
       "event_time": null,
       "game_id": "0"
     },
@@ -1824,6 +3678,42 @@
       "game_id": "0"
     },
     {
+      "id": "0-K-shota-imanaga-4.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Shota Imanaga \u00b7 Strikeouts Over 4.5",
+      "line": {
+        "number": "4.5",
+        "odds": -152.0
+      },
+      "fair_prob": "0.6560",
+      "edge": "0.0925",
+      "kelly": "0.0231",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "65.6% Over \u00b7 \u03bb=5.59 \u00b7 edge +9.3pp \u00b7 conf 54%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-jacob-wilson-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Jacob Wilson \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 229.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.0922",
+      "kelly": "0.0231",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +9.2pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-K-christian-scott-4.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_K",
@@ -1860,17 +3750,17 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-spencer-horwitz-0.5-OVER",
+      "id": "0-RBI-andrew-benintendi-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Spencer Horwitz \u00b7 RBIs Over 0.5",
+      "selection": "Andrew Benintendi \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": 230.0
+        "odds": 228.0
       },
       "fair_prob": "0.3759",
-      "edge": "0.0914",
-      "kelly": "0.0228",
+      "edge": "0.0915",
+      "kelly": "0.0229",
       "grade": "A+",
       "tier": "ELITE",
       "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +9.1pp \u00b7 conf 64%",
@@ -1878,10 +3768,10 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-tyler-stephenson-0.5-OVER",
+      "id": "0-RBI-edouard-julien-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Tyler Stephenson \u00b7 RBIs Over 0.5",
+      "selection": "Edouard Julien \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 230.0
@@ -1891,7 +3781,43 @@
       "kelly": "0.0228",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +9.1pp \u00b7 conf 63%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +9.1pp \u00b7 conf 62%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-ozzie-albies-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Ozzie Albies \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 230.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.0914",
+      "kelly": "0.0228",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +9.1pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-brandon-nimmo-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Brandon Nimmo \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 117.0
+      },
+      "fair_prob": "0.5210",
+      "edge": "0.0904",
+      "kelly": "0.0226",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "52.1% Over \u00b7 \u03bb=1.75 \u00b7 edge +9.0pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
@@ -1932,20 +3858,38 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-andrew-benintendi-0.5-OVER",
+      "id": "0-RBI-ryan-o-hearn-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Andrew Benintendi \u00b7 RBIs Over 0.5",
+      "selection": "Ryan O'Hearn \u00b7 RBIs Under 1.5",
       "line": {
-        "number": "0.5",
-        "odds": 226.0
+        "number": "1.5",
+        "odds": -725.0
       },
-      "fair_prob": "0.3759",
-      "edge": "0.0896",
+      "fair_prob": "0.9183",
+      "edge": "0.0897",
       "kelly": "0.0224",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +9.0pp \u00b7 conf 64%",
+      "notes": "91.8% Under \u00b7 \u03bb=0.47 \u00b7 edge +9.0pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-munetaka-murakami-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Munetaka Murakami \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 117.0
+      },
+      "fair_prob": "0.5206",
+      "edge": "0.0894",
+      "kelly": "0.0224",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "52.1% Over \u00b7 \u03bb=1.75 \u00b7 edge +8.9pp \u00b7 conf 66%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2040,24 +3984,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-jacob-wilson-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Jacob Wilson \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 221.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0854",
-      "kelly": "0.0214",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.5pp \u00b7 conf 67%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Total_Bases-hunter-goodman-1.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_TOTAL_BASES",
@@ -2090,6 +4016,24 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "69.6% Over \u00b7 \u03bb=1.19 \u00b7 edge +8.4pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-nolan-gorman-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Nolan Gorman \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -270.0
+      },
+      "fair_prob": "0.7703",
+      "edge": "0.0839",
+      "kelly": "0.0210",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "77.0% Under \u00b7 \u03bb=0.91 \u00b7 edge +8.4pp \u00b7 conf 66%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2148,60 +4092,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-alec-burleson-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Alec Burleson \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 220.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0818",
-      "kelly": "0.0205",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.2pp \u00b7 conf 67%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-ryan-jeffers-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Ryan Jeffers \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 220.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0818",
-      "kelly": "0.0205",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.2pp \u00b7 conf 64%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-daulton-varsho-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Daulton Varsho \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 220.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0818",
-      "kelly": "0.0205",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.2pp \u00b7 conf 66%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-RBI-kazuma-okamoto-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
@@ -2220,24 +4110,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-kyle-tucker-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Kyle Tucker \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 220.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0818",
-      "kelly": "0.0205",
-      "grade": "A+",
-      "tier": "ELITE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.2pp \u00b7 conf 67%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-RBI-ryan-o-hearn-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
@@ -2252,6 +4124,60 @@
       "grade": "A+",
       "tier": "ELITE",
       "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.2pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-jj-wetherholt-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "JJ Wetherholt \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 220.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.0818",
+      "kelly": "0.0205",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.2pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-alec-burleson-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Alec Burleson \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 220.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.0818",
+      "kelly": "0.0205",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.2pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-ezequiel-tovar-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Ezequiel Tovar \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 220.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.0818",
+      "kelly": "0.0205",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.2pp \u00b7 conf 65%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2328,42 +4254,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-austin-hays-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Austin Hays \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 215.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0799",
-      "kelly": "0.0200",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.0pp \u00b7 conf 56%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-K-matthew-liberatore-4.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_K",
-      "selection": "Matthew Liberatore \u00b7 Strikeouts Over 4.5",
-      "line": {
-        "number": "4.5",
-        "odds": 130.0
-      },
-      "fair_prob": "0.4893",
-      "edge": "0.0798",
-      "kelly": "0.0200",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "48.9% Over \u00b7 \u03bb=4.61 \u00b7 edge +8.0pp \u00b7 conf 52%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Hits-max-muncy-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -2378,24 +4268,6 @@
       "grade": "A",
       "tier": "STRONG",
       "notes": "65.1% Over \u00b7 \u03bb=1.05 \u00b7 edge +8.0pp \u00b7 conf 66%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-Hits-bryce-johnson-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Bryce Johnson \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -146.0
-      },
-      "fair_prob": "0.6344",
-      "edge": "0.0795",
-      "kelly": "0.0199",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "63.4% Over \u00b7 \u03bb=1.01 \u00b7 edge +8.0pp \u00b7 conf 54%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2418,6 +4290,24 @@
       "game_id": "0"
     },
     {
+      "id": "0-Hits-zach-neto-0.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Zach Neto \u00b7 Hits Under 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 155.0
+      },
+      "fair_prob": "0.4459",
+      "edge": "0.0785",
+      "kelly": "0.0196",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "44.6% Under \u00b7 \u03bb=0.81 \u00b7 edge +7.9pp \u00b7 conf 69%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-RBI-josh-naylor-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
@@ -2432,6 +4322,24 @@
       "grade": "A",
       "tier": "STRONG",
       "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +7.8pp \u00b7 conf 65%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-austin-hays-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Austin Hays \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 213.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.0781",
+      "kelly": "0.0195",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +7.8pp \u00b7 conf 56%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2454,6 +4362,24 @@
       "game_id": "0"
     },
     {
+      "id": "0-Total_Bases-george-springer-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "George Springer \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 126.0
+      },
+      "fair_prob": "0.4950",
+      "edge": "0.0778",
+      "kelly": "0.0195",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "49.5% Over \u00b7 \u03bb=1.66 \u00b7 edge +7.8pp \u00b7 conf 61%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-Hits-jacob-wilson-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -2468,6 +4394,42 @@
       "grade": "A",
       "tier": "STRONG",
       "notes": "71.5% Under \u00b7 \u03bb=1.06 \u00b7 edge +7.7pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-miguel-vargas-0.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Miguel Vargas \u00b7 Hits Under 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 146.0
+      },
+      "fair_prob": "0.4574",
+      "edge": "0.0766",
+      "kelly": "0.0192",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "45.7% Under \u00b7 \u03bb=0.78 \u00b7 edge +7.7pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-matt-olson-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Matt Olson \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -162.0
+      },
+      "fair_prob": "0.6582",
+      "edge": "0.0753",
+      "kelly": "0.0188",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "65.8% Over \u00b7 \u03bb=1.07 \u00b7 edge +7.5pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2490,28 +4452,28 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-jorge-mateo-0.5-OVER",
+      "id": "0-Hits-corey-seager-0.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
-      "selection": "Jorge Mateo \u00b7 Hits Over 0.5",
+      "selection": "Corey Seager \u00b7 Hits Under 0.5",
       "line": {
         "number": "0.5",
-        "odds": -149.0
+        "odds": 159.0
       },
-      "fair_prob": "0.6320",
-      "edge": "0.0728",
-      "kelly": "0.0182",
+      "fair_prob": "0.4347",
+      "edge": "0.0730",
+      "kelly": "0.0183",
       "grade": "A",
       "tier": "STRONG",
-      "notes": "63.2% Over \u00b7 \u03bb=1.00 \u00b7 edge +7.3pp \u00b7 conf 55%",
+      "notes": "43.5% Under \u00b7 \u03bb=0.83 \u00b7 edge +7.3pp \u00b7 conf 67%",
       "event_time": null,
       "game_id": "0"
     },
     {
-      "id": "0-RBI-yohendrick-pinango-0.5-OVER",
+      "id": "0-RBI-matt-olson-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Yohendrick Pinango \u00b7 RBIs Over 0.5",
+      "selection": "Matt Olson \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 210.0
@@ -2521,43 +4483,7 @@
       "kelly": "0.0181",
       "grade": "A",
       "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +7.2pp \u00b7 conf 41%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-miguel-rojas-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Miguel Rojas \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 210.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0724",
-      "kelly": "0.0181",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +7.2pp \u00b7 conf 58%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-brandon-lowe-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Brandon Lowe \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 210.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0724",
-      "kelly": "0.0181",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +7.2pp \u00b7 conf 66%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +7.2pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2580,10 +4506,10 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-marcell-ozuna-0.5-OVER",
+      "id": "0-RBI-yohendrick-pinango-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Marcell Ozuna \u00b7 RBIs Over 0.5",
+      "selection": "Yohendrick Pinango \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 210.0
@@ -2593,7 +4519,7 @@
       "kelly": "0.0181",
       "grade": "A",
       "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +7.2pp \u00b7 conf 65%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +7.2pp \u00b7 conf 41%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2616,20 +4542,38 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-austin-hays-0.5-OVER",
+      "id": "0-Hits-willi-castro-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
-      "selection": "Austin Hays \u00b7 Hits Over 0.5",
+      "selection": "Willi Castro \u00b7 Hits Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": -184.0
+        "odds": -148.0
       },
-      "fair_prob": "0.6783",
+      "fair_prob": "0.6339",
+      "edge": "0.0719",
+      "kelly": "0.0180",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "63.4% Over \u00b7 \u03bb=1.00 \u00b7 edge +7.2pp \u00b7 conf 61%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-andy-pages-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Andy Pages \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -188.0
+      },
+      "fair_prob": "0.6870",
       "edge": "0.0717",
       "kelly": "0.0179",
       "grade": "A",
       "tier": "STRONG",
-      "notes": "67.8% Over \u00b7 \u03bb=1.13 \u00b7 edge +7.2pp \u00b7 conf 56%",
+      "notes": "68.7% Under \u00b7 \u03bb=1.13 \u00b7 edge +7.2pp \u00b7 conf 67%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2670,24 +4614,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-zach-neto-0.5-UNDER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Zach Neto \u00b7 Hits Under 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 149.0
-      },
-      "fair_prob": "0.4459",
-      "edge": "0.0699",
-      "kelly": "0.0175",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "44.6% Under \u00b7 \u03bb=0.81 \u00b7 edge +7.0pp \u00b7 conf 69%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Hits-freddy-fermin-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -2724,6 +4650,24 @@
       "game_id": "0"
     },
     {
+      "id": "0-Total_Bases-tyler-freeman-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Tyler Freeman \u00b7 Total Bases Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -120.0
+      },
+      "fair_prob": "0.5790",
+      "edge": "0.0689",
+      "kelly": "0.0172",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "57.9% Under \u00b7 \u03bb=1.44 \u00b7 edge +6.9pp \u00b7 conf 59%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-RBI-brett-baty-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
@@ -2742,20 +4686,38 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-nathan-church-0.5-OVER",
+      "id": "0-Hits-austin-hays-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
-      "selection": "Nathan Church \u00b7 Hits Over 0.5",
+      "selection": "Austin Hays \u00b7 Hits Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": -142.0
+        "odds": -187.0
       },
-      "fair_prob": "0.6199",
-      "edge": "0.0679",
-      "kelly": "0.0170",
+      "fair_prob": "0.6783",
+      "edge": "0.0684",
+      "kelly": "0.0171",
       "grade": "A",
       "tier": "STRONG",
-      "notes": "62.0% Over \u00b7 \u03bb=0.97 \u00b7 edge +6.8pp \u00b7 conf 64%",
+      "notes": "67.8% Over \u00b7 \u03bb=1.13 \u00b7 edge +6.8pp \u00b7 conf 56%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-ryan-jeffers-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Ryan Jeffers \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 126.0
+      },
+      "fair_prob": "0.4854",
+      "edge": "0.0683",
+      "kelly": "0.0171",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "48.5% Over \u00b7 \u03bb=1.63 \u00b7 edge +6.8pp \u00b7 conf 64%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2778,56 +4740,20 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-miguel-vargas-0.5-UNDER",
+      "id": "0-Hits-daulton-varsho-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
-      "selection": "Miguel Vargas \u00b7 Hits Under 0.5",
+      "selection": "Daulton Varsho \u00b7 Hits Under 1.5",
       "line": {
-        "number": "0.5",
-        "odds": 140.0
+        "number": "1.5",
+        "odds": -248.0
       },
-      "fair_prob": "0.4574",
-      "edge": "0.0674",
-      "kelly": "0.0168",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "45.7% Under \u00b7 \u03bb=0.78 \u00b7 edge +6.7pp \u00b7 conf 68%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-troy-johnston-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Troy Johnston \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 202.0
-      },
-      "fair_prob": "0.3759",
+      "fair_prob": "0.7374",
       "edge": "0.0673",
       "kelly": "0.0168",
       "grade": "A",
       "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +6.7pp \u00b7 conf 66%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-Hits-josh-bell-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Josh Bell \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -120.0
-      },
-      "fair_prob": "0.5768",
-      "edge": "0.0667",
-      "kelly": "0.0167",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "57.7% Over \u00b7 \u03bb=0.86 \u00b7 edge +6.7pp \u00b7 conf 67%",
+      "notes": "73.7% Under \u00b7 \u03bb=1.00 \u00b7 edge +6.7pp \u00b7 conf 66%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2868,24 +4794,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-jorge-mateo-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Jorge Mateo \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 199.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0645",
-      "kelly": "0.0161",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +6.5pp \u00b7 conf 55%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Hits-hunter-goodman-0.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -2918,6 +4826,24 @@
       "grade": "A",
       "tier": "STRONG",
       "notes": "60.9% Over \u00b7 \u03bb=0.94 \u00b7 edge +6.3pp \u00b7 conf 60%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-ryan-o-hearn-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Ryan O'Hearn \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -255.0
+      },
+      "fair_prob": "0.7384",
+      "edge": "0.0628",
+      "kelly": "0.0157",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "73.8% Under \u00b7 \u03bb=0.99 \u00b7 edge +6.3pp \u00b7 conf 67%",
       "event_time": null,
       "game_id": "0"
     },
@@ -2958,24 +4884,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-spencer-steer-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Spencer Steer \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 200.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0624",
-      "kelly": "0.0156",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +6.2pp \u00b7 conf 66%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-RBI-bryan-reynolds-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
@@ -2994,10 +4902,10 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-george-springer-0.5-OVER",
+      "id": "0-RBI-jake-mccarthy-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "George Springer \u00b7 RBIs Over 0.5",
+      "selection": "Jake McCarthy \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 200.0
@@ -3007,25 +4915,7 @@
       "kelly": "0.0156",
       "grade": "A",
       "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +6.2pp \u00b7 conf 61%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-nathaniel-lowe-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Nathaniel Lowe \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 200.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0624",
-      "kelly": "0.0156",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +6.2pp \u00b7 conf 60%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +6.2pp \u00b7 conf 62%",
       "event_time": null,
       "game_id": "0"
     },
@@ -3048,20 +4938,20 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-konnor-griffin-0.5-OVER",
+      "id": "0-Hits-josh-smith-0.5-OVER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Konnor Griffin \u00b7 RBIs Over 0.5",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Josh Smith \u00b7 Hits Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": 200.0
+        "odds": -129.0
       },
-      "fair_prob": "0.3759",
-      "edge": "0.0624",
-      "kelly": "0.0156",
+      "fair_prob": "0.5881",
+      "edge": "0.0620",
+      "kelly": "0.0155",
       "grade": "A",
       "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +6.2pp \u00b7 conf 64%",
+      "notes": "58.8% Over \u00b7 \u03bb=0.89 \u00b7 edge +6.2pp \u00b7 conf 65%",
       "event_time": null,
       "game_id": "0"
     },
@@ -3084,20 +4974,38 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-edouard-julien-0.5-OVER",
+      "id": "0-K-dylan-cease-6.5-UNDER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Edouard Julien \u00b7 RBIs Over 0.5",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Dylan Cease \u00b7 Strikeouts Under 6.5",
+      "line": {
+        "number": "6.5",
+        "odds": -140.0
+      },
+      "fair_prob": "0.6067",
+      "edge": "0.0609",
+      "kelly": "0.0152",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "60.7% Under \u00b7 \u03bb=6.00 \u00b7 edge +6.1pp \u00b7 conf 52%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-jake-mccarthy-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Jake McCarthy \u00b7 Hits Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": 195.0
+        "odds": -148.0
       },
-      "fair_prob": "0.3759",
-      "edge": "0.0604",
+      "fair_prob": "0.6223",
+      "edge": "0.0603",
       "kelly": "0.0151",
       "grade": "A",
       "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +6.0pp \u00b7 conf 62%",
+      "notes": "62.2% Over \u00b7 \u03bb=0.97 \u00b7 edge +6.0pp \u00b7 conf 62%",
       "event_time": null,
       "game_id": "0"
     },
@@ -3134,24 +5042,6 @@
       "grade": "A",
       "tier": "STRONG",
       "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +6.0pp \u00b7 conf 42%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-Hits-tyler-heineman-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Tyler Heineman \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -135.0
-      },
-      "fair_prob": "0.6008",
-      "edge": "0.0601",
-      "kelly": "0.0150",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "60.1% Over \u00b7 \u03bb=0.92 \u00b7 edge +6.0pp \u00b7 conf 56%",
       "event_time": null,
       "game_id": "0"
     },
@@ -3210,6 +5100,24 @@
       "game_id": "0"
     },
     {
+      "id": "0-Total_Bases-corey-seager-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Corey Seager \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 132.0
+      },
+      "fair_prob": "0.4613",
+      "edge": "0.0580",
+      "kelly": "0.0145",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "46.1% Over \u00b7 \u03bb=1.56 \u00b7 edge +5.8pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-Hits-kyle-manzardo-0.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -3224,60 +5132,6 @@
       "grade": "A",
       "tier": "STRONG",
       "notes": "43.4% Under \u00b7 \u03bb=0.83 \u00b7 edge +5.8pp \u00b7 conf 65%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-oneil-cruz-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Oneil Cruz \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 195.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0576",
-      "kelly": "0.0144",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +5.8pp \u00b7 conf 66%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-royce-lewis-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Royce Lewis \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 195.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0576",
-      "kelly": "0.0144",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +5.8pp \u00b7 conf 63%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-will-smith-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Will Smith \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 195.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0576",
-      "kelly": "0.0144",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +5.8pp \u00b7 conf 62%",
       "event_time": null,
       "game_id": "0"
     },
@@ -3354,6 +5208,24 @@
       "game_id": "0"
     },
     {
+      "id": "0-Hits-mike-trout-0.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Mike Trout \u00b7 Hits Under 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 156.0
+      },
+      "fair_prob": "0.4213",
+      "edge": "0.0556",
+      "kelly": "0.0139",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "42.1% Under \u00b7 \u03bb=0.86 \u00b7 edge +5.6pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-Total_Bases-ryan-jeffers-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_TOTAL_BASES",
@@ -3386,24 +5258,6 @@
       "grade": "A",
       "tier": "STRONG",
       "notes": "62.6% Over \u00b7 \u03bb=0.98 \u00b7 edge +5.5pp \u00b7 conf 62%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-Total_Bases-andrew-benintendi-1.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_TOTAL_BASES",
-      "selection": "Andrew Benintendi \u00b7 Total Bases Over 1.5",
-      "line": {
-        "number": "1.5",
-        "odds": 135.0
-      },
-      "fair_prob": "0.4529",
-      "edge": "0.0546",
-      "kelly": "0.0137",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "45.3% Over \u00b7 \u03bb=1.53 \u00b7 edge +5.5pp \u00b7 conf 64%",
       "event_time": null,
       "game_id": "0"
     },
@@ -3498,24 +5352,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-brandon-lowe-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Brandon Lowe \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -135.0
-      },
-      "fair_prob": "0.5934",
-      "edge": "0.0526",
-      "kelly": "0.0131",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "59.3% Over \u00b7 \u03bb=0.90 \u00b7 edge +5.3pp \u00b7 conf 66%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Hits-ryan-o-hearn-0.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -3534,46 +5370,10 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-freddie-freeman-0.5-OVER",
+      "id": "0-RBI-austin-riley-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
-      "selection": "Freddie Freeman \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 190.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0516",
-      "kelly": "0.0129",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +5.2pp \u00b7 conf 67%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-lenyn-sosa-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Lenyn Sosa \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 190.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0516",
-      "kelly": "0.0129",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +5.2pp \u00b7 conf 60%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-elly-de-la-cruz-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Elly De La Cruz \u00b7 RBIs Over 0.5",
+      "selection": "Austin Riley \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
         "odds": 190.0
@@ -3696,20 +5496,20 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-freddie-freeman-0.5-OVER",
+      "id": "0-RBI-ty-france-0.5-OVER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Freddie Freeman \u00b7 Hits Over 0.5",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Ty France \u00b7 RBIs Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": -168.0
+        "odds": 184.0
       },
-      "fair_prob": "0.6388",
-      "edge": "0.0483",
+      "fair_prob": "0.3759",
+      "edge": "0.0484",
       "kelly": "0.0121",
       "grade": "B",
       "tier": "MODERATE",
-      "notes": "63.9% Over \u00b7 \u03bb=1.02 \u00b7 edge +4.8pp \u00b7 conf 67%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +4.8pp \u00b7 conf 58%",
       "event_time": null,
       "game_id": "0"
     },
@@ -3732,20 +5532,20 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-mike-trout-0.5-UNDER",
+      "id": "0-Total_Bases-andrew-benintendi-1.5-OVER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Mike Trout \u00b7 Hits Under 0.5",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Andrew Benintendi \u00b7 Total Bases Over 1.5",
       "line": {
-        "number": "0.5",
-        "odds": 151.0
+        "number": "1.5",
+        "odds": 131.0
       },
-      "fair_prob": "0.4213",
+      "fair_prob": "0.4529",
       "edge": "0.0480",
       "kelly": "0.0120",
       "grade": "B",
       "tier": "MODERATE",
-      "notes": "42.1% Under \u00b7 \u03bb=0.86 \u00b7 edge +4.8pp \u00b7 conf 68%",
+      "notes": "45.3% Over \u00b7 \u03bb=1.53 \u00b7 edge +4.8pp \u00b7 conf 64%",
       "event_time": null,
       "game_id": "0"
     },
@@ -3768,20 +5568,20 @@
       "game_id": "0"
     },
     {
-      "id": "0-Total_Bases-ryan-o-hearn-1.5-OVER",
+      "id": "0-Hits-evan-carter-0.5-UNDER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_TOTAL_BASES",
-      "selection": "Ryan O'Hearn \u00b7 Total Bases Over 1.5",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Evan Carter \u00b7 Hits Under 0.5",
       "line": {
-        "number": "1.5",
-        "odds": 120.0
+        "number": "0.5",
+        "odds": 121.0
       },
-      "fair_prob": "0.4759",
-      "edge": "0.0475",
+      "fair_prob": "0.4709",
+      "edge": "0.0477",
       "kelly": "0.0119",
       "grade": "B",
       "tier": "MODERATE",
-      "notes": "47.6% Over \u00b7 \u03bb=1.60 \u00b7 edge +4.7pp \u00b7 conf 67%",
+      "notes": "47.1% Under \u00b7 \u03bb=0.75 \u00b7 edge +4.8pp \u00b7 conf 65%",
       "event_time": null,
       "game_id": "0"
     },
@@ -3800,24 +5600,6 @@
       "grade": "B",
       "tier": "MODERATE",
       "notes": "58.9% Over \u00b7 \u03bb=0.89 \u00b7 edge +4.7pp \u00b7 conf 54%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-miguel-vargas-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Miguel Vargas \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 183.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0472",
-      "kelly": "0.0118",
-      "grade": "B",
-      "tier": "MODERATE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +4.7pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
@@ -3894,24 +5676,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-munetaka-murakami-0.5-UNDER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Munetaka Murakami \u00b7 Hits Under 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 146.0
-      },
-      "fair_prob": "0.4268",
-      "edge": "0.0464",
-      "kelly": "0.0116",
-      "grade": "B",
-      "tier": "MODERATE",
-      "notes": "42.7% Under \u00b7 \u03bb=0.85 \u00b7 edge +4.6pp \u00b7 conf 66%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Hits-jeff-mcneil-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -3984,24 +5748,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-andy-pages-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Andy Pages \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 185.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0460",
-      "kelly": "0.0115",
-      "grade": "B",
-      "tier": "MODERATE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +4.6pp \u00b7 conf 67%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Hits-brett-baty-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -4056,20 +5802,20 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-elly-de-la-cruz-0.5-OVER",
+      "id": "0-Total_Bases-masyn-winn-1.5-UNDER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Elly De La Cruz \u00b7 Hits Over 0.5",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Masyn Winn \u00b7 Total Bases Under 1.5",
       "line": {
-        "number": "0.5",
-        "odds": -162.0
+        "number": "1.5",
+        "odds": -175.0
       },
-      "fair_prob": "0.6274",
-      "edge": "0.0445",
-      "kelly": "0.0111",
+      "fair_prob": "0.6441",
+      "edge": "0.0448",
+      "kelly": "0.0112",
       "grade": "B",
       "tier": "MODERATE",
-      "notes": "62.7% Over \u00b7 \u03bb=0.99 \u00b7 edge +4.4pp \u00b7 conf 68%",
+      "notes": "64.4% Under \u00b7 \u03bb=1.25 \u00b7 edge +4.5pp \u00b7 conf 66%",
       "event_time": null,
       "game_id": "0"
     },
@@ -4106,6 +5852,24 @@
       "grade": "B",
       "tier": "MODERATE",
       "notes": "51.1% Over \u00b7 \u03bb=1.71 \u00b7 edge +4.4pp \u00b7 conf 57%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-brandon-nimmo-0.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Brandon Nimmo \u00b7 Hits Under 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 198.0
+      },
+      "fair_prob": "0.3582",
+      "edge": "0.0430",
+      "kelly": "0.0108",
+      "grade": "B",
+      "tier": "MODERATE",
+      "notes": "35.8% Under \u00b7 \u03bb=1.03 \u00b7 edge +4.3pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
@@ -4164,24 +5928,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-ty-france-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Ty France \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 178.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0415",
-      "kelly": "0.0104",
-      "grade": "B",
-      "tier": "MODERATE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +4.2pp \u00b7 conf 58%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Hits-jonah-heim-0.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -4196,42 +5942,6 @@
       "grade": "B",
       "tier": "MODERATE",
       "notes": "39.6% Under \u00b7 \u03bb=0.93 \u00b7 edge +4.1pp \u00b7 conf 54%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-Hits-jj-wetherholt-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "JJ Wetherholt \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -135.0
-      },
-      "fair_prob": "0.5819",
-      "edge": "0.0411",
-      "kelly": "0.0103",
-      "grade": "B",
-      "tier": "MODERATE",
-      "notes": "58.2% Over \u00b7 \u03bb=0.87 \u00b7 edge +4.1pp \u00b7 conf 68%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-Hits-carter-jensen-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Carter Jensen \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -139.0
-      },
-      "fair_prob": "0.5837",
-      "edge": "0.0411",
-      "kelly": "0.0103",
-      "grade": "B",
-      "tier": "MODERATE",
-      "notes": "58.4% Over \u00b7 \u03bb=0.88 \u00b7 edge +4.1pp \u00b7 conf 65%",
       "event_time": null,
       "game_id": "0"
     },
@@ -4308,24 +6018,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-Total_Bases-miguel-vargas-1.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_TOTAL_BASES",
-      "selection": "Miguel Vargas \u00b7 Total Bases Over 1.5",
-      "line": {
-        "number": "1.5",
-        "odds": 140.0
-      },
-      "fair_prob": "0.4288",
-      "edge": "0.0387",
-      "kelly": "0.0097",
-      "grade": "B",
-      "tier": "MODERATE",
-      "notes": "42.9% Over \u00b7 \u03bb=1.46 \u00b7 edge +3.9pp \u00b7 conf 68%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Hits-isaac-collins-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -4340,6 +6032,24 @@
       "grade": "B",
       "tier": "MODERATE",
       "notes": "55.6% Over \u00b7 \u03bb=0.81 \u00b7 edge +3.9pp \u00b7 conf 62%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-munetaka-murakami-0.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Munetaka Murakami \u00b7 Hits Under 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 141.0
+      },
+      "fair_prob": "0.4268",
+      "edge": "0.0381",
+      "kelly": "0.0095",
+      "grade": "B",
+      "tier": "MODERATE",
+      "notes": "42.7% Under \u00b7 \u03bb=0.85 \u00b7 edge +3.8pp \u00b7 conf 66%",
       "event_time": null,
       "game_id": "0"
     },
@@ -4380,24 +6090,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-ezequiel-tovar-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Ezequiel Tovar \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 174.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0367",
-      "kelly": "0.0092",
-      "grade": "B",
-      "tier": "MODERATE",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +3.7pp \u00b7 conf 65%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Total_Bases-marcus-semien-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_TOTAL_BASES",
@@ -4434,20 +6126,20 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-santiago-espinal-0.5-OVER",
+      "id": "0-Total_Bases-miguel-vargas-1.5-OVER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Santiago Espinal \u00b7 Hits Over 0.5",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Miguel Vargas \u00b7 Total Bases Over 1.5",
       "line": {
-        "number": "0.5",
-        "odds": -168.0
+        "number": "1.5",
+        "odds": 138.0
       },
-      "fair_prob": "0.6262",
-      "edge": "0.0357",
-      "kelly": "0.0089",
+      "fair_prob": "0.4288",
+      "edge": "0.0358",
+      "kelly": "0.0090",
       "grade": "B",
       "tier": "MODERATE",
-      "notes": "62.6% Over \u00b7 \u03bb=0.98 \u00b7 edge +3.6pp \u00b7 conf 54%",
+      "notes": "42.9% Over \u00b7 \u03bb=1.46 \u00b7 edge +3.6pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
@@ -4458,14 +6150,32 @@
       "selection": "Ezequiel Tovar \u00b7 Hits Under 0.5",
       "line": {
         "number": "0.5",
-        "odds": 142.0
+        "odds": 145.0
       },
       "fair_prob": "0.4196",
-      "edge": "0.0328",
+      "edge": "0.0349",
+      "kelly": "0.0087",
+      "grade": "B",
+      "tier": "MODERATE",
+      "notes": "42.0% Under \u00b7 \u03bb=0.87 \u00b7 edge +3.5pp \u00b7 conf 65%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-miguel-vargas-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Miguel Vargas \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 171.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.0329",
       "kelly": "0.0082",
       "grade": "B",
       "tier": "MODERATE",
-      "notes": "42.0% Under \u00b7 \u03bb=0.87 \u00b7 edge +3.3pp \u00b7 conf 65%",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +3.3pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
@@ -4484,6 +6194,24 @@
       "grade": "B",
       "tier": "MODERATE",
       "notes": "44.2% Under \u00b7 \u03bb=0.82 \u00b7 edge +3.3pp \u00b7 conf 65%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-austin-martin-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Austin Martin \u00b7 Total Bases Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -148.0
+      },
+      "fair_prob": "0.5942",
+      "edge": "0.0322",
+      "kelly": "0.0081",
+      "grade": "B",
+      "tier": "MODERATE",
+      "notes": "59.4% Under \u00b7 \u03bb=1.39 \u00b7 edge +3.2pp \u00b7 conf 63%",
       "event_time": null,
       "game_id": "0"
     },
@@ -4538,6 +6266,42 @@
       "grade": "B",
       "tier": "MODERATE",
       "notes": "62.4% Under \u00b7 \u03bb=0.47 \u00b7 edge +3.1pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-tj-friedl-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "TJ Friedl \u00b7 Total Bases Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -162.0
+      },
+      "fair_prob": "0.6138",
+      "edge": "0.0310",
+      "kelly": "0.0077",
+      "grade": "B",
+      "tier": "MODERATE",
+      "notes": "61.4% Under \u00b7 \u03bb=1.34 \u00b7 edge +3.1pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-carter-jensen-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Carter Jensen \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -145.0
+      },
+      "fair_prob": "0.5837",
+      "edge": "0.0308",
+      "kelly": "0.0077",
+      "grade": "B",
+      "tier": "MODERATE",
+      "notes": "58.4% Over \u00b7 \u03bb=0.88 \u00b7 edge +3.1pp \u00b7 conf 65%",
       "event_time": null,
       "game_id": "0"
     },
@@ -4758,6 +6522,24 @@
       "game_id": "0"
     },
     {
+      "id": "0-Total_Bases-brooks-lee-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Brooks Lee \u00b7 Total Bases Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -110.0
+      },
+      "fair_prob": "0.5177",
+      "edge": "0.0278",
+      "kelly": "0.0070",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "51.8% Under \u00b7 \u03bb=1.62 \u00b7 edge +2.8pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-Total_Bases-nolan-schanuel-1.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_TOTAL_BASES",
@@ -4772,42 +6554,6 @@
       "grade": "C",
       "tier": "LEAN",
       "notes": "40.2% Over \u00b7 \u03bb=1.38 \u00b7 edge +2.7pp \u00b7 conf 67%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-brooks-lee-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Brooks Lee \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 170.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0274",
-      "kelly": "0.0069",
-      "grade": "C",
-      "tier": "LEAN",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +2.7pp \u00b7 conf 66%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-RBI-sal-stewart-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Sal Stewart \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 170.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0274",
-      "kelly": "0.0069",
-      "grade": "C",
-      "tier": "LEAN",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +2.7pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
@@ -4844,6 +6590,24 @@
       "grade": "C",
       "tier": "LEAN",
       "notes": "37.3% Under \u00b7 \u03bb=0.99 \u00b7 edge +2.7pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-colson-montgomery-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Colson Montgomery \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 166.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.0267",
+      "kelly": "0.0067",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +2.7pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
@@ -4902,24 +6666,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-nathaniel-lowe-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Nathaniel Lowe \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -188.0
-      },
-      "fair_prob": "0.6399",
-      "edge": "0.0247",
-      "kelly": "0.0062",
-      "grade": "C",
-      "tier": "LEAN",
-      "notes": "64.0% Over \u00b7 \u03bb=1.02 \u00b7 edge +2.5pp \u00b7 conf 60%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Total_Bases-jonah-heim-1.5-UNDER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_TOTAL_BASES",
@@ -4934,42 +6680,6 @@
       "grade": "C",
       "tier": "LEAN",
       "notes": "60.4% Under \u00b7 \u03bb=1.36 \u00b7 edge +2.4pp \u00b7 conf 54%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-Hits-jake-mccarthy-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Jake McCarthy \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -178.0
-      },
-      "fair_prob": "0.6223",
-      "edge": "0.0236",
-      "kelly": "0.0059",
-      "grade": "C",
-      "tier": "LEAN",
-      "notes": "62.2% Over \u00b7 \u03bb=0.97 \u00b7 edge +2.4pp \u00b7 conf 62%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-Hits-ty-france-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Ty France \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -206.0
-      },
-      "fair_prob": "0.6530",
-      "edge": "0.0230",
-      "kelly": "0.0057",
-      "grade": "C",
-      "tier": "LEAN",
-      "notes": "65.3% Over \u00b7 \u03bb=1.06 \u00b7 edge +2.3pp \u00b7 conf 58%",
       "event_time": null,
       "game_id": "0"
     },
@@ -5046,24 +6756,6 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-shohei-ohtani-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Shohei Ohtani \u00b7 RBIs Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": 165.0
-      },
-      "fair_prob": "0.3759",
-      "edge": "0.0209",
-      "kelly": "0.0052",
-      "grade": "C",
-      "tier": "LEAN",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +2.1pp \u00b7 conf 66%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
       "id": "0-Hits-jorge-soler-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -5118,6 +6810,60 @@
       "game_id": "0"
     },
     {
+      "id": "0-RBI-munetaka-murakami-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Munetaka Murakami \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 161.0
+      },
+      "fair_prob": "0.3759",
+      "edge": "0.0200",
+      "kelly": "0.0050",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +2.0pp \u00b7 conf 66%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-josh-lowe-0.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Josh Lowe \u00b7 Hits Under 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 134.0
+      },
+      "fair_prob": "0.4197",
+      "edge": "0.0199",
+      "kelly": "0.0050",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "42.0% Under \u00b7 \u03bb=0.87 \u00b7 edge +2.0pp \u00b7 conf 61%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-tj-rumfield-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "TJ Rumfield \u00b7 Total Bases Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -125.0
+      },
+      "fair_prob": "0.5395",
+      "edge": "0.0192",
+      "kelly": "0.0048",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "53.9% Under \u00b7 \u03bb=1.56 \u00b7 edge +1.9pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-Total_Bases-tyler-freeman-1.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_TOTAL_BASES",
@@ -5154,38 +6900,38 @@
       "game_id": "0"
     },
     {
-      "id": "0-RBI-colson-montgomery-0.5-OVER",
+      "id": "0-Hits-colson-montgomery-0.5-OVER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Colson Montgomery \u00b7 RBIs Over 0.5",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Colson Montgomery \u00b7 Hits Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": 159.0
+        "odds": -151.0
       },
-      "fair_prob": "0.3759",
-      "edge": "0.0176",
-      "kelly": "0.0044",
+      "fair_prob": "0.5790",
+      "edge": "0.0174",
+      "kelly": "0.0043",
       "grade": "C",
       "tier": "LEAN",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +1.8pp \u00b7 conf 68%",
+      "notes": "57.9% Over \u00b7 \u03bb=0.87 \u00b7 edge +1.7pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
     {
-      "id": "0-RBI-munetaka-murakami-0.5-OVER",
+      "id": "0-Hits-austin-riley-0.5-OVER",
       "sport": "MLB",
-      "market_type": "PLAYER_PROP_RBI",
-      "selection": "Munetaka Murakami \u00b7 RBIs Over 0.5",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Austin Riley \u00b7 Hits Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": 159.0
+        "odds": -154.0
       },
-      "fair_prob": "0.3759",
-      "edge": "0.0173",
+      "fair_prob": "0.5887",
+      "edge": "0.0171",
       "kelly": "0.0043",
       "grade": "C",
       "tier": "LEAN",
-      "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +1.7pp \u00b7 conf 66%",
+      "notes": "58.9% Over \u00b7 \u03bb=0.89 \u00b7 edge +1.7pp \u00b7 conf 68%",
       "event_time": null,
       "game_id": "0"
     },
@@ -5298,6 +7044,42 @@
       "game_id": "0"
     },
     {
+      "id": "0-Hits-ty-france-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Ty France \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -214.0
+      },
+      "fair_prob": "0.6530",
+      "edge": "0.0147",
+      "kelly": "0.0037",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "65.3% Over \u00b7 \u03bb=1.06 \u00b7 edge +1.5pp \u00b7 conf 58%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-chase-meidroth-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Chase Meidroth \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -181.0
+      },
+      "fair_prob": "0.6164",
+      "edge": "0.0143",
+      "kelly": "0.0036",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "61.6% Over \u00b7 \u03bb=0.96 \u00b7 edge +1.4pp \u00b7 conf 68%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-Hits-rhys-hoskins-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -5334,6 +7116,24 @@
       "game_id": "0"
     },
     {
+      "id": "0-Hits-josh-jung-0.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Josh Jung \u00b7 Hits Under 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 196.0
+      },
+      "fair_prob": "0.3307",
+      "edge": "0.0136",
+      "kelly": "0.0034",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "33.1% Under \u00b7 \u03bb=1.11 \u00b7 edge +1.4pp \u00b7 conf 64%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-RBI-manny-machado-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_RBI",
@@ -5348,24 +7148,6 @@
       "grade": "C",
       "tier": "LEAN",
       "notes": "37.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +1.3pp \u00b7 conf 64%",
-      "event_time": null,
-      "game_id": "0"
-    },
-    {
-      "id": "0-Hits-eli-white-0.5-OVER",
-      "sport": "MLB",
-      "market_type": "PLAYER_PROP_HITS",
-      "selection": "Eli White \u00b7 Hits Over 0.5",
-      "line": {
-        "number": "0.5",
-        "odds": -209.0
-      },
-      "fair_prob": "0.6471",
-      "edge": "0.0132",
-      "kelly": "0.0033",
-      "grade": "C",
-      "tier": "LEAN",
-      "notes": "64.7% Over \u00b7 \u03bb=1.04 \u00b7 edge +1.3pp \u00b7 conf 55%",
       "event_time": null,
       "game_id": "0"
     },
@@ -5388,6 +7170,24 @@
       "game_id": "0"
     },
     {
+      "id": "0-Hits-danny-jansen-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Danny Jansen \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -149.0
+      },
+      "fair_prob": "0.5716",
+      "edge": "0.0124",
+      "kelly": "0.0031",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "57.2% Over \u00b7 \u03bb=0.85 \u00b7 edge +1.2pp \u00b7 conf 60%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
       "id": "0-Hits-nick-kurtz-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
@@ -5406,20 +7206,560 @@
       "game_id": "0"
     },
     {
-      "id": "0-Hits-josh-lowe-0.5-UNDER",
+      "id": "0-Hits-ozzie-albies-0.5-OVER",
       "sport": "MLB",
       "market_type": "PLAYER_PROP_HITS",
-      "selection": "Josh Lowe \u00b7 Hits Under 0.5",
+      "selection": "Ozzie Albies \u00b7 Hits Over 0.5",
       "line": {
         "number": "0.5",
-        "odds": 129.0
+        "odds": -225.0
       },
-      "fair_prob": "0.4197",
-      "edge": "0.0112",
+      "fair_prob": "0.6626",
+      "edge": "0.0111",
       "kelly": "0.0028",
       "grade": "C",
       "tier": "LEAN",
-      "notes": "42.0% Under \u00b7 \u03bb=0.87 \u00b7 edge +1.1pp \u00b7 conf 61%",
+      "notes": "66.3% Over \u00b7 \u03bb=1.09 \u00b7 edge +1.1pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-jake-burger-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Jake Burger \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -182.0
+      },
+      "fair_prob": "0.6141",
+      "edge": "0.0105",
+      "kelly": "0.0026",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "61.4% Over \u00b7 \u03bb=0.95 \u00b7 edge +1.0pp \u00b7 conf 67%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-ML-atl-0",
+      "sport": "MLB",
+      "market_type": "MONEYLINE",
+      "selection": "ATL \u00b7 Moneyline",
+      "line": {
+        "number": null,
+        "odds": 730.0
+      },
+      "fair_prob": "0.6143",
+      "edge": "0.5026",
+      "kelly": "0.1257",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "61.4% ATL \u00b7 \u03bb=9.30 \u00b7 edge +50.3pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-atl-5.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "ATL \u00b7 Run Line +5.5",
+      "line": {
+        "number": "5.5",
+        "odds": -117.0
+      },
+      "fair_prob": "0.9888",
+      "edge": "0.4496",
+      "kelly": "0.1124",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "98.9% ATL \u00b7 \u03bb=9.30 \u00b7 edge +45.0pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total-under-13.5",
+      "sport": "MLB",
+      "market_type": "TOTAL",
+      "selection": "Total Runs Under 13.5",
+      "line": {
+        "number": "13.5",
+        "odds": -109.0
+      },
+      "fair_prob": "0.9099",
+      "edge": "0.4201",
+      "kelly": "0.1050",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "91.0% Under \u00b7 \u03bb=9.30 \u00b7 edge +42.0pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-lad-2.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "LAD \u00b7 Run Line +2.5",
+      "line": {
+        "number": "2.5",
+        "odds": 100.0
+      },
+      "fair_prob": "0.8890",
+      "edge": "0.3890",
+      "kelly": "0.0972",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "88.9% LAD \u00b7 \u03bb=9.10 \u00b7 edge +38.9pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-ML-lad-0",
+      "sport": "MLB",
+      "market_type": "MONEYLINE",
+      "selection": "LAD \u00b7 Moneyline",
+      "line": {
+        "number": null,
+        "odds": 369.0
+      },
+      "fair_prob": "0.5813",
+      "edge": "0.3810",
+      "kelly": "0.0952",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "58.1% LAD \u00b7 \u03bb=9.10 \u00b7 edge +38.1pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-min-4.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "MIN \u00b7 Run Line +4.5",
+      "line": {
+        "number": "4.5",
+        "odds": -134.0
+      },
+      "fair_prob": "0.9518",
+      "edge": "0.3792",
+      "kelly": "0.0948",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "95.2% MIN \u00b7 \u03bb=9.15 \u00b7 edge +37.9pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total-under-12.5",
+      "sport": "MLB",
+      "market_type": "TOTAL",
+      "selection": "Total Runs Under 12.5",
+      "line": {
+        "number": "12.5",
+        "odds": -137.0
+      },
+      "fair_prob": "0.8649",
+      "edge": "0.3213",
+      "kelly": "0.0803",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "86.5% Under \u00b7 \u03bb=9.15 \u00b7 edge +32.1pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-cin-3.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "CIN \u00b7 Run Line +3.5",
+      "line": {
+        "number": "3.5",
+        "odds": -106.0
+      },
+      "fair_prob": "0.8257",
+      "edge": "0.3112",
+      "kelly": "0.0778",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "82.6% CIN \u00b7 \u03bb=9.06 \u00b7 edge +31.1pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-ML-cin-0",
+      "sport": "MLB",
+      "market_type": "MONEYLINE",
+      "selection": "CIN \u00b7 Moneyline",
+      "line": {
+        "number": null,
+        "odds": 573.0
+      },
+      "fair_prob": "0.3411",
+      "edge": "0.2014",
+      "kelly": "0.0504",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "34.1% CIN \u00b7 \u03bb=9.06 \u00b7 edge +20.1pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total-under-9",
+      "sport": "MLB",
+      "market_type": "TOTAL",
+      "selection": "Total Runs Under 9",
+      "line": {
+        "number": "9",
+        "odds": -108.0
+      },
+      "fair_prob": "0.6659",
+      "edge": "0.1702",
+      "kelly": "0.0426",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "66.6% Under \u00b7 \u03bb=9.82 \u00b7 edge +17.0pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-mia-1.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "MIA \u00b7 Run Line +1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -196.0
+      },
+      "fair_prob": "0.8213",
+      "edge": "0.1591",
+      "kelly": "0.0398",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "82.1% MIA \u00b7 \u03bb=8.69 \u00b7 edge +15.9pp \u00b7 conf 71%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-laa-1.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "LAA \u00b7 Run Line +1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -181.0
+      },
+      "fair_prob": "0.7837",
+      "edge": "0.1396",
+      "kelly": "0.0349",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "78.4% LAA \u00b7 \u03bb=8.40 \u00b7 edge +14.0pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-min-1.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "MIN \u00b7 Run Line +1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -156.0
+      },
+      "fair_prob": "0.7474",
+      "edge": "0.1380",
+      "kelly": "0.0345",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "74.7% MIN \u00b7 \u03bb=9.15 \u00b7 edge +13.8pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total-over-7",
+      "sport": "MLB",
+      "market_type": "TOTAL",
+      "selection": "Total Runs Over 7",
+      "line": {
+        "number": "7",
+        "odds": -112.0
+      },
+      "fair_prob": "0.6168",
+      "edge": "0.1125",
+      "kelly": "0.0281",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "61.7% Over \u00b7 \u03bb=8.52 \u00b7 edge +11.3pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total-under-8",
+      "sport": "MLB",
+      "market_type": "TOTAL",
+      "selection": "Total Runs Under 8",
+      "line": {
+        "number": "8",
+        "odds": -110.0
+      },
+      "fair_prob": "0.5937",
+      "edge": "0.0937",
+      "kelly": "0.0234",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "59.4% Under \u00b7 \u03bb=7.99 \u00b7 edge +9.4pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-tb-1.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "TB \u00b7 Run Line +1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -178.0
+      },
+      "fair_prob": "0.7261",
+      "edge": "0.0858",
+      "kelly": "0.0214",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "72.6% TB \u00b7 \u03bb=8.25 \u00b7 edge +8.6pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-ML-mia-0",
+      "sport": "MLB",
+      "market_type": "MONEYLINE",
+      "selection": "MIA \u00b7 Moneyline",
+      "line": {
+        "number": null,
+        "odds": -112.0
+      },
+      "fair_prob": "0.5891",
+      "edge": "0.0802",
+      "kelly": "0.0200",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "58.9% MIA \u00b7 \u03bb=8.69 \u00b7 edge +8.0pp \u00b7 conf 71%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-ML-mil-0",
+      "sport": "MLB",
+      "market_type": "MONEYLINE",
+      "selection": "MIL \u00b7 Moneyline",
+      "line": {
+        "number": null,
+        "odds": -136.0
+      },
+      "fair_prob": "0.6158",
+      "edge": "0.0648",
+      "kelly": "0.0162",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "61.6% MIL \u00b7 \u03bb=10.56 \u00b7 edge +6.5pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-sea--1.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "SEA \u00b7 Run Line -1.5",
+      "line": {
+        "number": "-1.5",
+        "odds": 159.0
+      },
+      "fair_prob": "0.4463",
+      "edge": "0.0602",
+      "kelly": "0.0150",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "44.6% SEA \u00b7 \u03bb=8.52 \u00b7 edge +6.0pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total-over-7.5",
+      "sport": "MLB",
+      "market_type": "TOTAL",
+      "selection": "Total Runs Over 7.5",
+      "line": {
+        "number": "7.5",
+        "odds": -122.0
+      },
+      "fair_prob": "0.5813",
+      "edge": "0.0577",
+      "kelly": "0.0144",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "58.1% Over \u00b7 \u03bb=8.25 \u00b7 edge +5.8pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total-over-8",
+      "sport": "MLB",
+      "market_type": "TOTAL",
+      "selection": "Total Runs Over 8",
+      "line": {
+        "number": "8",
+        "odds": -108.0
+      },
+      "fair_prob": "0.5518",
+      "edge": "0.0562",
+      "kelly": "0.0140",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "55.2% Over \u00b7 \u03bb=7.99 \u00b7 edge +5.6pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-mil--1.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "MIL \u00b7 Run Line -1.5",
+      "line": {
+        "number": "-1.5",
+        "odds": 129.0
+      },
+      "fair_prob": "0.4925",
+      "edge": "0.0558",
+      "kelly": "0.0140",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "49.2% MIL \u00b7 \u03bb=10.56 \u00b7 edge +5.6pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-tex-1.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "TEX \u00b7 Run Line +1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -186.0
+      },
+      "fair_prob": "0.7004",
+      "edge": "0.0500",
+      "kelly": "0.0125",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "70.0% TEX \u00b7 \u03bb=7.99 \u00b7 edge +5.0pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-ML-sea-0",
+      "sport": "MLB",
+      "market_type": "MONEYLINE",
+      "selection": "SEA \u00b7 Moneyline",
+      "line": {
+        "number": null,
+        "odds": -136.0
+      },
+      "fair_prob": "0.5851",
+      "edge": "0.0340",
+      "kelly": "0.0085",
+      "grade": "B",
+      "tier": "MODERATE",
+      "notes": "58.5% SEA \u00b7 \u03bb=8.52 \u00b7 edge +3.4pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-ML-laa-0",
+      "sport": "MLB",
+      "market_type": "MONEYLINE",
+      "selection": "LAA \u00b7 Moneyline",
+      "line": {
+        "number": null,
+        "odds": -110.0
+      },
+      "fair_prob": "0.5316",
+      "edge": "0.0316",
+      "kelly": "0.0079",
+      "grade": "B",
+      "tier": "MODERATE",
+      "notes": "53.2% LAA \u00b7 \u03bb=8.40 \u00b7 edge +3.2pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-ML-min-0",
+      "sport": "MLB",
+      "market_type": "MONEYLINE",
+      "selection": "MIN \u00b7 Moneyline",
+      "line": {
+        "number": null,
+        "odds": 104.0
+      },
+      "fair_prob": "0.4968",
+      "edge": "0.0290",
+      "kelly": "0.0072",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "49.7% MIN \u00b7 \u03bb=9.15 \u00b7 edge +2.9pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-ML-chc-0",
+      "sport": "MLB",
+      "market_type": "MONEYLINE",
+      "selection": "CHC \u00b7 Moneyline",
+      "line": {
+        "number": null,
+        "odds": -163.0
+      },
+      "fair_prob": "0.6194",
+      "edge": "0.0265",
+      "kelly": "0.0066",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "61.9% CHC \u00b7 \u03bb=11.73 \u00b7 edge +2.6pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Run_Line-bos-1.5",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "BOS \u00b7 Run Line +1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -195.0
+      },
+      "fair_prob": "0.6872",
+      "edge": "0.0262",
+      "kelly": "0.0065",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "68.7% BOS \u00b7 \u03bb=9.82 \u00b7 edge +2.6pp \u00b7 conf 72%",
+      "event_time": null,
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total-over-8.5",
+      "sport": "MLB",
+      "market_type": "TOTAL",
+      "selection": "Total Runs Over 8.5",
+      "line": {
+        "number": "8.5",
+        "odds": -105.0
+      },
+      "fair_prob": "0.5026",
+      "edge": "0.0134",
+      "kelly": "0.0034",
+      "grade": "C",
+      "tier": "LEAN",
+      "notes": "50.3% Over \u00b7 \u03bb=9.10 \u00b7 edge +1.3pp \u00b7 conf 72%",
       "event_time": null,
       "game_id": "0"
     }
