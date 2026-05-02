@@ -86,12 +86,30 @@ NRFI_PROB_THRESHOLDS: tuple[tuple[float, Tier], ...] = (
 )
 
 # Edge-based ladder (model_p − vig-adjusted market_p, in pp / 0..1).
+# Tightened 2026-05-02 after first end-to-end run produced 237 ELITE
+# picks on a single slate — the original (0.08 / 0.05 / 0.03 / 0.01)
+# thresholds let too much through. The Poisson projection produces
+# inflated edges on extreme lines (e.g. Under N where N >> player's
+# typical) because Poisson is light-tailed vs the market's tail-risk
+# pricing; under the old ladder those artefacts all showed up as
+# ELITE / STRONG. The tightened ladder requires meaningfully larger
+# disagreement before promoting a pick.
 EDGE_THRESHOLDS: tuple[tuple[float, Tier], ...] = (
-    (0.08, Tier.ELITE),
-    (0.05, Tier.STRONG),
-    (0.03, Tier.MODERATE),
-    (0.01, Tier.LEAN),
+    (0.12, Tier.ELITE),
+    (0.08, Tier.STRONG),
+    (0.05, Tier.MODERATE),
+    (0.025, Tier.LEAN),
 )
+
+
+# ELITE-tier sanity floor on the model's own conviction. A pick where
+# the model says "37% to hit but the market underprices it" is still
+# a < coin-flip outcome — interesting context, but not the operator's
+# top conviction call. ELITE requires BOTH a meaningful edge AND a
+# model probability >= this floor; otherwise the pick demotes to the
+# next tier down (STRONG). Set to 0.62 to align with the upper end
+# of the MODERATE band on the symmetric-first-inning ladder.
+ELITE_MIN_MODEL_PROB: float = 0.62
 
 # Markets that use the NRFI raw-probability ladder.
 SYMMETRIC_FIRST_INNING_MARKETS: frozenset[str] = frozenset({"NRFI", "YRFI"})
@@ -150,11 +168,35 @@ def classify_tier(
         raise ValueError(
             f"{market_type} requires `edge` (edge-based ladder)"
         )
-    return _classify_by_ladder(
+    clf = _classify_by_ladder(
         value=float(edge),
         ladder=EDGE_THRESHOLDS,
         basis="edge",
     )
+    # ELITE sanity floor: a pick the model itself thinks is < 62% to
+    # hit isn't ELITE no matter how large the edge. Demote to STRONG
+    # so the pick still shows up as a top-tier conviction without
+    # claiming "Elite" — the operator can decide whether the
+    # large-edge / sub-coin-flip pick is worth posting.
+    if (
+        clf.tier == Tier.ELITE
+        and side_probability is not None
+        and float(side_probability) < ELITE_MIN_MODEL_PROB
+    ):
+        # Find STRONG's band so the caption stays accurate.
+        strong_lower = next(
+            (lo for lo, t in EDGE_THRESHOLDS if t == Tier.STRONG),
+            0.0,
+        )
+        elite_lower = next(
+            (lo for lo, t in EDGE_THRESHOLDS if t == Tier.ELITE),
+            float("inf"),
+        )
+        clf = TierClassification(
+            tier=Tier.STRONG, basis="edge", value=clf.value,
+            band_lower=strong_lower, band_upper=elite_lower,
+        )
+    return clf
 
 
 def _classify_by_ladder(
@@ -273,15 +315,21 @@ def render_conviction_key() -> str:
 
     Sits at the top of the daily email so the operator (and any forwarded
     reader) can decode the color tokens in each pick row at a glance.
+
+    First-Inning ladder is symmetric on side probability (NRFI%/YRFI%
+    interchangeably). Edge ladder applies to every other market type;
+    ELITE additionally requires a ``model_prob ≥ 0.62`` floor so that
+    a high-edge / sub-coin-flip pick demotes to STRONG.
     """
     lines = [
         "CONVICTION KEY",
         "═" * 60,
-        "  Electric Blue   ≥70% / ≥8pp edge   Elite conviction",
-        "  Deep Green      64-69%             Strong conviction (either side)",
-        "  Amber           58-63%             Moderate conviction",
-        "  Slate           55-57%             Lean (content-only)",
-        "  Red             <55%               No play / pass",
+        "  Electric Blue   ≥70% prob (NRFI/YRFI)   Elite conviction",
+        "                  ≥12pp edge AND ≥62% prob (other markets)",
+        "  Deep Green      64-69%   /   ≥8pp edge   Strong conviction",
+        "  Amber           58-63%   /   ≥5pp edge   Moderate conviction",
+        "  Slate           55-57%   /   ≥2.5pp edge Lean (content-only)",
+        "  Red             <55%     /   <2.5pp edge No play / pass",
     ]
     return "\n".join(lines)
 

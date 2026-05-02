@@ -247,15 +247,40 @@ def test_build_edge_picks_filters_below_min_tier():
     assert picks == []
 
 
-def test_build_edge_picks_classifies_strong_at_5pp():
+def test_build_edge_picks_classifies_moderate_at_7pp():
+    """Post 2026-05-02 the edge ladder is 12/8/5/2.5pp. A 7pp edge
+    classifies as MODERATE; previously this would have been STRONG."""
     line = _line(side="Over", american_odds=+250)  # implied ~28.6%
     proj = ProjectedSide(market=line.market, player_name=line.player_name,
                           line_value=0.5, side="Over",
-                          model_prob=0.36, confidence=0.5)  # 7.4pp edge
+                          model_prob=0.36, confidence=0.5)  # ~7.4pp edge
+    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
+    assert len(picks) == 1
+    assert picks[0].tier == Tier.MODERATE
+    assert picks[0].edge_pp > 5.0
+
+
+def test_build_edge_picks_classifies_strong_at_8pp_with_high_prob():
+    """8pp edge with model_prob above the 0.62 ELITE floor → STRONG."""
+    line = _line(side="Over", american_odds=-110)  # implied ~52.4%
+    proj = ProjectedSide(market=line.market, player_name=line.player_name,
+                          line_value=0.5, side="Over",
+                          model_prob=0.62, confidence=0.5)  # ~9.6pp edge
     picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
     assert len(picks) == 1
     assert picks[0].tier == Tier.STRONG
-    assert picks[0].edge_pp > 5.0
+
+
+def test_build_edge_picks_demotes_elite_when_model_prob_below_floor():
+    """A 13pp edge but model says 35% to hit → demote ELITE → STRONG."""
+    line = _line(side="Over", american_odds=+200)  # implied ~33.3%
+    proj = ProjectedSide(market=line.market, player_name=line.player_name,
+                          line_value=0.5, side="Over",
+                          model_prob=0.46, confidence=0.5)  # ~13pp edge
+    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
+    assert len(picks) == 1
+    assert picks[0].tier == Tier.STRONG
+    assert picks[0].edge_pp > 12.0
 
 
 def test_build_edge_picks_sorts_by_edge_desc():

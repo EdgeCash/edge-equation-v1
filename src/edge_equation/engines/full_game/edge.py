@@ -156,8 +156,15 @@ def build_edge_picks(
             line=line, projection=proj,
             devig_total=devig.get(_key_for_pair(line)),
         )
-        clf = classify_tier(market_type=line.market.canonical,
-                              edge=edge_pp / 100.0)
+        # Pass model prob so the tiering ELITE floor
+        # (model_prob >= 0.62) can demote large-edge / low-conviction
+        # picks (e.g. moneyline dogs at +700 with 35% model prob)
+        # from ELITE to STRONG.
+        clf = classify_tier(
+            market_type=line.market.canonical,
+            edge=edge_pp / 100.0,
+            side_probability=float(proj.model_prob),
+        )
         if rank[clf.tier] < floor:
             continue
         picks.append(FullGameEdgePick(
