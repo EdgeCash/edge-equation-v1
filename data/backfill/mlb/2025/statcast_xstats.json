@@ -1,0 +1,358 @@
+{
+  "batting": {},
+  "generated_at": "2026-05-04T21:24:26.318339Z",
+  "pitching": {
+    "543243": {
+      "pa": 753,
+      "source": "fip_proxy",
+      "xba": 0.2329,
+      "xslg": 0.3755,
+      "xwoba": 0.2855
+    },
+    "543294": {
+      "pa": 695,
+      "source": "fip_proxy",
+      "xba": 0.2574,
+      "xslg": 0.4105,
+      "xwoba": 0.3205
+    },
+    "571510": {
+      "pa": 718,
+      "source": "fip_proxy",
+      "xba": 0.238,
+      "xslg": 0.3829,
+      "xwoba": 0.2929
+    },
+    "579328": {
+      "pa": 772,
+      "source": "fip_proxy",
+      "xba": 0.2499,
+      "xslg": 0.3998,
+      "xwoba": 0.3098
+    },
+    "592332": {
+      "pa": 775,
+      "source": "fip_proxy",
+      "xba": 0.2333,
+      "xslg": 0.3762,
+      "xwoba": 0.2862
+    },
+    "592662": {
+      "pa": 755,
+      "source": "fip_proxy",
+      "xba": 0.2438,
+      "xslg": 0.3912,
+      "xwoba": 0.3012
+    },
+    "594798": {
+      "pa": 669,
+      "source": "fip_proxy",
+      "xba": 0.238,
+      "xslg": 0.3829,
+      "xwoba": 0.2929
+    },
+    "601713": {
+      "pa": 721,
+      "source": "fip_proxy",
+      "xba": 0.2349,
+      "xslg": 0.3785,
+      "xwoba": 0.2885
+    },
+    "605135": {
+      "pa": 736,
+      "source": "fip_proxy",
+      "xba": 0.2455,
+      "xslg": 0.3935,
+      "xwoba": 0.3035
+    },
+    "605280": {
+      "pa": 708,
+      "source": "fip_proxy",
+      "xba": 0.2474,
+      "xslg": 0.3963,
+      "xwoba": 0.3063
+    },
+    "605488": {
+      "pa": 713,
+      "source": "fip_proxy",
+      "xba": 0.2584,
+      "xslg": 0.412,
+      "xwoba": 0.322
+    },
+    "607074": {
+      "pa": 789,
+      "source": "fip_proxy",
+      "xba": 0.2408,
+      "xslg": 0.3868,
+      "xwoba": 0.2968
+    },
+    "607259": {
+      "pa": 683,
+      "source": "fip_proxy",
+      "xba": 0.252,
+      "xslg": 0.4028,
+      "xwoba": 0.3128
+    },
+    "607536": {
+      "pa": 709,
+      "source": "fip_proxy",
+      "xba": 0.2489,
+      "xslg": 0.3984,
+      "xwoba": 0.3084
+    },
+    "608331": {
+      "pa": 801,
+      "source": "fip_proxy",
+      "xba": 0.2263,
+      "xslg": 0.3662,
+      "xwoba": 0.2762
+    },
+    "608379": {
+      "pa": 716,
+      "source": "fip_proxy",
+      "xba": 0.2382,
+      "xslg": 0.3832,
+      "xwoba": 0.2932
+    },
+    "621244": {
+      "pa": 698,
+      "source": "fip_proxy",
+      "xba": 0.2583,
+      "xslg": 0.4119,
+      "xwoba": 0.3219
+    },
+    "622491": {
+      "pa": 745,
+      "source": "fip_proxy",
+      "xba": 0.2427,
+      "xslg": 0.3896,
+      "xwoba": 0.2996
+    },
+    "622663": {
+      "pa": 705,
+      "source": "fip_proxy",
+      "xba": 0.2474,
+      "xslg": 0.3963,
+      "xwoba": 0.3063
+    },
+    "642547": {
+      "pa": 723,
+      "source": "fip_proxy",
+      "xba": 0.238,
+      "xslg": 0.3829,
+      "xwoba": 0.2929
+    },
+    "645261": {
+      "pa": 745,
+      "source": "fip_proxy",
+      "xba": 0.2509,
+      "xslg": 0.4013,
+      "xwoba": 0.3113
+    },
+    "650911": {
+      "pa": 807,
+      "source": "fip_proxy",
+      "xba": 0.2158,
+      "xslg": 0.3512,
+      "xwoba": 0.2612
+    },
+    "656302": {
+      "pa": 722,
+      "source": "fip_proxy",
+      "xba": 0.2363,
+      "xslg": 0.3804,
+      "xwoba": 0.2904
+    },
+    "656605": {
+      "pa": 749,
+      "source": "fip_proxy",
+      "xba": 0.2457,
+      "xslg": 0.3938,
+      "xwoba": 0.3038
+    },
+    "656849": {
+      "pa": 723,
+      "source": "fip_proxy",
+      "xba": 0.2347,
+      "xslg": 0.3782,
+      "xwoba": 0.2882
+    },
+    "657277": {
+      "pa": 856,
+      "source": "fip_proxy",
+      "xba": 0.2169,
+      "xslg": 0.3527,
+      "xwoba": 0.2627
+    },
+    "657746": {
+      "pa": 689,
+      "source": "fip_proxy",
+      "xba": 0.2399,
+      "xslg": 0.3856,
+      "xwoba": 0.2956
+    },
+    "663623": {
+      "pa": 787,
+      "source": "fip_proxy",
+      "xba": 0.2784,
+      "xslg": 0.4406,
+      "xwoba": 0.3506
+    },
+    "663903": {
+      "pa": 716,
+      "source": "fip_proxy",
+      "xba": 0.2447,
+      "xslg": 0.3925,
+      "xwoba": 0.3025
+    },
+    "664285": {
+      "pa": 802,
+      "source": "fip_proxy",
+      "xba": 0.2325,
+      "xslg": 0.375,
+      "xwoba": 0.285
+    },
+    "665152": {
+      "pa": 708,
+      "source": "fip_proxy",
+      "xba": 0.2446,
+      "xslg": 0.3923,
+      "xwoba": 0.3023
+    },
+    "666200": {
+      "pa": 758,
+      "source": "fip_proxy",
+      "xba": 0.2228,
+      "xslg": 0.3612,
+      "xwoba": 0.2712
+    },
+    "667755": {
+      "pa": 724,
+      "source": "fip_proxy",
+      "xba": 0.2398,
+      "xslg": 0.3854,
+      "xwoba": 0.2954
+    },
+    "668678": {
+      "pa": 813,
+      "source": "fip_proxy",
+      "xba": 0.2555,
+      "xslg": 0.4078,
+      "xwoba": 0.3178
+    },
+    "668909": {
+      "pa": 704,
+      "source": "fip_proxy",
+      "xba": 0.2532,
+      "xslg": 0.4046,
+      "xwoba": 0.3146
+    },
+    "669358": {
+      "pa": 711,
+      "source": "fip_proxy",
+      "xba": 0.2527,
+      "xslg": 0.4038,
+      "xwoba": 0.3138
+    },
+    "669373": {
+      "pa": 748,
+      "source": "fip_proxy",
+      "xba": 0.2137,
+      "xslg": 0.3482,
+      "xwoba": 0.2582
+    },
+    "669467": {
+      "pa": 715,
+      "source": "fip_proxy",
+      "xba": 0.2591,
+      "xslg": 0.413,
+      "xwoba": 0.323
+    },
+    "671096": {
+      "pa": 684,
+      "source": "fip_proxy",
+      "xba": 0.2383,
+      "xslg": 0.3833,
+      "xwoba": 0.2933
+    },
+    "676440": {
+      "pa": 762,
+      "source": "fip_proxy",
+      "xba": 0.252,
+      "xslg": 0.4029,
+      "xwoba": 0.3129
+    },
+    "676979": {
+      "pa": 814,
+      "source": "fip_proxy",
+      "xba": 0.2226,
+      "xslg": 0.3609,
+      "xwoba": 0.2709
+    },
+    "678394": {
+      "pa": 700,
+      "source": "fip_proxy",
+      "xba": 0.2491,
+      "xslg": 0.3987,
+      "xwoba": 0.3087
+    },
+    "680730": {
+      "pa": 725,
+      "source": "fip_proxy",
+      "xba": 0.2653,
+      "xslg": 0.4218,
+      "xwoba": 0.3318
+    },
+    "686613": {
+      "pa": 729,
+      "source": "fip_proxy",
+      "xba": 0.2278,
+      "xslg": 0.3683,
+      "xwoba": 0.2783
+    },
+    "686752": {
+      "pa": 679,
+      "source": "fip_proxy",
+      "xba": 0.2525,
+      "xslg": 0.4036,
+      "xwoba": 0.3136
+    },
+    "693433": {
+      "pa": 731,
+      "source": "fip_proxy",
+      "xba": 0.2344,
+      "xslg": 0.3777,
+      "xwoba": 0.2877
+    },
+    "694297": {
+      "pa": 767,
+      "source": "fip_proxy",
+      "xba": 0.2497,
+      "xslg": 0.3995,
+      "xwoba": 0.3095
+    },
+    "694973": {
+      "pa": 733,
+      "source": "fip_proxy",
+      "xba": 0.212,
+      "xslg": 0.3457,
+      "xwoba": 0.2557
+    },
+    "701542": {
+      "pa": 711,
+      "source": "fip_proxy",
+      "xba": 0.2466,
+      "xslg": 0.3951,
+      "xwoba": 0.3051
+    },
+    "808967": {
+      "pa": 684,
+      "source": "fip_proxy",
+      "xba": 0.2237,
+      "xslg": 0.3624,
+      "xwoba": 0.2724
+    }
+  },
+  "season": 2025,
+  "source": "fip_proxy:statsapi.mlb.com"
+}
