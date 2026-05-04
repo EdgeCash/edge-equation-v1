@@ -11,6 +11,9 @@ dependencies = [
   "numpy>=1.26",
   "httpx>=0.27",
   "python-dotenv>=1.0",
+  # Required by edge_equation.exporters.mlb.workbook to emit
+  # mlb_daily.xlsx with the multi-tab layout. Light dep; pure-Python.
+  "openpyxl>=3.1",
 ]
 
 [project.optional-dependencies]

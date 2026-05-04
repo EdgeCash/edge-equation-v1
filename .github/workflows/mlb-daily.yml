@@ -1,0 +1,76 @@
+name: MLB Daily Spreadsheet
+
+# Builds today's MLB spreadsheet (slate + projections + Kelly + backtest +
+# market gate) and commits the new files to main, which triggers an
+# automatic Vercel redeploy. Ported from edge-equation-scrapers'
+# mlb-daily.yml; kept FEATURE-FLAGGED OFF via the MLB_PIPELINE_ENABLED
+# secret until Phase 4 cutover passes.
+on:
+  schedule:
+    # 15:00 UTC = 11:00 AM ET during DST.
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Target date (YYYY-MM-DD). Defaults to today (ET)."
+        required: false
+        default: ""
+      skip_odds:
+        description: "Skip odds fetch (Kelly falls back to -110)."
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    if: ${{ vars.MLB_PIPELINE_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -e .[nrfi]
+          pip install openpyxl
+
+      - name: Configure git
+        run: |
+          git config user.name  "edge-equation-bot"
+          git config user.email "bot@edge-equation.local"
+
+      - name: Build daily spreadsheet
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          EDGE_FEATURE_SPREADSHEET_PIPELINE: "on"
+        run: |
+          ARGS="--include-backfill"
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS="$ARGS --date ${{ github.event.inputs.date }}"
+          fi
+          if [ "${{ github.event.inputs.skip_odds }}" = "true" ]; then
+            ARGS="$ARGS --no-odds"
+          fi
+          python -m edge_equation.exporters.mlb.daily_spreadsheet $ARGS
+
+      - name: Commit and push outputs
+        run: |
+          git add public/data/mlb/ || true
+          if git diff --staged --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          DATE_TAG=$(date -u +"%Y-%m-%d")
+          git commit -m "Daily MLB spreadsheet — $DATE_TAG"
+          git push
