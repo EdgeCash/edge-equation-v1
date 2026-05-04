@@ -1,0 +1,48 @@
+name: MLB Closing-Line Snapshot
+
+# Snaps current market price for every pick in picks_log.json that
+# doesn't yet have a closing snapshot, computes CLV, pushes the updated
+# log back to the repo. Ported from edge-equation-scrapers
+# mlb-closing-lines.yml; FEATURE-FLAGGED OFF via MLB_PIPELINE_ENABLED.
+on:
+  schedule:
+    # Every 30 minutes during typical first-pitch windows.
+    - cron: "*/30 17-23 * * *"
+    - cron: "*/30 0-3 * * *"
+  workflow_dispatch:
+
+jobs:
+  snapshot:
+    if: ${{ vars.MLB_PIPELINE_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -e .[nrfi]
+          pip install openpyxl
+
+      - name: Configure git
+        run: |
+          git config user.name  "edge-equation-bot"
+          git config user.email "bot@edge-equation.local"
+
+      - name: Snap closing lines
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          EDGE_FEATURE_SPREADSHEET_PIPELINE: "on"
+        run: python -m edge_equation.exporters.mlb.closing_snapshot --push
