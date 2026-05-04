@@ -66,6 +66,16 @@ import requests
 
 BASE_URL = "https://statsapi.mlb.com/api/v1"
 
+# 30 MLB team IDs — same lookup table edge_equation.scrapers.mlb
+# .mlb_pitcher_scraper.TEAM_CODE_TO_ID uses. Duplicated here so the
+# script doesn't take a v1-package import dependency (it runs on a
+# fresh checkout before pip install completes for the package itself).
+ALL_TEAM_IDS: list[int] = [
+    108, 109, 110, 111, 112, 113, 114, 115, 116, 117,
+    118, 119, 120, 121, 133, 134, 135, 136, 137, 138,
+    139, 140, 141, 142, 143, 144, 145, 146, 147, 158,
+]
+
 LEAGUE_FIP = 4.20
 LEAGUE_XWOBA = 0.310
 FIP_TO_XWOBA_SLOPE = 0.029
@@ -75,7 +85,9 @@ XWOBA_MAX = 0.380
 FIP_CONSTANT = 3.10
 
 MIN_QUALIFIED_PITCHERS = 50
-PITCHER_PA_FLOOR = 100  # matches MIN_XSTATS_PA in splits_loader
+PITCHER_BF_FLOOR = 50    # below this we don't trust the FIP enough to
+                         # write an xwoba proxy. 50 BF ≈ 12 IP — enough
+                         # for a relief-arm sample.
 
 
 def _ip_to_float(ip_str) -> float:
@@ -125,29 +137,47 @@ def _safe_int(v) -> int | None:
 
 
 def fetch_pitching_leaders(season: int, http_get=None) -> list[dict]:
-    """Pull every QUALIFIED pitcher's season pitching stats.
+    """Pull every pitcher's season pitching stats by iterating teams.
+
+    History: a previous version used a single global query with
+    ?playerPool=Q without teamId, which returned too few rows in
+    production (validation failed at < 50 pitchers, no file written,
+    artifact step errored with 'No files found'). Per-team iteration
+    matches the proven pattern in mlb_lineup_scraper and reliably
+    yields ~150 pitchers across 30 teams.
 
     http_get is injectable for testing — defaults to requests.get.
+    Verbose progress logging fires on every page so a future failure
+    is self-explanatory.
     """
     if http_get is None:
         http_get = requests.get
     out: list[dict] = []
-    offset = 0
-    page = 250
-    while True:
+    teams_with_data = 0
+    teams_empty = 0
+    for team_id in ALL_TEAM_IDS:
         url = (
-            f"{BASE_URL}/stats?stats=season&season={season}&group=pitching"
-            f"&playerPool=Q&limit={page}&offset={offset}"
+            f"{BASE_URL}/stats"
+            f"?stats=season&season={season}&group=pitching"
+            f"&teamId={team_id}&limit=50"
         )
-        resp = http_get(url, timeout=30)
-        resp.raise_for_status()
-        payload = resp.json()
+        try:
+            resp = http_get(url, timeout=30)
+            resp.raise_for_status()
+            payload = resp.json()
+        except Exception as e:
+            print(f"  team {team_id}: {type(e).__name__}: {e}", file=sys.stderr)
+            teams_empty += 1
+            continue
         try:
             splits = payload["stats"][0]["splits"]
         except (KeyError, IndexError):
-            break
+            teams_empty += 1
+            continue
         if not splits:
-            break
+            teams_empty += 1
+            continue
+        teams_with_data += 1
         for s in splits:
             stat = s.get("stat") or {}
             player = s.get("player") or {}
@@ -163,35 +193,60 @@ def fetch_pitching_leaders(season: int, http_get=None) -> list[dict]:
                 "k": _safe_int(stat.get("strikeOuts")),
                 "bf": _safe_int(stat.get("battersFaced")),
             })
-        if len(splits) < page:
-            break
-        offset += page
+    print(f"  teams returned data: {teams_with_data}/{len(ALL_TEAM_IDS)} "
+          f"(empty: {teams_empty})")
+    print(f"  raw pitcher rows: {len(out)}")
     return out
 
 
 def build_pitching_xstats(rows: list[dict]) -> dict[str, dict]:
-    """Translate pitching rows to {player_id: {pa, xwoba, xba, xslg}}."""
-    out: dict[str, dict] = {}
+    """Translate pitching rows to {player_id: {pa, xwoba, xba, xslg}}.
+
+    Drops rows below PITCHER_BF_FLOOR (default 50 BF ≈ 12 IP) and rows
+    with insufficient FIP components.
+
+    Per-team iteration in fetch_pitching_leaders can return the same
+    pitcher twice if they were on multiple teams during the season
+    (mid-season trades). We dedupe on player_id, keeping the row with
+    the higher BF since that's the more representative sample.
+    """
+    seen: dict[str, dict] = {}
+    skipped_no_id = 0
+    skipped_below_bf = 0
+    skipped_no_fip = 0
+    deduped = 0
     for r in rows:
         pid = r.get("id")
         if pid is None:
+            skipped_no_id += 1
             continue
         bf = r.get("bf") or 0
+        if bf < PITCHER_BF_FLOOR:
+            skipped_below_bf += 1
+            continue
         fip = compute_fip(r.get("hr"), r.get("bb"), r.get("hbp"),
                           r.get("k"), r.get("ip"))
         if fip is None:
+            skipped_no_fip += 1
             continue
         xwoba = fip_to_xwoba(fip)
         xba = round(0.250 + (xwoba - LEAGUE_XWOBA) * 0.7, 4)
         xslg = round(0.400 + (xwoba - LEAGUE_XWOBA) * 1.0, 4)
-        out[str(pid)] = {
-            "pa": bf,
-            "xwoba": xwoba,
-            "xba": xba,
-            "xslg": xslg,
-            "source": "fip_proxy",
-        }
-    return out
+        key = str(pid)
+        if key in seen:
+            if bf > seen[key]["pa"]:
+                seen[key] = {"pa": bf, "xwoba": xwoba, "xba": xba,
+                             "xslg": xslg, "source": "fip_proxy"}
+            deduped += 1
+            continue
+        seen[key] = {"pa": bf, "xwoba": xwoba, "xba": xba,
+                     "xslg": xslg, "source": "fip_proxy"}
+    print(f"  filter results: kept={len(seen)}, "
+          f"skipped(no_id)={skipped_no_id}, "
+          f"skipped(BF<{PITCHER_BF_FLOOR})={skipped_below_bf}, "
+          f"skipped(no_FIP)={skipped_no_fip}, "
+          f"deduped={deduped}")
+    return seen
 
 
 def validate_pitching(payload: dict, season: int) -> list[str]:
@@ -228,10 +283,8 @@ def validate_pitching(payload: dict, season: int) -> list[str]:
 def bootstrap_season(season: int, out_dir: Path, http_get=None) -> dict:
     print(f"Fetching MLB Stats API pitching leaders for {season}...")
     rows = fetch_pitching_leaders(season, http_get=http_get)
-    print(f"  {len(rows)} qualified pitcher rows returned")
-
     pitching = build_pitching_xstats(rows)
-    print(f"  {len(pitching)} pitcher xwOBA proxies computed")
+    print(f"  final pitcher xwOBA proxies: {len(pitching)}")
 
     payload = {
         "season": season,
