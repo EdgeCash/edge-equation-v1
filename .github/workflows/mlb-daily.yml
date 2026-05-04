@@ -4,7 +4,7 @@ name: MLB Daily Spreadsheet
 # market gate) and commits the new files to main, which triggers an
 # automatic Vercel redeploy. Ported from edge-equation-scrapers'
 # mlb-daily.yml; kept FEATURE-FLAGGED OFF via the MLB_PIPELINE_ENABLED
-# secret until Phase 4 cutover passes.
+# variable until Phase 4 cutover passes.
 on:
   schedule:
     # 15:00 UTC = 11:00 AM ET during DST.
@@ -17,6 +17,10 @@ on:
         default: ""
       skip_odds:
         description: "Skip odds fetch (Kelly falls back to -110)."
+        type: boolean
+        default: false
+      dry_run:
+        description: "Dry run — build outputs and upload as artifact, but do NOT commit/push to main."
         type: boolean
         default: false
 
@@ -64,7 +68,35 @@ jobs:
           fi
           python -m edge_equation.exporters.mlb.daily_spreadsheet $ARGS
 
+      # Dry-run-friendly: list what was produced. Always runs so dry-run
+      # invocations leave a clear record in the Actions log of which files
+      # the orchestrator emitted, even when the commit step is skipped.
+      - name: List outputs
+        run: |
+          if [ -d public/data/mlb ]; then
+            echo "Files in public/data/mlb/:"
+            ls -la public/data/mlb/ || true
+            echo
+            echo "File sizes:"
+            du -h public/data/mlb/* 2>/dev/null || true
+          else
+            echo "public/data/mlb/ not found — orchestrator produced no outputs."
+          fi
+
+      # Always upload the outputs as an artifact so dry-run invocations
+      # have a downloadable record. Live runs also get the artifact as a
+      # belt-and-suspenders backup of what got committed.
+      - name: Upload outputs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlb-daily-${{ github.run_id }}
+          path: public/data/mlb/
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Commit and push outputs
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
           git add public/data/mlb/ || true
           if git diff --staged --quiet; then
@@ -74,3 +106,8 @@ jobs:
           DATE_TAG=$(date -u +"%Y-%m-%d")
           git commit -m "Daily MLB spreadsheet — $DATE_TAG"
           git push
+
+      - name: Dry-run notice
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          echo "::notice::DRY RUN — outputs uploaded as artifact 'mlb-daily-${{ github.run_id }}'. No commit/push to main. Download from the run's Summary page."
