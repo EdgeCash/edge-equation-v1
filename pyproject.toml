@@ -14,6 +14,10 @@ dependencies = [
   # Required by edge_equation.exporters.mlb.workbook to emit
   # mlb_daily.xlsx with the multi-tab layout. Light dep; pure-Python.
   "openpyxl>=3.1",
+  # Required by edge_equation.scrapers.mlb.mlb_game_scraper which calls
+  # statsapi.mlb.com directly. Could be migrated to httpx later but
+  # keeping requests preserves the verbatim port from scrapers.
+  "requests>=2.32",
 ]
 
 [project.optional-dependencies]
