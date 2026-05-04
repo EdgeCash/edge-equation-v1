@@ -105,25 +105,55 @@ def _fake_stats_response(rows):
     }
 
 
-def test_fetch_pitching_leaders_paginates_until_short_page(monkeypatch):
-    """fetch should call the API repeatedly until it gets a short page."""
-    page_1 = [{"id": i, "ip": "150.0", "hr": 10, "bb": 30, "hbp": 2, "k": 130, "bf": 600} for i in range(250)]
-    page_2 = [{"id": i, "ip": "150.0", "hr": 10, "bb": 30, "hbp": 2, "k": 130, "bf": 600} for i in range(250, 320)]
-
+def test_fetch_pitching_leaders_iterates_all_teams(monkeypatch):
+    """Per-team iteration: one call per team in ALL_TEAM_IDS."""
     calls = []
 
     def fake_get(url, timeout=None):
         calls.append(url)
-        offset = int(url.split("offset=")[-1])
-        rows = page_1 if offset == 0 else page_2
+        # Each team returns 5 pitchers
+        rows = [
+            {"id": int(url.split("teamId=")[1].split("&")[0]) * 100 + i,
+             "ip": "150.0", "hr": 10, "bb": 30, "hbp": 2, "k": 130, "bf": 600}
+            for i in range(5)
+        ]
         m = MagicMock()
         m.json.return_value = _fake_stats_response(rows)
         m.raise_for_status.return_value = None
         return m
 
     rows = bootstrap.fetch_pitching_leaders(2025, http_get=fake_get)
-    assert len(rows) == 320
-    assert len(calls) == 2  # stopped after short page
+    assert len(calls) == len(bootstrap.ALL_TEAM_IDS)  # 30 teams
+    assert len(rows) == 5 * len(bootstrap.ALL_TEAM_IDS)  # 150 pitchers
+    # Every URL must include teamId=<int>
+    for url in calls:
+        assert "teamId=" in url
+
+
+def test_fetch_pitching_leaders_tolerates_team_failures(monkeypatch):
+    """If one team's request fails or returns empty, the others still
+    aggregate. The loud diagnostic prints to stderr but doesn't abort."""
+    def fake_get(url, timeout=None):
+        team_id = int(url.split("teamId=")[1].split("&")[0])
+        if team_id == 108:  # LAA — pretend this one fails
+            raise requests_exceptions_RequestException("simulated 500")
+        m = MagicMock()
+        m.json.return_value = _fake_stats_response([
+            {"id": team_id * 100, "ip": "150.0", "hr": 10, "bb": 30,
+             "hbp": 2, "k": 130, "bf": 600},
+        ])
+        m.raise_for_status.return_value = None
+        return m
+
+    rows = bootstrap.fetch_pitching_leaders(2025, http_get=fake_get)
+    # 29 teams returned, 1 failed
+    assert len(rows) == len(bootstrap.ALL_TEAM_IDS) - 1
+
+
+# Stand-in for requests.RequestException in the test above; importing
+# requests at module scope would force the test file to depend on it.
+class requests_exceptions_RequestException(Exception):
+    pass
 
 
 # ---------------- build_pitching_xstats end-to-end ---------------------
@@ -170,6 +200,41 @@ def test_build_pitching_xstats_skips_rows_with_no_id():
     out = bootstrap.build_pitching_xstats(rows)
     assert "543" in out
     assert len(out) == 1
+
+
+def test_build_pitching_xstats_drops_below_bf_floor():
+    """A pitcher with only 30 BF (below the PITCHER_BF_FLOOR=50 default)
+    is too thin to derive a stable proxy from. Drop them."""
+    rows = [
+        {"id": 1, "ip": 12.0, "hr": 1, "bb": 5, "hbp": 0, "k": 12, "bf": 30},
+        {"id": 2, "ip": 80.0, "hr": 8, "bb": 25, "hbp": 2, "k": 70, "bf": 320},
+    ]
+    out = bootstrap.build_pitching_xstats(rows)
+    assert "1" not in out  # below threshold
+    assert "2" in out
+
+
+def test_build_pitching_xstats_dedupes_traded_pitchers_by_max_bf():
+    """A pitcher who appeared for two teams mid-season shows up twice
+    in the per-team fetch. Keep the row with the higher BF (more
+    representative sample)."""
+    rows = [
+        {"id": 543, "ip": 40.0, "hr": 4, "bb": 12, "hbp": 1, "k": 40, "bf": 160},   # Team A: 160 BF
+        {"id": 543, "ip": 100.0, "hr": 8, "bb": 25, "hbp": 2, "k": 95, "bf": 410},  # Team B: 410 BF
+    ]
+    out = bootstrap.build_pitching_xstats(rows)
+    assert len(out) == 1
+    assert out["543"]["pa"] == 410
+
+
+def test_build_pitching_xstats_dedup_handles_either_order():
+    """Whichever order the higher-BF row arrives in, it wins."""
+    rows = [
+        {"id": 543, "ip": 100.0, "hr": 8, "bb": 25, "hbp": 2, "k": 95, "bf": 410},
+        {"id": 543, "ip": 40.0, "hr": 4, "bb": 12, "hbp": 1, "k": 40, "bf": 160},
+    ]
+    out = bootstrap.build_pitching_xstats(rows)
+    assert out["543"]["pa"] == 410
 
 
 # ---------------- validate_pitching ------------------------------------
@@ -237,17 +302,17 @@ def test_validate_pitching_rejects_non_numeric_key():
 # ---------------- end-to-end bootstrap_season --------------------------
 
 def test_bootstrap_season_writes_valid_file(tmp_path: Path):
-    rows = [
-        {"id": 1000 + i, "ip": "150.0", "hr": 15, "bb": 50, "hbp": 5,
-         "k": 150, "bf": 600}
-        for i in range(80)
-    ]
-
+    """Per-team iteration: each team returns 3 unique pitchers (IDs
+    keyed off team_id so they don't collide). Final count = 30 * 3 = 90."""
     def fake_get(url, timeout=None):
-        offset = int(url.split("offset=")[-1])
-        # Single page worth (250 limit, only 80 rows → short page)
+        team_id = int(url.split("teamId=")[1].split("&")[0])
+        rows = [
+            {"id": team_id * 100 + i, "ip": "150.0",
+             "hr": 15, "bb": 50, "hbp": 5, "k": 150, "bf": 600}
+            for i in range(3)
+        ]
         m = MagicMock()
-        m.json.return_value = _fake_stats_response(rows if offset == 0 else [])
+        m.json.return_value = _fake_stats_response(rows)
         m.raise_for_status.return_value = None
         return m
 
@@ -259,7 +324,8 @@ def test_bootstrap_season_writes_valid_file(tmp_path: Path):
     on_disk = json.loads(out_file.read_text())
     assert on_disk["season"] == 2025
     assert "fip_proxy" in on_disk["source"]
-    assert len(on_disk["pitching"]) == 80
+    # 30 teams × 3 pitchers = 90 unique entries
+    assert len(on_disk["pitching"]) == 30 * 3
     # Pin the original-bug regression:
     assert "2025" not in on_disk["pitching"]
     for k, v in on_disk["pitching"].items():
