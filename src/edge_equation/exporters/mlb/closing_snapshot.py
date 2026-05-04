@@ -31,24 +31,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
 from edge_equation.exporters.mlb.clv_tracker import ClvTracker
-
-# TODO[wiring]: scrapers used scrapers.mlb.mlb_odds_scraper.MLBOddsScraper
-# which doesn't exist in v1. v1 has edge_equation.ingestion.odds_api_source
-# .TheOddsApiSource but the response shape differs (normalized markets list
-# vs scrapers' nested per-game dict). A small adapter shim will live in
-# edge_equation.exporters.mlb._odds_adapter and translate to the shape
-# clv_tracker.find_closing_price() expects. Until that lands, this script
-# raises a clear error rather than silently no-op'ing.
-class MLBOddsScraper:  # noqa: N801 — keeps parity with scrapers symbol name
-    def __init__(self, *args, **kwargs):
-        raise NotImplementedError(
-            "MLBOddsScraper adapter not yet wired in v1. See TODO[wiring] "
-            "in src/edge_equation/exporters/mlb/closing_snapshot.py. "
-            "Disable the closing-lines workflow until this is finished."
-        )
-
-    def fetch(self):
-        raise NotImplementedError
+from edge_equation.exporters.mlb._odds_adapter import MLBOddsScraper
 
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "public" / "data" / "mlb"
 
