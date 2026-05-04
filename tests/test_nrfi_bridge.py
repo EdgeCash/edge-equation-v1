@@ -121,6 +121,60 @@ def test_matchup_label_format_also_works(monkeypatch, projections):
     assert projections[0]["nrfi_prob"] == 0.58
 
 
+def test_shadow_mode_logs_but_does_not_mutate(monkeypatch, projections):
+    """EDGE_FEATURE_NRFI_BRIDGE=shadow runs the bridge for measurement
+    but leaves projections untouched. Used to verify the engine beats
+    the projector on real picks before flipping the bridge fully on."""
+    monkeypatch.setenv(_nrfi_bridge.FEATURE_FLAG_ENV, "shadow")
+    card = {"engine_label": "ml", "picks": [
+        {"away_team": "AZ", "home_team": "CHC",
+         "market_type": "NRFI", "pct": 72.0},
+    ]}
+    with patch.object(_nrfi_bridge, "_try_build_nrfi_card", return_value=card):
+        r = _nrfi_bridge.apply_overrides(projections, "2026-05-04")
+    assert r["mode"] == "shadow"
+    assert r["active"] is True
+    assert r["applied"] == 1  # measured 1 game
+    # CRUCIAL: projections must NOT be mutated in shadow mode.
+    assert projections[0]["nrfi_prob"] == 0.50
+    assert projections[0]["nrfi_pick"] == "NRFI"
+    # Deltas surfaced for orchestrator logging.
+    assert r["shadow_deltas"] == [{
+        "matchup": "AZ@CHC",
+        "projector_nrfi": 0.5,
+        "engine_nrfi": 0.72,
+        "delta": 0.22,
+    }]
+
+
+def test_on_mode_returns_empty_shadow_deltas(monkeypatch, projections):
+    """In on mode the deltas list is intentionally empty — overrides
+    are applied directly so there's nothing to shadow-log."""
+    monkeypatch.setenv(_nrfi_bridge.FEATURE_FLAG_ENV, "on")
+    card = {"picks": [
+        {"away_team": "AZ", "home_team": "CHC",
+         "market_type": "NRFI", "pct": 72.0},
+    ]}
+    with patch.object(_nrfi_bridge, "_try_build_nrfi_card", return_value=card):
+        r = _nrfi_bridge.apply_overrides(projections, "2026-05-04")
+    assert r["mode"] == "on"
+    assert r["shadow_deltas"] == []
+    # Mutated as expected
+    assert projections[0]["nrfi_prob"] == 0.72
+
+
+def test_flag_value_normalizes(monkeypatch):
+    for v in ("on", "1", "true", "TRUE", "Yes"):
+        monkeypatch.setenv(_nrfi_bridge.FEATURE_FLAG_ENV, v)
+        assert _nrfi_bridge._flag_value() == "on"
+    for v in ("shadow", "SHADOW", "Shadow"):
+        monkeypatch.setenv(_nrfi_bridge.FEATURE_FLAG_ENV, v)
+        assert _nrfi_bridge._flag_value() == "shadow"
+    for v in ("", "off", "0", "no", "garbage"):
+        monkeypatch.setenv(_nrfi_bridge.FEATURE_FLAG_ENV, v)
+        assert _nrfi_bridge._flag_value() == "off"
+
+
 def test_exception_in_engine_does_not_propagate(monkeypatch, projections):
     """If build_card raises (DuckDB locked, model artifact missing),
     the bridge must catch it and return inactive."""

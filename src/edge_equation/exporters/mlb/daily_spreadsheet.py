@@ -696,6 +696,30 @@ class DailySpreadsheet:
         )
         print(f"    {named}/{len(slate)} games have both probable SPs identified")
         print(f"    {xwoba_hits}/{sp_total} probable SPs got prior-season xwOBA data")
+        if xwoba_hits == 0 and sp_total > 0:
+            # Surface the why so "0/N" is never a silent failure. The
+            # SplitsLoader records the exact files it tried to load and
+            # didn't find — print the first one (typically all share the
+            # same root cause: prior-season backfill not on disk).
+            try:
+                report = splits_loader.diagnostic_report()
+                missing = report.get("missing_files") or []
+                if missing:
+                    first = missing[0]
+                    print(
+                        f"    xwOBA blend inactive — {first['kind']} file "
+                        f"missing at {first['path']}. "
+                        f"Run scripts/bootstrap_mlb_backfill.sh to populate "
+                        f"data/backfill/mlb/<season>/ then re-run."
+                    )
+                elif not report.get("backfill_dir_exists"):
+                    print(
+                        f"    xwOBA blend inactive — backfill_dir "
+                        f"{report['backfill_dir']} does not exist. "
+                        f"Run scripts/bootstrap_mlb_backfill.sh."
+                    )
+            except Exception:
+                pass
 
         print("  Fetching team bullpen factors (season + last-3-day workload)...")
         team_codes = sorted({g["away_team"] for g in slate} | {g["home_team"] for g in slate})
@@ -813,9 +837,26 @@ class DailySpreadsheet:
             from edge_equation.exporters.mlb._nrfi_bridge import apply_overrides
             nrfi_report = apply_overrides(projections, self.target_date)
             if nrfi_report.get("active"):
-                print(f"  NRFI bridge: applied {nrfi_report['applied']} overrides "
-                      f"({nrfi_report['skipped']} skipped, "
-                      f"engine={nrfi_report.get('engine_label')})")
+                mode = nrfi_report.get("mode", "on")
+                if mode == "shadow":
+                    deltas = nrfi_report.get("shadow_deltas") or []
+                    print(
+                        f"  NRFI bridge [shadow]: {nrfi_report['applied']} games measured "
+                        f"({nrfi_report['skipped']} skipped, "
+                        f"engine={nrfi_report.get('engine_label')}). "
+                        f"Projections NOT modified."
+                    )
+                    for d in deltas:
+                        print(
+                            f"    {d['matchup']}: projector={d['projector_nrfi']:.3f} "
+                            f"engine={d['engine_nrfi']:.3f} delta={d['delta']:+.3f}"
+                        )
+                else:
+                    print(
+                        f"  NRFI bridge [on]: applied {nrfi_report['applied']} overrides "
+                        f"({nrfi_report['skipped']} skipped, "
+                        f"engine={nrfi_report.get('engine_label')})"
+                    )
             else:
                 print(f"  NRFI bridge: inactive ({nrfi_report.get('reason', 'n/a')}); "
                       f"using projector's in-house first-inning math")
@@ -1675,6 +1716,19 @@ class DailySpreadsheet:
 
         wb = Workbook()
         wb.remove(wb.active)
+
+        # Brand metadata — visible in File > Info / Properties without
+        # disturbing cell layout. The "Facts. Not Feelings." tagline is
+        # the brand-mandatory string from compliance.brand.BRAND_TAGLINE.
+        try:
+            from edge_equation.compliance.brand import BRAND_FULL, BRAND_TAGLINE
+            wb.properties.title = f"Edge Equation — MLB Daily ({data.get('today', '')})"
+            wb.properties.subject = BRAND_TAGLINE
+            wb.properties.creator = BRAND_FULL
+            wb.properties.keywords = "MLB, picks, NegBin, Kelly, edge"
+        except Exception:
+            # Brand stamp must never block the build.
+            pass
 
         title_font = Font(bold=True, size=14, color="FFFFFF")
         title_fill = PatternFill("solid", fgColor="1F4E78")
