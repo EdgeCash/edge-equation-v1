@@ -66,10 +66,21 @@ def _canon(team: str | None) -> str | None:
     return TEAM_ALIASES.get(team.upper(), team.upper())
 
 
+def _flag_value() -> str:
+    """Return the flag's normalized value: 'on' / 'shadow' / 'off'.
+    'shadow' = run the bridge but log delta only, don't override
+    projections. Lets us measure NRFI engine vs projector on real picks
+    before flipping fully on."""
+    raw = os.environ.get(FEATURE_FLAG_ENV, "").strip().lower()
+    if raw in ("1", "on", "true", "yes"):
+        return "on"
+    if raw == "shadow":
+        return "shadow"
+    return "off"
+
+
 def _flag_on() -> bool:
-    return os.environ.get(FEATURE_FLAG_ENV, "").strip().lower() in (
-        "1", "on", "true", "yes",
-    )
+    return _flag_value() == "on"
 
 
 def _try_build_nrfi_card(target_date: str) -> dict | None:
@@ -146,7 +157,8 @@ def apply_overrides(
     Reasons a projection might be in "skipped":
         - no engine pick matched its (away, home) tuple after canonicalization
     """
-    if not _flag_on():
+    mode = _flag_value()
+    if mode == "off":
         return {"active": False, "applied": 0, "skipped": 0, "reason": "flag_off"}
 
     card = _try_build_nrfi_card(target_date)
@@ -159,6 +171,7 @@ def apply_overrides(
     index = _index_picks_by_matchup(card)
     applied = 0
     skipped = 0
+    deltas: list[dict] = []  # populated in shadow mode for measurement
     for proj in projections:
         away = _canon(proj.get("away_team"))
         home = _canon(proj.get("home_team"))
@@ -166,10 +179,21 @@ def apply_overrides(
         if match is None:
             skipped += 1
             continue
-        proj["nrfi_prob"] = round(float(match["nrfi_prob"]), 3)
-        proj["yrfi_prob"] = round(1.0 - proj["nrfi_prob"], 3)
-        proj["nrfi_pick"] = "NRFI" if proj["nrfi_prob"] >= 0.5 else "YRFI"
-        applied += 1
+        engine_nrfi = round(float(match["nrfi_prob"]), 3)
+        projector_nrfi = float(proj.get("nrfi_prob") or 0.5)
+        if mode == "on":
+            proj["nrfi_prob"] = engine_nrfi
+            proj["yrfi_prob"] = round(1.0 - proj["nrfi_prob"], 3)
+            proj["nrfi_pick"] = "NRFI" if proj["nrfi_prob"] >= 0.5 else "YRFI"
+            applied += 1
+        else:  # shadow — log only, don't mutate
+            deltas.append({
+                "matchup": f"{away}@{home}",
+                "projector_nrfi": round(projector_nrfi, 3),
+                "engine_nrfi": engine_nrfi,
+                "delta": round(engine_nrfi - projector_nrfi, 3),
+            })
+            applied += 1
 
     engine_label = card.get("engine_label") or "ml-bridge"
     return {
@@ -177,4 +201,9 @@ def apply_overrides(
         "applied": applied,
         "skipped": skipped,
         "engine_label": engine_label,
+        "mode": mode,
+        # Empty list in 'on' mode; populated in shadow mode so the
+        # orchestrator can log per-game side-by-side without touching
+        # the actual projection output.
+        "shadow_deltas": deltas,
     }

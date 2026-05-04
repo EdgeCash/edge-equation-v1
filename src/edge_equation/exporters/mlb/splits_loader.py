@@ -46,7 +46,10 @@ has no usable sample for that player.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 # Below this many PAs / batters-faced, the split is too noisy to trust.
 MIN_HANDEDNESS_PA = 30
@@ -64,6 +67,40 @@ class SplitsLoader:
         self._splits_by_season: dict[int, dict | None] = {}
         self._xstats_by_season: dict[int, dict | None] = {}
         self._people: dict | None = None
+        # Diagnostic flags so we log "data missing" once per (season, kind)
+        # rather than once per player. The orchestrator's per-slate summary
+        # then surfaces the count + the exact path that's missing.
+        self._missing_paths_logged: set[Path] = set()
+        self._missing_path_records: list[dict] = []
+
+    def _record_missing(self, path: Path, kind: str) -> None:
+        """Log + record a missing prior-season data file exactly once.
+
+        kind is a short label like 'splits' / 'statcast_xstats' / 'people'
+        used by callers to surface a per-slate breakdown of which data
+        layers are present vs missing.
+        """
+        if path in self._missing_paths_logged:
+            return
+        self._missing_paths_logged.add(path)
+        self._missing_path_records.append({"kind": kind, "path": str(path)})
+        log.warning(
+            "splits_loader: %s data file not found at %s — "
+            "downstream lookups will return None (run "
+            "scripts/bootstrap_mlb_backfill.sh to populate).",
+            kind, path,
+        )
+
+    def diagnostic_report(self) -> dict:
+        """Snapshot of every data file the loader looked for and didn't
+        find. Empty list when the backfill is fully populated. Designed
+        for the orchestrator to print after fetch_factors_for_slate so
+        '0/24 SPs got xwOBA' is always paired with the why."""
+        return {
+            "missing_files": list(self._missing_path_records),
+            "backfill_dir": str(self.backfill_dir),
+            "backfill_dir_exists": self.backfill_dir.exists(),
+        }
 
     # ---------------- people / handedness -----------------------------
 
@@ -74,8 +111,10 @@ class SplitsLoader:
                 try:
                     self._people = json.loads(path.read_text())
                 except (OSError, json.JSONDecodeError):
+                    self._record_missing(path, "people (corrupt)")
                     self._people = {"players": {}}
             else:
+                self._record_missing(path, "people")
                 self._people = {"players": {}}
         return self._people
 
@@ -116,8 +155,10 @@ class SplitsLoader:
                 try:
                     self._splits_by_season[season] = json.loads(path.read_text())
                 except (OSError, json.JSONDecodeError):
+                    self._record_missing(path, "splits (corrupt)")
                     self._splits_by_season[season] = None
             else:
+                self._record_missing(path, "splits")
                 self._splits_by_season[season] = None
         return self._splits_by_season[season]
 
@@ -143,8 +184,10 @@ class SplitsLoader:
                 try:
                     self._xstats_by_season[season] = json.loads(path.read_text())
                 except (OSError, json.JSONDecodeError):
+                    self._record_missing(path, "statcast_xstats (corrupt)")
                     self._xstats_by_season[season] = None
             else:
+                self._record_missing(path, "statcast_xstats")
                 self._xstats_by_season[season] = None
         return self._xstats_by_season[season]
 
