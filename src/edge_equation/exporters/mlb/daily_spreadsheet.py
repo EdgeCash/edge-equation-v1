@@ -805,6 +805,24 @@ class DailySpreadsheet:
         model = ProjectionModel(backfill, calibration=cal)
         projections = model.project_slate(slate)
 
+        # Optional: hand off NRFI/YRFI probabilities to v1's elite NRFI
+        # engine (XGBoost + LightGBM + SHAP + MC) when its runtime is
+        # available. Gated by EDGE_FEATURE_NRFI_BRIDGE so the verbatim
+        # projector remains the default during the polish phase.
+        try:
+            from edge_equation.exporters.mlb._nrfi_bridge import apply_overrides
+            nrfi_report = apply_overrides(projections, self.target_date)
+            if nrfi_report.get("active"):
+                print(f"  NRFI bridge: applied {nrfi_report['applied']} overrides "
+                      f"({nrfi_report['skipped']} skipped, "
+                      f"engine={nrfi_report.get('engine_label')})")
+            else:
+                print(f"  NRFI bridge: inactive ({nrfi_report.get('reason', 'n/a')}); "
+                      f"using projector's in-house first-inning math")
+        except Exception as e:
+            print(f"  NRFI bridge: error ({type(e).__name__}: {e}); "
+                  f"using projector's in-house first-inning math")
+
         tabs = {
             "moneyline": self._build_moneyline(backfill, projections, odds),
             "run_line": self._build_run_line(backfill, projections, odds),
@@ -1620,9 +1638,40 @@ class DailySpreadsheet:
             for row in tab["backfill"]:
                 writer.writerow({"section": "backfill", **row})
 
+    @staticmethod
+    def _grade_formula(edge_col: str, row_idx: int) -> str:
+        """In-cell grade ladder D→A+ keyed off the row's edge_pct cell.
+        Mirrors src/edge_equation/math/scoring.py thresholds restated in
+        percent (because the workbook stores edge as a percent value
+        like 4.5, not a fraction 0.045)."""
+        e = f"{edge_col}{row_idx}"
+        return (
+            f'=IF({e}="","",'
+            f'IF({e}>=8,"A+",'
+            f'IF({e}>=5,"A",'
+            f'IF({e}>=3,"B",'
+            f'IF({e}>=0,"C",'
+            f'IF({e}>=-3,"D","F"))))))'
+        )
+
+    @staticmethod
+    def _kelly_advice_formula(kelly_col: str, row_idx: int) -> str:
+        """In-cell mirror of exporters.mlb.kelly._tier(). Resolves the
+        same PASS / 0.5u / 1u / 2u / 3u tier as the Python helper but
+        recomputes if the kelly_pct cell is edited by hand."""
+        k = f"{kelly_col}{row_idx}"
+        return (
+            f'=IF({k}="","PASS",'
+            f'IF({k}<=0.5,"PASS",'
+            f'IF({k}<=1.5,"0.5u",'
+            f'IF({k}<=3,"1u",'
+            f'IF({k}<=5,"2u","3u")))))'
+        )
+
     def _write_xlsx(self, path: Path, data: dict) -> None:
         from openpyxl import Workbook
         from openpyxl.styles import Alignment, Font, PatternFill
+        from openpyxl.utils import get_column_letter
 
         wb = Workbook()
         wb.remove(wb.active)
@@ -1646,21 +1695,40 @@ class DailySpreadsheet:
                 f"({data['counts']['backfill_games']} games)",
             )
 
+            # Append a synthetic "grade" column to the xlsx view when the
+            # tab has edge_pct (so the formula has something to reference).
+            # Only the xlsx is affected — CSV / JSON outputs use the
+            # original projection_columns list.
+            base_cols = list(tab["projection_columns"])
+            xlsx_cols = list(base_cols)
+            if "edge_pct" in xlsx_cols and "grade" not in xlsx_cols:
+                xlsx_cols.append("grade")
+            col_letter = {
+                name: get_column_letter(i + 1) for i, name in enumerate(xlsx_cols)
+            }
+
             ws.cell(row=1, column=1, value=proj_title)
             ws.cell(row=1, column=1).font = title_font
             ws.cell(row=1, column=1).fill = title_fill
             ws.merge_cells(
                 start_row=1, start_column=1,
-                end_row=1, end_column=max(len(tab["projection_columns"]), 1),
+                end_row=1, end_column=max(len(xlsx_cols), 1),
             )
 
-            for c, col in enumerate(tab["projection_columns"], 1):
+            for c, col in enumerate(xlsx_cols, 1):
                 cell = ws.cell(row=2, column=c, value=col)
                 cell.font = header_font
                 cell.fill = header_fill
             for r, row in enumerate(tab["projections"], 3):
-                for c, col in enumerate(tab["projection_columns"], 1):
-                    ws.cell(row=r, column=c, value=row.get(col))
+                for c, col in enumerate(xlsx_cols, 1):
+                    if col == "grade" and "edge_pct" in col_letter:
+                        ws.cell(row=r, column=c,
+                                value=self._grade_formula(col_letter["edge_pct"], r))
+                    elif col == "kelly_advice" and "kelly_pct" in col_letter:
+                        ws.cell(row=r, column=c,
+                                value=self._kelly_advice_formula(col_letter["kelly_pct"], r))
+                    else:
+                        ws.cell(row=r, column=c, value=row.get(col))
 
             backfill_start = 3 + len(tab["projections"]) + 1
             ws.cell(row=backfill_start, column=1, value=backfill_title)
@@ -1680,7 +1748,7 @@ class DailySpreadsheet:
                     ws.cell(row=r, column=c, value=row.get(col))
 
             for col_idx, col in enumerate(
-                set(tab["projection_columns"]) | set(tab["backfill_columns"]), 1
+                set(xlsx_cols) | set(tab["backfill_columns"]), 1
             ):
                 ws.column_dimensions[
                     ws.cell(row=2, column=col_idx).column_letter

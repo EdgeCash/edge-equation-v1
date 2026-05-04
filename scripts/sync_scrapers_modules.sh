@@ -27,7 +27,7 @@ if [[ ! -d "$DEST" ]]; then
     exit 1
 fi
 
-MODULES=(
+EXPORTER_MODULES=(
     park_factors.py
     closing_snapshot.py
     clv_tracker.py
@@ -35,13 +35,30 @@ MODULES=(
     backtest.py
 )
 
-echo "Syncing ${#MODULES[@]} modules from edge-equation-scrapers@${REF}"
-for m in "${MODULES[@]}"; do
-    url="${BASE}/${m}"
-    out="${DEST}/${m}"
-    echo "  ${m}"
-    curl -fsSL --max-time 30 "$url" -o "$out"
+# Game-data scrapers live in a sibling package in v1
+# (src/edge_equation/scrapers/mlb/ vs scrapers' flat scrapers/mlb/).
+SCRAPER_BASE="https://raw.githubusercontent.com/EdgeCash/edge-equation-scrapers/${REF}/scrapers/mlb"
+SCRAPER_DEST="src/edge_equation/scrapers/mlb"
+SCRAPER_MODULES=(
+    mlb_game_scraper.py
+    mlb_pitcher_scraper.py
+    mlb_weather_scraper.py
+    mlb_lineup_scraper.py
+)
+
+echo "Syncing ${#EXPORTER_MODULES[@]} exporter modules from edge-equation-scrapers@${REF}"
+for m in "${EXPORTER_MODULES[@]}"; do
+    echo "  exporters/mlb/${m}"
+    curl -fsSL --max-time 30 "${BASE}/${m}" -o "${DEST}/${m}"
 done
+
+if [[ -d "$SCRAPER_DEST" ]]; then
+    echo "Syncing ${#SCRAPER_MODULES[@]} scraper modules"
+    for m in "${SCRAPER_MODULES[@]}"; do
+        echo "  scrapers/mlb/${m}"
+        curl -fsSL --max-time 30 "${SCRAPER_BASE}/${m}" -o "${SCRAPER_DEST}/${m}"
+    done
+fi
 
 echo
 echo "Sync complete. Now re-apply import-path patches — see"
