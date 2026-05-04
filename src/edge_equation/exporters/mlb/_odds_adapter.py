@@ -57,6 +57,59 @@ DEFAULT_ODDS_FORMAT = "american"
 DEFAULT_TIMEOUT_SECONDS = 15.0
 
 
+# The Odds API returns full team names ("Chicago Cubs"); the projection
+# pipeline keys games by the 3-letter MLB Stats API codes ("CHC"). The
+# orchestrator's `MLBOddsScraper.find_game(odds, away, home)` lookup
+# matches on those codes, so the adapter MUST normalize at the boundary.
+# Map mirrors scrapers/mlb/mlb_odds_scraper.py:TEAM_NAME_TO_CODE.
+TEAM_NAME_TO_CODE: dict[str, str] = {
+    "Arizona Diamondbacks": "AZ",
+    "Atlanta Braves": "ATL",
+    "Baltimore Orioles": "BAL",
+    "Boston Red Sox": "BOS",
+    "Chicago Cubs": "CHC",
+    "Chicago White Sox": "CWS",
+    "Cincinnati Reds": "CIN",
+    "Cleveland Guardians": "CLE",
+    "Colorado Rockies": "COL",
+    "Detroit Tigers": "DET",
+    "Houston Astros": "HOU",
+    "Kansas City Royals": "KC",
+    "Los Angeles Angels": "LAA",
+    "Los Angeles Dodgers": "LAD",
+    "Miami Marlins": "MIA",
+    "Milwaukee Brewers": "MIL",
+    "Minnesota Twins": "MIN",
+    "New York Mets": "NYM",
+    "New York Yankees": "NYY",
+    "Athletics": "ATH",
+    "Oakland Athletics": "ATH",
+    "Philadelphia Phillies": "PHI",
+    "Pittsburgh Pirates": "PIT",
+    "San Diego Padres": "SD",
+    "San Francisco Giants": "SF",
+    "Seattle Mariners": "SEA",
+    "St. Louis Cardinals": "STL",
+    "Tampa Bay Rays": "TB",
+    "Texas Rangers": "TEX",
+    "Toronto Blue Jays": "TOR",
+    "Washington Nationals": "WSH",
+}
+
+
+def _team_code(name: str | None) -> str | None:
+    """Resolve a team name (full Odds API form OR already-coded form) to
+    its 3-letter MLB Stats API code. Pass-through for codes already in
+    the map's values so synthetic test payloads using codes still work."""
+    if not name:
+        return None
+    if name in TEAM_NAME_TO_CODE:
+        return TEAM_NAME_TO_CODE[name]
+    if name in TEAM_NAME_TO_CODE.values():
+        return name
+    return None
+
+
 def _resolve_api_key(override: Optional[str]) -> str:
     if override:
         return override
@@ -107,20 +160,27 @@ def _parse_total_selection(name: str, point) -> tuple[str | None, float | None]:
 def _translate_game(raw_game: dict, preferred_bookmaker: Optional[str]) -> dict | None:
     """Convert one raw Odds API game into the nested CLV-friendly shape.
 
-    Returns None if no bookmaker has any priced markets — the caller
-    skips those rather than emitting an empty-shell game.
+    Returns None if no bookmaker has any priced markets, or if either
+    team name fails to resolve to a 3-letter code (orchestrator can't
+    look the game up otherwise).
     """
     bookmaker = _select_bookmaker(raw_game.get("bookmakers", []), preferred_bookmaker)
     if bookmaker is None:
         return None
     book = bookmaker.get("key", "")
-    home = raw_game.get("home_team")
-    away = raw_game.get("away_team")
+    home_full = raw_game.get("home_team")
+    away_full = raw_game.get("away_team")
+    home_code = _team_code(home_full)
+    away_code = _team_code(away_full)
+    if home_code is None or away_code is None:
+        return None
     out: dict = {
         "game_id": raw_game.get("id"),
         "commence_time": raw_game.get("commence_time"),
-        "home_team": home,
-        "away_team": away,
+        # Output keyed by 3-letter codes so the orchestrator's find_game
+        # lookup matches the projection's away_team / home_team fields.
+        "home_team": home_code,
+        "away_team": away_code,
         "moneyline": {},
         "run_line": [],
         "totals": [],
@@ -138,13 +198,23 @@ def _translate_game(raw_game: dict, preferred_bookmaker: Optional[str]) -> dict 
                 "book": book,
             }
             if key == "h2h":
-                team = outcome.get("name")
-                side = "home" if team == home else "away" if team == away else None
+                # Outcome names are full Odds API team names; translate
+                # before comparing to the codes we just stored.
+                outcome_code = _team_code(outcome.get("name"))
+                side = (
+                    "home" if outcome_code == home_code
+                    else "away" if outcome_code == away_code
+                    else None
+                )
                 if side:
                     out["moneyline"][side] = price_block
             elif key == "spreads":
-                team = outcome.get("name")
-                side = "home" if team == home else "away" if team == away else None
+                outcome_code = _team_code(outcome.get("name"))
+                side = (
+                    "home" if outcome_code == home_code
+                    else "away" if outcome_code == away_code
+                    else None
+                )
                 point = outcome.get("point")
                 if side is None or point is None:
                     continue
@@ -184,7 +254,26 @@ class MLBOddsScraper:
 
     fetch() returns:
         {"source": str, "games": [game_dict, ...]}
+
+    find_game(odds, away, home) is a static helper used by
+    daily_spreadsheet.py to look up a single game in fetch()'s output
+    by 3-letter team codes.
     """
+
+    @staticmethod
+    def find_game(odds: dict, away: str, home: str) -> dict | None:
+        """Locate a translated game by (away_code, home_code). Returns the
+        game dict or None when no match. Mirrors scrapers' static helper
+        verbatim. Tolerates either Odds API full names or 3-letter codes
+        on the input side via _team_code() canonicalization."""
+        if not odds:
+            return None
+        away_code = _team_code(away) or away
+        home_code = _team_code(home) or home
+        for g in odds.get("games", []) or []:
+            if g.get("away_team") == away_code and g.get("home_team") == home_code:
+                return g
+        return None
 
     def __init__(
         self,

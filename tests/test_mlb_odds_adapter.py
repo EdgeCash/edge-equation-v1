@@ -180,16 +180,16 @@ def test_env_var_fallback_order(monkeypatch, chc_az_game):
 def test_preferred_bookmaker_selected_when_present():
     payload = [{
         "id": "g1", "commence_time": "2026-05-04T23:00:00Z",
-        "home_team": "A", "away_team": "B",
+        "home_team": "NYY", "away_team": "BOS",
         "bookmakers": [
             {"key": "betmgm", "markets": [
                 {"key": "h2h", "outcomes": [
-                    {"name": "A", "price": -100}, {"name": "B", "price": -100},
+                    {"name": "NYY", "price": -100}, {"name": "BOS", "price": -100},
                 ]},
             ]},
             {"key": "fanduel", "markets": [
                 {"key": "h2h", "outcomes": [
-                    {"name": "A", "price": -200}, {"name": "B", "price": +180},
+                    {"name": "NYY", "price": -200}, {"name": "BOS", "price": +180},
                 ]},
             ]},
         ],
@@ -200,3 +200,88 @@ def test_preferred_bookmaker_selected_when_present():
     ).fetch()["games"][0]
     assert g["moneyline"]["home"]["book"] == "fanduel"
     assert g["moneyline"]["home"]["american"] == -200
+
+
+def test_translates_full_odds_api_team_names_to_codes():
+    """Live Odds API returns full team names ('Chicago Cubs') not codes.
+    Adapter must translate to 3-letter codes so the orchestrator's
+    find_game lookup matches the projection's away_team / home_team."""
+    payload = [{
+        "id": "live1", "commence_time": "2026-05-04T22:05:00Z",
+        "home_team": "Chicago Cubs", "away_team": "Arizona Diamondbacks",
+        "bookmakers": [{"key": "draftkings", "markets": [
+            {"key": "h2h", "outcomes": [
+                {"name": "Chicago Cubs", "price": -118},
+                {"name": "Arizona Diamondbacks", "price": +102},
+            ]},
+        ]}],
+    }]
+    client = _mock_client(payload)
+    g = MLBOddsScraper(api_key="TEST", http_client=client).fetch()["games"][0]
+    assert g["home_team"] == "CHC"
+    assert g["away_team"] == "AZ"
+    assert g["moneyline"]["home"]["american"] == -118
+    assert g["moneyline"]["away"]["american"] == +102
+
+
+def test_skips_games_with_unknown_team_names():
+    """If a game's team names don't resolve to known codes, drop it
+    rather than emit a half-translated entry the orchestrator can't
+    look up."""
+    payload = [{
+        "id": "unknown", "commence_time": "2026-05-04T22:05:00Z",
+        "home_team": "Mystery Team", "away_team": "Phantom FC",
+        "bookmakers": [{"key": "draftkings", "markets": [
+            {"key": "h2h", "outcomes": [
+                {"name": "Mystery Team", "price": -110},
+                {"name": "Phantom FC", "price": -110},
+            ]},
+        ]}],
+    }]
+    client = _mock_client(payload)
+    result = MLBOddsScraper(api_key="TEST", http_client=client).fetch()
+    assert result["games"] == []
+
+
+def test_find_game_returns_match_by_codes(chc_az_game):
+    client = _mock_client(chc_az_game)
+    result = MLBOddsScraper(api_key="TEST", http_client=client).fetch()
+    g = MLBOddsScraper.find_game(result, "AZ", "CHC")
+    assert g is not None
+    assert g["away_team"] == "AZ" and g["home_team"] == "CHC"
+    assert g["moneyline"]["home"]["american"] == -118
+
+
+def test_find_game_returns_none_on_no_match(chc_az_game):
+    client = _mock_client(chc_az_game)
+    result = MLBOddsScraper(api_key="TEST", http_client=client).fetch()
+    assert MLBOddsScraper.find_game(result, "NYY", "BOS") is None
+
+
+def test_find_game_tolerates_full_team_names_on_input():
+    """find_game canonicalizes inputs via _team_code, so callers passing
+    full names get the same answer as callers passing 3-letter codes."""
+    payload = [{
+        "id": "live2", "commence_time": "2026-05-04T22:05:00Z",
+        "home_team": "Chicago Cubs", "away_team": "Arizona Diamondbacks",
+        "bookmakers": [{"key": "draftkings", "markets": [
+            {"key": "h2h", "outcomes": [
+                {"name": "Chicago Cubs", "price": -118},
+                {"name": "Arizona Diamondbacks", "price": +102},
+            ]},
+        ]}],
+    }]
+    client = _mock_client(payload)
+    result = MLBOddsScraper(api_key="TEST", http_client=client).fetch()
+    g_via_full = MLBOddsScraper.find_game(
+        result, "Arizona Diamondbacks", "Chicago Cubs",
+    )
+    g_via_code = MLBOddsScraper.find_game(result, "AZ", "CHC")
+    assert g_via_full is not None and g_via_code is not None
+    assert g_via_full == g_via_code
+
+
+def test_find_game_handles_empty_or_missing_odds_payload():
+    assert MLBOddsScraper.find_game({}, "AZ", "CHC") is None
+    assert MLBOddsScraper.find_game({"games": []}, "AZ", "CHC") is None
+    assert MLBOddsScraper.find_game(None, "AZ", "CHC") is None
