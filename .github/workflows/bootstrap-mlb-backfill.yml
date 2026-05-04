@@ -1,17 +1,23 @@
 name: Bootstrap MLB Backfill (xwOBA)
 
-# Pulls Baseball Savant expected-stats CSVs for the requested season(s)
-# and writes data/backfill/mlb/<season>/statcast_xstats.json. This is
-# what the SplitsLoader needs in order for the daily orchestrator's
-# prior-season xwOBA blend to fire.
+# Pulls prior-season pitching stats from MLB Stats API and synthesizes
+# an xwOBA proxy from FIP, writing
+# data/backfill/mlb/<season>/statcast_xstats.json. This is what the
+# SplitsLoader needs in order for the daily orchestrator's prior-season
+# xwOBA blend to fire.
+#
+# History: an earlier version of this workflow scraped Baseball Savant
+# CSVs directly. That parser silently produced a 337-byte file with one
+# nonsense entry keyed on the year ("2025") and bogus xwOBA values
+# (0.019). The current version uses MLB Stats API (same source the rest
+# of the pipeline already uses successfully) plus a FIP→xwOBA linear
+# proxy bounded to a plausible range. A real Savant integration is a
+# future replacement; the JSON shape stays identical so SplitsLoader
+# doesn't change.
 #
 # Run once per off-season (or whenever you want to refresh prior-season
-# xStats). Manual-only trigger — there's no scheduled cron because the
+# stats). Manual-only trigger — there's no scheduled cron because the
 # data only updates once a year.
-#
-# After this lands, the next mlb-daily run should show
-# `xwoba_hits/sp_total` go from 0/N to 24/24 (or close to it for SPs
-# with >= 100 PAs in the prior season).
 on:
   workflow_dispatch:
     inputs:
@@ -42,6 +48,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install dependencies
+        run: pip install requests
+
       - name: Configure git
         run: |
           git config user.name  "edge-equation-bot"
@@ -50,9 +59,9 @@ jobs:
       - name: Run bootstrap script
         run: |
           if [ -n "${{ github.event.inputs.seasons }}" ]; then
-            ./scripts/bootstrap_mlb_backfill.sh ${{ github.event.inputs.seasons }}
+            python scripts/bootstrap_mlb_xstats.py --seasons ${{ github.event.inputs.seasons }}
           else
-            ./scripts/bootstrap_mlb_backfill.sh
+            python scripts/bootstrap_mlb_xstats.py
           fi
 
       - name: List generated files
@@ -67,37 +76,49 @@ jobs:
             fi
           done
 
-      - name: Sanity-check via SplitsLoader
+      - name: Validate output via SplitsLoader
         run: |
-          python -c "
+          PYTHONPATH=src python -c "
           import sys
           from pathlib import Path
-          sys.path.insert(0, 'src')
           from edge_equation.exporters.mlb.splits_loader import SplitsLoader
 
           backfill = Path('data/backfill/mlb')
           if not backfill.exists():
               print('ERROR: backfill dir missing'); sys.exit(1)
 
+          fail = False
           sl = SplitsLoader(backfill)
           for season_dir in sorted(backfill.glob('*/'), key=lambda p: p.name):
               if not season_dir.name.isdigit(): continue
               season = int(season_dir.name)
               loaded = sl._load_season_xstats(season)
               if loaded is None:
-                  print(f'  {season}: NOT loaded')
-                  continue
-              p_count = len(loaded.get('pitching', {}))
-              b_count = len(loaded.get('batting', {}))
-              print(f'  {season}: pitchers={p_count}, batters={b_count}')
-              # Spot-check: must have non-empty xwoba on at least one pitcher
+                  print(f'  {season}: NOT loaded'); fail = True; continue
+              pitching = loaded.get('pitching', {})
+              p_count = len(pitching)
+              # Hard checks (these fail the workflow):
+              if p_count < 50:
+                  print(f'  {season}: FAIL pitcher count {p_count} < 50'); fail = True
+              for k in pitching:
+                  if not k.isdigit():
+                      print(f'  {season}: FAIL non-numeric key {k!r}'); fail = True; break
+                  if k == str(season):
+                      print(f'  {season}: FAIL key == season ({season}) — Savant CSV bug regressed'); fail = True; break
+              # Spot-check: pitchers with xwoba+PA>=100
               with_xwoba = sum(
-                  1 for r in loaded.get('pitching', {}).values()
-                  if r.get('xwoba') is not None and r.get('pa', 0) >= 100
+                  1 for r in pitching.values()
+                  if r.get('xwoba') is not None and 0.20 <= r.get('xwoba', 0) <= 0.40
+                  and r.get('pa', 0) >= 100
               )
-              print(f'  {season}: pitchers with xwoba+PA>=100: {with_xwoba}')
-              if with_xwoba == 0:
-                  print(f'  WARNING: 0 pitchers in {season} cleared the PA threshold')
+              print(f'  {season}: pitchers={p_count}, with xwoba+PA>=100: {with_xwoba}')
+              if with_xwoba < 50:
+                  print(f'  {season}: FAIL only {with_xwoba} pitchers cleared PA threshold'); fail = True
+
+          if fail:
+              print('VALIDATION FAILED — refusing to commit broken data.')
+              sys.exit(2)
+          print('Validation OK.')
           "
 
       - name: Upload artifact
@@ -118,10 +139,11 @@ jobs:
             exit 0
           fi
           SEASONS_TAG="$(ls data/backfill/mlb/ | grep -E '^[0-9]{4}$' | tr '\n' ' ' | sed 's/ $//')"
-          git commit -m "data: bootstrap MLB backfill (Statcast xStats) for seasons: $SEASONS_TAG"
+          git commit -m "data: bootstrap MLB xStats (FIP proxy) for seasons: $SEASONS_TAG"
           git push
 
       - name: Dry-run notice
         if: ${{ github.event.inputs.commit == 'false' }}
         run: |
           echo "::notice::Inspect-only mode — files in artifact 'mlb-backfill-${{ github.run_id }}'. Set commit=true to land them on main."
+
