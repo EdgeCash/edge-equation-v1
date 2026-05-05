@@ -9,6 +9,7 @@ dist/
 build/
 *.egg-info/
 data/failsafes/
+.claude/
 
 # public/data/mlb/ holds the rolling daily snapshots (xlsx + csv + json).
 # These ARE checked in — they're how Vercel serves "today's card" and
