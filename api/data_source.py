@@ -27,6 +27,8 @@ SPORT_ALIASES = {
     "nhl": "NHL",
     "nfl": "NFL", "ncaaf": "NCAAF",
     "soc": "SOC", "soccer": "SOC",
+    "wnba": "WNBA",
+
 }
 
 
@@ -53,6 +55,10 @@ def _source_for_league(league: str):
         return NflSource()
     if league == "SOC":
         return SoccerSource()
+    if league == "WNBA":
+        from edge_equation.ingestion.wnba_source import WNBASource
+        return WNBASource()
+
     raise ValueError(f"No source wired for league: {league!r}")
 
 
@@ -70,7 +76,8 @@ def get_combined_slate_for_all_sports(run_datetime: Optional[datetime] = None) -
     """Combined slate across the leagues the engine currently serves public cards on."""
     run_dt = run_datetime or datetime.now()
     games, markets = [], []
-    for league in ("MLB", "NBA", "NHL"):
+    for league in ("MLB", "NBA", "NHL", "WNBA"):
+
         source = _source_for_league(league)
         games.extend(source.get_raw_games(run_dt))
         markets.extend(source.get_raw_markets(run_dt))
@@ -82,7 +89,8 @@ def picks_for_today(run_datetime: Optional[datetime] = None) -> List[Pick]:
     run_dt = run_datetime or datetime.now()
     slate = get_combined_slate_for_all_sports(run_dt)
     all_picks: List[Pick] = []
-    for sport_filter in ("MLB", "NBA", "NHL"):
+    for sport_filter in ("MLB", "NBA", "NHL", "WNBA"):
+
         all_picks.extend(run_slate(slate, sport_filter, public_mode=False))
     return all_picks
 
