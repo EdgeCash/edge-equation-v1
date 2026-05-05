@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 from dataclasses import dataclass
-from edge_equation.engine.slate import SlateRunner
+from edge_equation.engine.slate_runner import SlateRunner
 from edge_equation.ingestion.wnba import get_daily_games, get_player_props
 from edge_equation.utils.logger import log
 from edge_equation.compliance.sanitizer import sanitize_output
