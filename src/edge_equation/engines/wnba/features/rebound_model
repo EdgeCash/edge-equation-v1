@@ -1,0 +1,5 @@
+def rebound_chance(def_reb_rate: float, off_reb_rate: float, minutes: float) -> float:
+    """
+    Estimate rebound opportunity share.
+    """
+    return (def_reb_rate + off_reb_rate) * 0.5 * minutes
