@@ -1,4 +1,4 @@
 {
-  "buildCommand": "cd website && npm run build",
-  "outputDirectory": "website/out"
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next"
 }
