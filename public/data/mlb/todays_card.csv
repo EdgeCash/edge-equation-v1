@@ -1,0 +1,13 @@
+section,date,matchup,starting_pitchers,bet_type,pick,model_prob,fair_odds_dec,market_odds_dec,market_odds_american,book,edge_pct,kelly_pct,kelly_advice,portfolio_scaled_from
+projection,2026-05-04,BOS@DET,,run_line,DET,0.617,1.621,2.68,168,fanduel,24.39,5.0,2u,
+projection,2026-05-04,CLE@KC,,run_line,KC,0.631,1.585,2.14,114,fanduel,16.37,5.0,2u,
+projection,2026-05-04,TOR@TB,,run_line,TOR,0.599,1.669,2.22,122,fanduel,14.85,5.0,2u,
+projection,2026-05-04,CIN@CHC,,run_line,CIN,0.56,1.786,1.9804,-102,fanduel,5.51,5.0,2u,
+projection,2026-05-04,LAD@HOU,,run_line,HOU,0.529,1.89,2.02,102,fanduel,3.4,3.36,2u,
+backfill,2026-05-04,SD@SF,,run_line,SF,0.61,1.639,1.6494,-154,fanduel,0.37,0.47,PASS,
+backfill,2026-05-04,MIL@STL,,run_line,STL,0.575,1.739,1.5618,-178,fanduel,-6.53,0.0,PASS,
+backfill,2026-05-04,NYM@COL,,run_line,COL,0.6,1.667,,,,,5.0,2u,
+backfill,2026-05-04,PHI@MIA,,run_line,PHI,0.603,1.658,,,,,5.0,2u,
+backfill,2026-05-04,BAL@NYY,,run_line,BAL,0.489,2.045,,,,,0.0,PASS,
+backfill,2026-05-04,CWS@LAA,,run_line,LAA,0.577,1.733,,,,,5.0,2u,
+backfill,2026-05-04,ATL@SEA,,run_line,SEA,0.614,1.629,,,,,5.0,2u,

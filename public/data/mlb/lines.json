@@ -1,0 +1,1187 @@
+{
+  "source": "the-odds-api",
+  "fetched_at": "2026-05-05T00:05:52+00:00",
+  "games": [
+    {
+      "game_id": "80044e6fc3586ebcf9f4df924a6f9519",
+      "commence_time": "2026-05-04T21:41:00Z",
+      "home_team": "COL",
+      "away_team": "NYM",
+      "moneyline": {
+        "home": {
+          "decimal": 18.0,
+          "american": 1700,
+          "book": "fanduel"
+        },
+        "away": {
+          "decimal": 1.01,
+          "american": -10000,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [],
+      "totals": [
+        {
+          "point": 6.5,
+          "over": {
+            "decimal": 6.8,
+            "american": 580,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.0909,
+            "american": -1100,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "42cd2c9d9860ded679366dcdfe136ea7",
+      "commence_time": "2026-05-04T22:11:00Z",
+      "home_team": "DET",
+      "away_team": "BOS",
+      "moneyline": {
+        "away": {
+          "decimal": 1.1493,
+          "american": -670,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 5.3,
+          "american": 430,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 1.4348,
+          "american": -230,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 2.68,
+          "american": 168,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 8.5,
+          "over": {
+            "decimal": 2.02,
+            "american": 102,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.7353,
+            "american": -136,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "a8b6869ab87cab44f73e7d8fe9c435f5",
+      "commence_time": "2026-05-04T22:41:00Z",
+      "home_team": "MIA",
+      "away_team": "PHI",
+      "moneyline": {
+        "home": {
+          "decimal": 2.42,
+          "american": 142,
+          "book": "fanduel"
+        },
+        "away": {
+          "decimal": 1.5435,
+          "american": -184,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 1.5319,
+          "american": -188,
+          "book": "fanduel"
+        },
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 2.4,
+          "american": 140,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 4.5,
+          "over": {
+            "decimal": 1.625,
+            "american": -160,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 2.2,
+            "american": 120,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "724956d85946d94ae169ea8b4f5299b3",
+      "commence_time": "2026-05-04T22:41:00Z",
+      "home_team": "TB",
+      "away_team": "TOR",
+      "moneyline": {
+        "home": {
+          "decimal": 1.1923,
+          "american": -520,
+          "book": "fanduel"
+        },
+        "away": {
+          "decimal": 4.5,
+          "american": 350,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "home",
+          "point": -1.5,
+          "decimal": 1.6173,
+          "american": -162,
+          "book": "fanduel"
+        },
+        {
+          "team": "away",
+          "point": 1.5,
+          "decimal": 2.22,
+          "american": 122,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 6.5,
+          "over": {
+            "decimal": 1.6579,
+            "american": -152,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 2.14,
+            "american": 114,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "1be0149112c46951b21b30f3277a53dd",
+      "commence_time": "2026-05-04T23:06:00Z",
+      "home_team": "NYY",
+      "away_team": "BAL",
+      "moneyline": {
+        "away": {
+          "decimal": 7.3,
+          "american": 630,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 1.0833,
+          "american": -1200,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": 3.5,
+          "decimal": 1.9804,
+          "american": -102,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": -3.5,
+          "decimal": 1.7692,
+          "american": -130,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 8.5,
+          "over": {
+            "decimal": 1.9091,
+            "american": -110,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.8333,
+            "american": -120,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "286159b7ccc29dea1805a4ce6218be0e",
+      "commence_time": "2026-05-04T23:41:00Z",
+      "home_team": "KC",
+      "away_team": "CLE",
+      "moneyline": {
+        "away": {
+          "decimal": 1.3571,
+          "american": -280,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 3.0,
+          "american": 200,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 1.6579,
+          "american": -152,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 2.14,
+          "american": 114,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 9.5,
+          "over": {
+            "decimal": 2.04,
+            "american": 104,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.7246,
+            "american": -138,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "6768391de7087c252e7f2dae8ec9bd0b",
+      "commence_time": "2026-05-04T23:46:00Z",
+      "home_team": "STL",
+      "away_team": "MIL",
+      "moneyline": {
+        "away": {
+          "decimal": 1.7576,
+          "american": -132,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 2.04,
+          "american": 104,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 2.32,
+          "american": 132,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 1.5618,
+          "american": -178,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 7.5,
+          "over": {
+            "decimal": 1.9615,
+            "american": -104,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.7812,
+            "american": -128,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "29183afced82bafdf09738bf1fa00600",
+      "commence_time": "2026-05-05T00:11:00Z",
+      "home_team": "HOU",
+      "away_team": "LAD",
+      "moneyline": {
+        "home": {
+          "decimal": 2.68,
+          "american": 168,
+          "book": "fanduel"
+        },
+        "away": {
+          "decimal": 1.5,
+          "american": -200,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 2.02,
+          "american": 102,
+          "book": "fanduel"
+        },
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 1.8197,
+          "american": -122,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 9.0,
+          "over": {
+            "decimal": 1.8696,
+            "american": -115,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.9524,
+            "american": -105,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "25d5af851ff059eb0a390e1f5908f926",
+      "commence_time": "2026-05-05T00:50:00Z",
+      "home_team": "CHC",
+      "away_team": "CIN",
+      "moneyline": {
+        "home": {
+          "decimal": 1.4651,
+          "american": -215,
+          "book": "fanduel"
+        },
+        "away": {
+          "decimal": 2.8,
+          "american": 180,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "home",
+          "point": -1.5,
+          "decimal": 1.8475,
+          "american": -118,
+          "book": "fanduel"
+        },
+        {
+          "team": "away",
+          "point": 1.5,
+          "decimal": 1.9804,
+          "american": -102,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 11.5,
+          "over": {
+            "decimal": 1.9091,
+            "american": -110,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.9091,
+            "american": -110,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "e07f1907da5ba8bebef841815c5cd9a1",
+      "commence_time": "2026-05-05T01:39:00Z",
+      "home_team": "LAA",
+      "away_team": "CWS",
+      "moneyline": {
+        "away": {
+          "decimal": 2.34,
+          "american": 134,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 1.6329,
+          "american": -158,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": 1.5,
+          "decimal": 1.6173,
+          "american": -162,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": -1.5,
+          "decimal": 2.34,
+          "american": 134,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 7.5,
+          "over": {
+            "decimal": 1.8333,
+            "american": -120,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.9804,
+            "american": -102,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "6afb68c3e91d245e69a9eec05286476d",
+      "commence_time": "2026-05-05T01:41:00Z",
+      "home_team": "SEA",
+      "away_team": "ATL",
+      "moneyline": {
+        "away": {
+          "decimal": 2.16,
+          "american": 116,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 1.7353,
+          "american": -136,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": 1.5,
+          "decimal": 1.5102,
+          "american": -196,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": -1.5,
+          "decimal": 2.62,
+          "american": 162,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 7.5,
+          "over": {
+            "decimal": 1.8197,
+            "american": -122,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 2.0,
+            "american": 100,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "a6a446c7235d0fcd72e04a211f04e87a",
+      "commence_time": "2026-05-05T01:46:00Z",
+      "home_team": "SF",
+      "away_team": "SD",
+      "moneyline": {
+        "away": {
+          "decimal": 1.7353,
+          "american": -136,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 2.16,
+          "american": 116,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 2.28,
+          "american": 128,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 1.6494,
+          "american": -154,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 8.0,
+          "over": {
+            "decimal": 1.9091,
+            "american": -110,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.9091,
+            "american": -110,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "b30fec61cfbf1f3dfe4bb5e70a150f48",
+      "commence_time": "2026-05-05T22:41:00Z",
+      "home_team": "PHI",
+      "away_team": "ATH",
+      "moneyline": {
+        "away": {
+          "decimal": 2.58,
+          "american": 158,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 1.5319,
+          "american": -188,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": 1.5,
+          "decimal": 1.7463,
+          "american": -134,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": -1.5,
+          "decimal": 2.12,
+          "american": 112,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 8.5,
+          "over": {
+            "decimal": 1.8197,
+            "american": -122,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 2.0,
+            "american": 100,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "692aeb05691cac285d594067d9c4a24e",
+      "commence_time": "2026-05-05T22:41:00Z",
+      "home_team": "MIA",
+      "away_team": "BAL",
+      "moneyline": {
+        "away": {
+          "decimal": 2.0,
+          "american": 100,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 1.8475,
+          "american": -118,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 2.64,
+          "american": 164,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 1.5,
+          "american": -200,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 8.5,
+          "over": {
+            "decimal": 1.9091,
+            "american": -110,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.9091,
+            "american": -110,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "71ef508a8cbaa38a8e77f003e58f92aa",
+      "commence_time": "2026-05-05T22:41:00Z",
+      "home_team": "DET",
+      "away_team": "BOS",
+      "moneyline": {
+        "away": {
+          "decimal": 2.52,
+          "american": 152,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 1.5556,
+          "american": -180,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": 1.5,
+          "decimal": 1.7246,
+          "american": -138,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": -1.5,
+          "decimal": 2.15,
+          "american": 115,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 7.5,
+          "over": {
+            "decimal": 1.8197,
+            "american": -122,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 2.0,
+            "american": 100,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "d0147770323bf6c913a672f31ac49256",
+      "commence_time": "2026-05-05T22:41:00Z",
+      "home_team": "TB",
+      "away_team": "TOR",
+      "moneyline": {
+        "home": {
+          "decimal": 1.8621,
+          "american": -116,
+          "book": "fanduel"
+        },
+        "away": {
+          "decimal": 1.9804,
+          "american": -102,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 1.4878,
+          "american": -205,
+          "book": "fanduel"
+        },
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 2.72,
+          "american": 172,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 7.0,
+          "over": {
+            "decimal": 1.9091,
+            "american": -110,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.9091,
+            "american": -110,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "d1bb060e1d2465b94fde23b308c82f30",
+      "commence_time": "2026-05-05T22:46:00Z",
+      "home_team": "WSH",
+      "away_team": "MIN",
+      "moneyline": {
+        "away": {
+          "decimal": 1.9091,
+          "american": -110,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 1.9434,
+          "american": -106,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 2.46,
+          "american": 146,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 1.5682,
+          "american": -176,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 9.0,
+          "over": {
+            "decimal": 1.9091,
+            "american": -110,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.9091,
+            "american": -110,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "642027e0dc5d6fe0e383f9c8b6453d6c",
+      "commence_time": "2026-05-05T23:06:00Z",
+      "home_team": "NYY",
+      "away_team": "TEX",
+      "moneyline": {
+        "home": {
+          "decimal": 1.8475,
+          "american": -118,
+          "book": "fanduel"
+        },
+        "away": {
+          "decimal": 2.0,
+          "american": 100,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 1.5155,
+          "american": -194,
+          "book": "fanduel"
+        },
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 2.6,
+          "american": 160,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 8.5,
+          "over": {
+            "decimal": 1.8696,
+            "american": -115,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.9524,
+            "american": -105,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "7cdd4e1d6b845aedaf71e33a78a0f164",
+      "commence_time": "2026-05-05T23:40:00Z",
+      "home_team": "CHC",
+      "away_team": "CIN",
+      "moneyline": {
+        "home": {
+          "decimal": 1.6369,
+          "american": -157,
+          "book": "betonlineag"
+        },
+        "away": {
+          "decimal": 2.42,
+          "american": 142,
+          "book": "betonlineag"
+        }
+      },
+      "run_line": [],
+      "totals": []
+    },
+    {
+      "game_id": "725a2bc29fdee3828f24905b97afda08",
+      "commence_time": "2026-05-05T23:41:00Z",
+      "home_team": "KC",
+      "away_team": "CLE",
+      "moneyline": {
+        "away": {
+          "decimal": 1.8621,
+          "american": -116,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 1.9804,
+          "american": -102,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 2.5,
+          "american": 150,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 1.5495,
+          "american": -182,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 8.0,
+          "over": {
+            "decimal": 1.9524,
+            "american": -105,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.8696,
+            "american": -115,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "4f532987fa9021753e499704cc1998d0",
+      "commence_time": "2026-05-05T23:46:00Z",
+      "home_team": "STL",
+      "away_team": "MIL",
+      "moneyline": {
+        "away": {
+          "decimal": 1.9615,
+          "american": -104,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 1.8929,
+          "american": -112,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 2.64,
+          "american": 164,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 1.5,
+          "american": -200,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 7.5,
+          "over": {
+            "decimal": 1.8197,
+            "american": -122,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 2.0,
+            "american": 100,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "6ce90524a09ef856d3a08a7038715209",
+      "commence_time": "2026-05-06T00:11:00Z",
+      "home_team": "HOU",
+      "away_team": "LAD",
+      "moneyline": {
+        "home": {
+          "decimal": 2.72,
+          "american": 172,
+          "book": "fanduel"
+        },
+        "away": {
+          "decimal": 1.4878,
+          "american": -205,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 2.0,
+          "american": 100,
+          "book": "fanduel"
+        },
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 1.8333,
+          "american": -120,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 8.5,
+          "over": {
+            "decimal": 1.9259,
+            "american": -108,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.8929,
+            "american": -112,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "6a03ee8f26eea9160cbb5d12946cb37c",
+      "commence_time": "2026-05-06T00:41:00Z",
+      "home_team": "COL",
+      "away_team": "NYM",
+      "moneyline": {
+        "home": {
+          "decimal": 2.44,
+          "american": 144,
+          "book": "fanduel"
+        },
+        "away": {
+          "decimal": 1.5814,
+          "american": -172,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "home",
+          "point": 1.5,
+          "decimal": 1.9009,
+          "american": -111,
+          "book": "fanduel"
+        },
+        {
+          "team": "away",
+          "point": -1.5,
+          "decimal": 1.9259,
+          "american": -108,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 10.0,
+          "over": {
+            "decimal": 1.9524,
+            "american": -105,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.8696,
+            "american": -115,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "8ce45c11dc2d0ef2edaaf6ecd5f2b8ff",
+      "commence_time": "2026-05-06T01:41:00Z",
+      "home_team": "AZ",
+      "away_team": "PIT",
+      "moneyline": {
+        "home": {
+          "decimal": 1.7692,
+          "american": -130,
+          "book": "fanduel"
+        },
+        "away": {
+          "decimal": 2.1,
+          "american": 110,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "home",
+          "point": -1.5,
+          "decimal": 2.6,
+          "american": 160,
+          "book": "fanduel"
+        },
+        {
+          "team": "away",
+          "point": 1.5,
+          "decimal": 1.5155,
+          "american": -194,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 9.0,
+          "over": {
+            "decimal": 1.9524,
+            "american": -105,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 1.8696,
+            "american": -115,
+            "book": "fanduel"
+          }
+        }
+      ]
+    },
+    {
+      "game_id": "732ae7d99e94ec771af4f2525709bb66",
+      "commence_time": "2026-05-06T01:41:00Z",
+      "home_team": "SEA",
+      "away_team": "ATL",
+      "moneyline": {
+        "away": {
+          "decimal": 2.3,
+          "american": 130,
+          "book": "fanduel"
+        },
+        "home": {
+          "decimal": 1.6494,
+          "american": -154,
+          "book": "fanduel"
+        }
+      },
+      "run_line": [
+        {
+          "team": "away",
+          "point": 1.5,
+          "decimal": 1.5814,
+          "american": -172,
+          "book": "fanduel"
+        },
+        {
+          "team": "home",
+          "point": -1.5,
+          "decimal": 2.42,
+          "american": 142,
+          "book": "fanduel"
+        }
+      ],
+      "totals": [
+        {
+          "point": 7.5,
+          "over": {
+            "decimal": 1.8197,
+            "american": -122,
+            "book": "fanduel"
+          },
+          "under": {
+            "decimal": 2.0,
+            "american": 100,
+            "book": "fanduel"
+          }
+        }
+      ]
+    }
+  ]
+}

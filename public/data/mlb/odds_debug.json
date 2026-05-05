@@ -1,0 +1,1239 @@
+{
+  "fetched_at": "2026-05-05T00:05:52+00:00",
+  "source": "the-odds-api",
+  "game_count": 25,
+  "games": [
+    {
+      "game": "NYM @ COL",
+      "first_pitch": "2026-05-04T21:41:00Z",
+      "moneyline": {
+        "NYM": {
+          "american": "-10000",
+          "decimal": 1.01,
+          "book": "fanduel"
+        },
+        "COL": {
+          "american": "+1700",
+          "decimal": 18.0,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "NYM": "94.7%",
+          "COL": "5.3%"
+        }
+      },
+      "totals": [
+        {
+          "line": 6.5,
+          "OVER": {
+            "american": "+580",
+            "decimal": 6.8,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-1100",
+            "decimal": 1.0909,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "13.8%",
+            "UNDER": "86.2%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "BOS @ DET",
+      "first_pitch": "2026-05-04T22:11:00Z",
+      "moneyline": {
+        "BOS": {
+          "american": "-670",
+          "decimal": 1.1493,
+          "book": "fanduel"
+        },
+        "DET": {
+          "american": "+430",
+          "decimal": 5.3,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "BOS": "82.2%",
+          "DET": "17.8%"
+        }
+      },
+      "run_line": {
+        "BOS -1.5": {
+          "american": "-230",
+          "decimal": 1.4348,
+          "book": "fanduel"
+        },
+        "DET +1.5": {
+          "american": "+168",
+          "decimal": 2.68,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 8.5,
+          "OVER": {
+            "american": "+102",
+            "decimal": 2.02,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-136",
+            "decimal": 1.7353,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "46.2%",
+            "UNDER": "53.8%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "PHI @ MIA",
+      "first_pitch": "2026-05-04T22:41:00Z",
+      "moneyline": {
+        "PHI": {
+          "american": "-184",
+          "decimal": 1.5435,
+          "book": "fanduel"
+        },
+        "MIA": {
+          "american": "+142",
+          "decimal": 2.42,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "PHI": "61.1%",
+          "MIA": "38.9%"
+        }
+      },
+      "run_line": {
+        "MIA +1.5": {
+          "american": "-188",
+          "decimal": 1.5319,
+          "book": "fanduel"
+        },
+        "PHI -1.5": {
+          "american": "+140",
+          "decimal": 2.4,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 4.5,
+          "OVER": {
+            "american": "-160",
+            "decimal": 1.625,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "+120",
+            "decimal": 2.2,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "57.5%",
+            "UNDER": "42.5%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "TOR @ TB",
+      "first_pitch": "2026-05-04T22:41:00Z",
+      "moneyline": {
+        "TOR": {
+          "american": "+350",
+          "decimal": 4.5,
+          "book": "fanduel"
+        },
+        "TB": {
+          "american": "-520",
+          "decimal": 1.1923,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "TOR": "20.9%",
+          "TB": "79.1%"
+        }
+      },
+      "run_line": {
+        "TB -1.5": {
+          "american": "-162",
+          "decimal": 1.6173,
+          "book": "fanduel"
+        },
+        "TOR +1.5": {
+          "american": "+122",
+          "decimal": 2.22,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 6.5,
+          "OVER": {
+            "american": "-152",
+            "decimal": 1.6579,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "+114",
+            "decimal": 2.14,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "56.3%",
+            "UNDER": "43.7%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "BAL @ NYY",
+      "first_pitch": "2026-05-04T23:06:00Z",
+      "moneyline": {
+        "BAL": {
+          "american": "+630",
+          "decimal": 7.3,
+          "book": "fanduel"
+        },
+        "NYY": {
+          "american": "-1200",
+          "decimal": 1.0833,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "BAL": "12.9%",
+          "NYY": "87.1%"
+        }
+      },
+      "run_line": {
+        "BAL +3.5": {
+          "american": "-102",
+          "decimal": 1.9804,
+          "book": "fanduel"
+        },
+        "NYY -3.5": {
+          "american": "-130",
+          "decimal": 1.7692,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 8.5,
+          "OVER": {
+            "american": "-110",
+            "decimal": 1.9091,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-120",
+            "decimal": 1.8333,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "49.0%",
+            "UNDER": "51.0%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "CLE @ KC",
+      "first_pitch": "2026-05-04T23:41:00Z",
+      "moneyline": {
+        "CLE": {
+          "american": "-280",
+          "decimal": 1.3571,
+          "book": "fanduel"
+        },
+        "KC": {
+          "american": "+200",
+          "decimal": 3.0,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "CLE": "68.9%",
+          "KC": "31.1%"
+        }
+      },
+      "run_line": {
+        "CLE -1.5": {
+          "american": "-152",
+          "decimal": 1.6579,
+          "book": "fanduel"
+        },
+        "KC +1.5": {
+          "american": "+114",
+          "decimal": 2.14,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 9.5,
+          "OVER": {
+            "american": "+104",
+            "decimal": 2.04,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-138",
+            "decimal": 1.7246,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "45.8%",
+            "UNDER": "54.2%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "MIL @ STL",
+      "first_pitch": "2026-05-04T23:46:00Z",
+      "moneyline": {
+        "MIL": {
+          "american": "-132",
+          "decimal": 1.7576,
+          "book": "fanduel"
+        },
+        "STL": {
+          "american": "+104",
+          "decimal": 2.04,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "MIL": "53.7%",
+          "STL": "46.3%"
+        }
+      },
+      "run_line": {
+        "MIL -1.5": {
+          "american": "+132",
+          "decimal": 2.32,
+          "book": "fanduel"
+        },
+        "STL +1.5": {
+          "american": "-178",
+          "decimal": 1.5618,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 7.5,
+          "OVER": {
+            "american": "-104",
+            "decimal": 1.9615,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-128",
+            "decimal": 1.7812,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "47.6%",
+            "UNDER": "52.4%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "LAD @ HOU",
+      "first_pitch": "2026-05-05T00:11:00Z",
+      "moneyline": {
+        "LAD": {
+          "american": "-200",
+          "decimal": 1.5,
+          "book": "fanduel"
+        },
+        "HOU": {
+          "american": "+168",
+          "decimal": 2.68,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "LAD": "64.1%",
+          "HOU": "35.9%"
+        }
+      },
+      "run_line": {
+        "HOU +1.5": {
+          "american": "+102",
+          "decimal": 2.02,
+          "book": "fanduel"
+        },
+        "LAD -1.5": {
+          "american": "-122",
+          "decimal": 1.8197,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 9.0,
+          "OVER": {
+            "american": "-115",
+            "decimal": 1.8696,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-105",
+            "decimal": 1.9524,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "51.1%",
+            "UNDER": "48.9%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "CIN @ CHC",
+      "first_pitch": "2026-05-05T00:50:00Z",
+      "moneyline": {
+        "CIN": {
+          "american": "+180",
+          "decimal": 2.8,
+          "book": "fanduel"
+        },
+        "CHC": {
+          "american": "-215",
+          "decimal": 1.4651,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "CIN": "34.4%",
+          "CHC": "65.6%"
+        }
+      },
+      "run_line": {
+        "CHC -1.5": {
+          "american": "-118",
+          "decimal": 1.8475,
+          "book": "fanduel"
+        },
+        "CIN +1.5": {
+          "american": "-102",
+          "decimal": 1.9804,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 11.5,
+          "OVER": {
+            "american": "-110",
+            "decimal": 1.9091,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-110",
+            "decimal": 1.9091,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "50.0%",
+            "UNDER": "50.0%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "CWS @ LAA",
+      "first_pitch": "2026-05-05T01:39:00Z",
+      "moneyline": {
+        "CWS": {
+          "american": "+134",
+          "decimal": 2.34,
+          "book": "fanduel"
+        },
+        "LAA": {
+          "american": "-158",
+          "decimal": 1.6329,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "CWS": "41.1%",
+          "LAA": "58.9%"
+        }
+      },
+      "run_line": {
+        "CWS +1.5": {
+          "american": "-162",
+          "decimal": 1.6173,
+          "book": "fanduel"
+        },
+        "LAA -1.5": {
+          "american": "+134",
+          "decimal": 2.34,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 7.5,
+          "OVER": {
+            "american": "-120",
+            "decimal": 1.8333,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-102",
+            "decimal": 1.9804,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "51.9%",
+            "UNDER": "48.1%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "ATL @ SEA",
+      "first_pitch": "2026-05-05T01:41:00Z",
+      "moneyline": {
+        "ATL": {
+          "american": "+116",
+          "decimal": 2.16,
+          "book": "fanduel"
+        },
+        "SEA": {
+          "american": "-136",
+          "decimal": 1.7353,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "ATL": "44.5%",
+          "SEA": "55.5%"
+        }
+      },
+      "run_line": {
+        "ATL +1.5": {
+          "american": "-196",
+          "decimal": 1.5102,
+          "book": "fanduel"
+        },
+        "SEA -1.5": {
+          "american": "+162",
+          "decimal": 2.62,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 7.5,
+          "OVER": {
+            "american": "-122",
+            "decimal": 1.8197,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "+100",
+            "decimal": 2.0,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "52.4%",
+            "UNDER": "47.6%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "SD @ SF",
+      "first_pitch": "2026-05-05T01:46:00Z",
+      "moneyline": {
+        "SD": {
+          "american": "-136",
+          "decimal": 1.7353,
+          "book": "fanduel"
+        },
+        "SF": {
+          "american": "+116",
+          "decimal": 2.16,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "SD": "55.5%",
+          "SF": "44.5%"
+        }
+      },
+      "run_line": {
+        "SD -1.5": {
+          "american": "+128",
+          "decimal": 2.28,
+          "book": "fanduel"
+        },
+        "SF +1.5": {
+          "american": "-154",
+          "decimal": 1.6494,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 8.0,
+          "OVER": {
+            "american": "-110",
+            "decimal": 1.9091,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-110",
+            "decimal": 1.9091,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "50.0%",
+            "UNDER": "50.0%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "ATH @ PHI",
+      "first_pitch": "2026-05-05T22:41:00Z",
+      "moneyline": {
+        "ATH": {
+          "american": "+158",
+          "decimal": 2.58,
+          "book": "fanduel"
+        },
+        "PHI": {
+          "american": "-188",
+          "decimal": 1.5319,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "ATH": "37.3%",
+          "PHI": "62.7%"
+        }
+      },
+      "run_line": {
+        "ATH +1.5": {
+          "american": "-134",
+          "decimal": 1.7463,
+          "book": "fanduel"
+        },
+        "PHI -1.5": {
+          "american": "+112",
+          "decimal": 2.12,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 8.5,
+          "OVER": {
+            "american": "-122",
+            "decimal": 1.8197,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "+100",
+            "decimal": 2.0,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "52.4%",
+            "UNDER": "47.6%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "BAL @ MIA",
+      "first_pitch": "2026-05-05T22:41:00Z",
+      "moneyline": {
+        "BAL": {
+          "american": "+100",
+          "decimal": 2.0,
+          "book": "fanduel"
+        },
+        "MIA": {
+          "american": "-118",
+          "decimal": 1.8475,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "BAL": "48.0%",
+          "MIA": "52.0%"
+        }
+      },
+      "run_line": {
+        "BAL -1.5": {
+          "american": "+164",
+          "decimal": 2.64,
+          "book": "fanduel"
+        },
+        "MIA +1.5": {
+          "american": "-200",
+          "decimal": 1.5,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 8.5,
+          "OVER": {
+            "american": "-110",
+            "decimal": 1.9091,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-110",
+            "decimal": 1.9091,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "50.0%",
+            "UNDER": "50.0%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "BOS @ DET",
+      "first_pitch": "2026-05-05T22:41:00Z",
+      "moneyline": {
+        "BOS": {
+          "american": "+152",
+          "decimal": 2.52,
+          "book": "fanduel"
+        },
+        "DET": {
+          "american": "-180",
+          "decimal": 1.5556,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "BOS": "38.2%",
+          "DET": "61.8%"
+        }
+      },
+      "run_line": {
+        "BOS +1.5": {
+          "american": "-138",
+          "decimal": 1.7246,
+          "book": "fanduel"
+        },
+        "DET -1.5": {
+          "american": "+115",
+          "decimal": 2.15,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 7.5,
+          "OVER": {
+            "american": "-122",
+            "decimal": 1.8197,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "+100",
+            "decimal": 2.0,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "52.4%",
+            "UNDER": "47.6%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "TOR @ TB",
+      "first_pitch": "2026-05-05T22:41:00Z",
+      "moneyline": {
+        "TOR": {
+          "american": "-102",
+          "decimal": 1.9804,
+          "book": "fanduel"
+        },
+        "TB": {
+          "american": "-116",
+          "decimal": 1.8621,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "TOR": "48.5%",
+          "TB": "51.5%"
+        }
+      },
+      "run_line": {
+        "TB +1.5": {
+          "american": "-205",
+          "decimal": 1.4878,
+          "book": "fanduel"
+        },
+        "TOR -1.5": {
+          "american": "+172",
+          "decimal": 2.72,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 7.0,
+          "OVER": {
+            "american": "-110",
+            "decimal": 1.9091,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-110",
+            "decimal": 1.9091,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "50.0%",
+            "UNDER": "50.0%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "MIN @ WSH",
+      "first_pitch": "2026-05-05T22:46:00Z",
+      "moneyline": {
+        "MIN": {
+          "american": "-110",
+          "decimal": 1.9091,
+          "book": "fanduel"
+        },
+        "WSH": {
+          "american": "-106",
+          "decimal": 1.9434,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "MIN": "50.4%",
+          "WSH": "49.6%"
+        }
+      },
+      "run_line": {
+        "MIN -1.5": {
+          "american": "+146",
+          "decimal": 2.46,
+          "book": "fanduel"
+        },
+        "WSH +1.5": {
+          "american": "-176",
+          "decimal": 1.5682,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 9.0,
+          "OVER": {
+            "american": "-110",
+            "decimal": 1.9091,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-110",
+            "decimal": 1.9091,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "50.0%",
+            "UNDER": "50.0%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "TEX @ NYY",
+      "first_pitch": "2026-05-05T23:06:00Z",
+      "moneyline": {
+        "TEX": {
+          "american": "+100",
+          "decimal": 2.0,
+          "book": "fanduel"
+        },
+        "NYY": {
+          "american": "-118",
+          "decimal": 1.8475,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "TEX": "48.0%",
+          "NYY": "52.0%"
+        }
+      },
+      "run_line": {
+        "NYY +1.5": {
+          "american": "-194",
+          "decimal": 1.5155,
+          "book": "fanduel"
+        },
+        "TEX -1.5": {
+          "american": "+160",
+          "decimal": 2.6,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 8.5,
+          "OVER": {
+            "american": "-115",
+            "decimal": 1.8696,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-105",
+            "decimal": 1.9524,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "51.1%",
+            "UNDER": "48.9%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "CIN @ CHC",
+      "first_pitch": "2026-05-05T23:40:00Z",
+      "moneyline": {
+        "CIN": {
+          "american": "+142",
+          "decimal": 2.42,
+          "book": "betonlineag"
+        },
+        "CHC": {
+          "american": "-157",
+          "decimal": 1.6369,
+          "book": "betonlineag"
+        },
+        "vig_free": {
+          "CIN": "40.3%",
+          "CHC": "59.7%"
+        }
+      }
+    },
+    {
+      "game": "CLE @ KC",
+      "first_pitch": "2026-05-05T23:41:00Z",
+      "moneyline": {
+        "CLE": {
+          "american": "-116",
+          "decimal": 1.8621,
+          "book": "fanduel"
+        },
+        "KC": {
+          "american": "-102",
+          "decimal": 1.9804,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "CLE": "51.5%",
+          "KC": "48.5%"
+        }
+      },
+      "run_line": {
+        "CLE -1.5": {
+          "american": "+150",
+          "decimal": 2.5,
+          "book": "fanduel"
+        },
+        "KC +1.5": {
+          "american": "-182",
+          "decimal": 1.5495,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 8.0,
+          "OVER": {
+            "american": "-105",
+            "decimal": 1.9524,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-115",
+            "decimal": 1.8696,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "48.9%",
+            "UNDER": "51.1%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "MIL @ STL",
+      "first_pitch": "2026-05-05T23:46:00Z",
+      "moneyline": {
+        "MIL": {
+          "american": "-104",
+          "decimal": 1.9615,
+          "book": "fanduel"
+        },
+        "STL": {
+          "american": "-112",
+          "decimal": 1.8929,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "MIL": "49.1%",
+          "STL": "50.9%"
+        }
+      },
+      "run_line": {
+        "MIL -1.5": {
+          "american": "+164",
+          "decimal": 2.64,
+          "book": "fanduel"
+        },
+        "STL +1.5": {
+          "american": "-200",
+          "decimal": 1.5,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 7.5,
+          "OVER": {
+            "american": "-122",
+            "decimal": 1.8197,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "+100",
+            "decimal": 2.0,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "52.4%",
+            "UNDER": "47.6%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "LAD @ HOU",
+      "first_pitch": "2026-05-06T00:11:00Z",
+      "moneyline": {
+        "LAD": {
+          "american": "-205",
+          "decimal": 1.4878,
+          "book": "fanduel"
+        },
+        "HOU": {
+          "american": "+172",
+          "decimal": 2.72,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "LAD": "64.6%",
+          "HOU": "35.4%"
+        }
+      },
+      "run_line": {
+        "HOU +1.5": {
+          "american": "+100",
+          "decimal": 2.0,
+          "book": "fanduel"
+        },
+        "LAD -1.5": {
+          "american": "-120",
+          "decimal": 1.8333,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 8.5,
+          "OVER": {
+            "american": "-108",
+            "decimal": 1.9259,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-112",
+            "decimal": 1.8929,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "49.6%",
+            "UNDER": "50.4%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "NYM @ COL",
+      "first_pitch": "2026-05-06T00:41:00Z",
+      "moneyline": {
+        "NYM": {
+          "american": "-172",
+          "decimal": 1.5814,
+          "book": "fanduel"
+        },
+        "COL": {
+          "american": "+144",
+          "decimal": 2.44,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "NYM": "60.7%",
+          "COL": "39.3%"
+        }
+      },
+      "run_line": {
+        "COL +1.5": {
+          "american": "-111",
+          "decimal": 1.9009,
+          "book": "fanduel"
+        },
+        "NYM -1.5": {
+          "american": "-108",
+          "decimal": 1.9259,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 10.0,
+          "OVER": {
+            "american": "-105",
+            "decimal": 1.9524,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-115",
+            "decimal": 1.8696,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "48.9%",
+            "UNDER": "51.1%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "PIT @ AZ",
+      "first_pitch": "2026-05-06T01:41:00Z",
+      "moneyline": {
+        "PIT": {
+          "american": "+110",
+          "decimal": 2.1,
+          "book": "fanduel"
+        },
+        "AZ": {
+          "american": "-130",
+          "decimal": 1.7692,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "PIT": "45.7%",
+          "AZ": "54.3%"
+        }
+      },
+      "run_line": {
+        "AZ -1.5": {
+          "american": "+160",
+          "decimal": 2.6,
+          "book": "fanduel"
+        },
+        "PIT +1.5": {
+          "american": "-194",
+          "decimal": 1.5155,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 9.0,
+          "OVER": {
+            "american": "-105",
+            "decimal": 1.9524,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "-115",
+            "decimal": 1.8696,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "48.9%",
+            "UNDER": "51.1%"
+          }
+        }
+      ]
+    },
+    {
+      "game": "ATL @ SEA",
+      "first_pitch": "2026-05-06T01:41:00Z",
+      "moneyline": {
+        "ATL": {
+          "american": "+130",
+          "decimal": 2.3,
+          "book": "fanduel"
+        },
+        "SEA": {
+          "american": "-154",
+          "decimal": 1.6494,
+          "book": "fanduel"
+        },
+        "vig_free": {
+          "ATL": "41.8%",
+          "SEA": "58.2%"
+        }
+      },
+      "run_line": {
+        "ATL +1.5": {
+          "american": "-172",
+          "decimal": 1.5814,
+          "book": "fanduel"
+        },
+        "SEA -1.5": {
+          "american": "+142",
+          "decimal": 2.42,
+          "book": "fanduel"
+        }
+      },
+      "totals": [
+        {
+          "line": 7.5,
+          "OVER": {
+            "american": "-122",
+            "decimal": 1.8197,
+            "book": "fanduel"
+          },
+          "UNDER": {
+            "american": "+100",
+            "decimal": 2.0,
+            "book": "fanduel"
+          },
+          "vig_free": {
+            "OVER": "52.4%",
+            "UNDER": "47.6%"
+          }
+        }
+      ]
+    }
+  ]
+}
