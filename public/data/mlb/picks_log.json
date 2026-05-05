@@ -27,8 +27,9 @@
       "closing_book": null,
       "closing_recorded_at": null,
       "clv_pct": null,
-      "result": null,
-      "units": null
+      "result": "WIN",
+      "units": 1.68,
+      "graded_at": "2026-05-05T19:02:05.438917Z"
     },
     {
       "pick_id": "2026-05-04|CLE@KC|run_line|KC",
@@ -57,8 +58,9 @@
       "closing_book": null,
       "closing_recorded_at": null,
       "clv_pct": null,
-      "result": null,
-      "units": null
+      "result": "WIN",
+      "units": 1.14,
+      "graded_at": "2026-05-05T19:02:05.438923Z"
     },
     {
       "pick_id": "2026-05-04|TOR@TB|run_line|TOR",
@@ -87,8 +89,9 @@
       "closing_book": null,
       "closing_recorded_at": null,
       "clv_pct": null,
-      "result": null,
-      "units": null
+      "result": "LOSS",
+      "units": -1.0,
+      "graded_at": "2026-05-05T19:02:05.438925Z"
     },
     {
       "pick_id": "2026-05-04|CIN@CHC|run_line|CIN",
@@ -142,6 +145,37 @@
       "pick_price_american": 102,
       "book_at_pick": "fanduel",
       "pick_taken_at": "2026-05-05T00:05:53.981121Z",
+      "odds_source": "the-odds-api",
+      "closing_price_dec": null,
+      "closing_price_american": null,
+      "closing_book": null,
+      "closing_recorded_at": null,
+      "clv_pct": null,
+      "result": "LOSS",
+      "units": -1.0,
+      "graded_at": "2026-05-05T19:02:05.438927Z"
+    },
+    {
+      "pick_id": "2026-05-05|ATH@PHI|run_line|ATH",
+      "date": "2026-05-05",
+      "matchup": "ATH@PHI",
+      "game_pk": 823469,
+      "game_time": "2026-05-05T22:40:00Z",
+      "bet_type": "run_line",
+      "pick": "ATH",
+      "spec": {
+        "type": "run_line",
+        "team": "ATH",
+        "point": -1.5
+      },
+      "model_prob": 0.612,
+      "edge_pct_at_pick": 5.45,
+      "kelly_pct": 5.0,
+      "kelly_advice": "2u",
+      "pick_price_dec": 1.7937,
+      "pick_price_american": -126,
+      "book_at_pick": "fanduel",
+      "pick_taken_at": "2026-05-05T19:02:05.438296Z",
       "odds_source": "the-odds-api",
       "closing_price_dec": null,
       "closing_price_american": null,

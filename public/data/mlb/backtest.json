@@ -1,85 +1,85 @@
 {
-  "as_of": "2026-05-05T00:05:53.569346Z",
-  "total_games_in_window": 582,
+  "as_of": "2026-05-05T19:02:05.021731Z",
+  "total_games_in_window": 594,
   "first_date": "2026-03-20",
-  "last_date": "2026-05-03",
+  "last_date": "2026-05-04",
   "summary_by_bet_type": [
     {
       "bet_type": "first_5",
-      "bets": 568,
-      "wins": 229,
-      "losses": 247,
-      "pushes": 92,
-      "hit_rate": 48.1,
-      "units_pl": -38.84,
-      "roi_pct": -6.84,
+      "bets": 580,
+      "wins": 231,
+      "losses": 254,
+      "pushes": 95,
+      "hit_rate": 47.6,
+      "units_pl": -44.02,
+      "roi_pct": -7.59,
       "brier": 0.2548
     },
     {
       "bet_type": "first_inning",
-      "bets": 572,
-      "wins": 311,
-      "losses": 261,
+      "bets": 584,
+      "wins": 318,
+      "losses": 266,
       "pushes": 0,
-      "hit_rate": 54.4,
-      "units_pl": 21.7,
-      "roi_pct": 3.79,
-      "brier": 0.2494
+      "hit_rate": 54.5,
+      "units_pl": 23.06,
+      "roi_pct": 3.95,
+      "brier": 0.2495
     },
     {
       "bet_type": "moneyline",
-      "bets": 572,
-      "wins": 286,
-      "losses": 286,
+      "bets": 584,
+      "wins": 292,
+      "losses": 292,
       "pushes": 0,
       "hit_rate": 50.0,
-      "units_pl": -26.03,
+      "units_pl": -26.57,
       "roi_pct": -4.55,
       "brier": 0.2509
     },
     {
       "bet_type": "run_line",
-      "bets": 572,
-      "wins": 353,
-      "losses": 219,
+      "bets": 584,
+      "wins": 361,
+      "losses": 223,
       "pushes": 0,
-      "hit_rate": 61.7,
-      "units_pl": 101.88,
-      "roi_pct": 17.81,
-      "brier": 0.2356
+      "hit_rate": 61.8,
+      "units_pl": 105.15,
+      "roi_pct": 18.01,
+      "brier": 0.2353
     },
     {
       "bet_type": "team_totals",
-      "bets": 2288,
-      "wins": 1237,
-      "losses": 1051,
+      "bets": 2336,
+      "wins": 1265,
+      "losses": 1071,
       "pushes": 0,
-      "hit_rate": 54.1,
-      "units_pl": 73.43,
-      "roi_pct": 3.21,
-      "brier": 0.2557
+      "hit_rate": 54.2,
+      "units_pl": 78.89,
+      "roi_pct": 3.38,
+      "brier": 0.2554
     },
     {
       "bet_type": "totals",
-      "bets": 1716,
-      "wins": 890,
-      "losses": 774,
-      "pushes": 52,
-      "hit_rate": 53.5,
-      "units_pl": 35.01,
-      "roi_pct": 2.04,
-      "brier": 0.2487
+      "bets": 1752,
+      "wins": 912,
+      "losses": 784,
+      "pushes": 56,
+      "hit_rate": 53.8,
+      "units_pl": 45.01,
+      "roi_pct": 2.57,
+      "brier": 0.248
     }
   ],
   "overall": {
-    "bets": 6288,
-    "wins": 3306,
-    "losses": 2838,
-    "pushes": 144,
-    "hit_rate": 53.8,
-    "units_pl": 167.15,
-    "roi_pct": 2.66,
-    "brier": 0.2508
+    "bets": 6420,
+    "wins": 3379,
+    "losses": 2890,
+    "pushes": 151,
+    "hit_rate": 53.9,
+    "units_pl": 181.51,
+    "roi_pct": 2.83,
+    "brier": 0.2505
   },
   "daily_pl": [
     {
@@ -306,16 +306,21 @@
       "date": "2026-05-03",
       "daily_units": 4.08,
       "cumulative_units": 167.15
+    },
+    {
+      "date": "2026-05-04",
+      "daily_units": 14.36,
+      "cumulative_units": 181.51
     }
   ],
   "calibration": {
-    "total_sd": 4.641,
-    "team_total_sd": 3.213,
-    "margin_sd": 4.44,
-    "f5_total_sd": 3.274,
-    "f5_margin_sd": 3.418,
-    "win_prob_slope": 0.3365,
-    "n_residuals": 572,
+    "total_sd": 4.614,
+    "team_total_sd": 3.201,
+    "margin_sd": 4.435,
+    "f5_total_sd": 3.275,
+    "f5_margin_sd": 3.405,
+    "win_prob_slope": 0.3362,
+    "n_residuals": 584,
     "isotonic_fit": {
       "increasing": true,
       "blocks": [
@@ -333,21 +338,39 @@
         },
         {
           "left_x": "-1.12",
+          "right_x": "-1.1100000000000003",
+          "mean_y": "0.500000",
+          "total_weight": "2"
+        },
+        {
+          "left_x": "-1.08",
+          "right_x": "-1.0099999999999998",
+          "mean_y": "0.500000",
+          "total_weight": "2"
+        },
+        {
+          "left_x": "-0.9800000000000004",
+          "right_x": "-0.8600000000000003",
+          "mean_y": "0.500000",
+          "total_weight": "6"
+        },
+        {
+          "left_x": "-0.8500000000000005",
           "right_x": "-0.3599999999999999",
-          "mean_y": "0.495146",
-          "total_weight": "103"
+          "mean_y": "0.505262",
+          "total_weight": "95"
         },
         {
           "left_x": "-0.35000000000000053",
-          "right_x": "0.3099999999999996",
-          "mean_y": "0.544692",
-          "total_weight": "358"
+          "right_x": "0.41000000000000014",
+          "mean_y": "0.542502",
+          "total_weight": "400"
         },
         {
-          "left_x": "0.3100000000000005",
+          "left_x": "0.4199999999999995",
           "right_x": "0.8499999999999996",
-          "mean_y": "0.549451",
-          "total_weight": "91"
+          "mean_y": "0.559323",
+          "total_weight": "59"
         },
         {
           "left_x": "0.8500000000000005",
@@ -387,7 +410,7 @@
         }
       ]
     },
-    "isotonic_n_blocks": 11
+    "isotonic_n_blocks": 14
   },
   "bets": [
     {
@@ -56981,6 +57004,1194 @@
       "model_prob": 0.589,
       "result": "LOSS",
       "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "NYM@COL",
+      "bet_type": "moneyline",
+      "pick": "COL",
+      "model_prob": 0.535,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "NYM@COL",
+      "bet_type": "run_line",
+      "pick": "NYM +1.5",
+      "model_prob": 0.632,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "NYM@COL",
+      "bet_type": "totals",
+      "pick": "OVER 8.5",
+      "model_prob": 0.718,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "NYM@COL",
+      "bet_type": "totals",
+      "pick": "OVER 9.0",
+      "model_prob": 0.599,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "NYM@COL",
+      "bet_type": "totals",
+      "pick": "OVER 9.5",
+      "model_prob": 0.599,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "NYM@COL",
+      "bet_type": "first_5",
+      "pick": "COL",
+      "model_prob": 0.541,
+      "result": "PUSH",
+      "units": 0.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "NYM@COL",
+      "bet_type": "first_inning",
+      "pick": "YRFI",
+      "model_prob": 0.519,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "NYM@COL",
+      "bet_type": "team_totals",
+      "pick": "NYM OVER 3.5",
+      "model_prob": 0.746,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "NYM@COL",
+      "bet_type": "team_totals",
+      "pick": "NYM OVER 4.5",
+      "model_prob": 0.573,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "NYM@COL",
+      "bet_type": "team_totals",
+      "pick": "COL OVER 3.5",
+      "model_prob": 0.786,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "NYM@COL",
+      "bet_type": "team_totals",
+      "pick": "COL OVER 4.5",
+      "model_prob": 0.625,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BOS@DET",
+      "bet_type": "moneyline",
+      "pick": "DET",
+      "model_prob": 0.538,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BOS@DET",
+      "bet_type": "run_line",
+      "pick": "BOS +1.5",
+      "model_prob": 0.63,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BOS@DET",
+      "bet_type": "totals",
+      "pick": "UNDER 8.5",
+      "model_prob": 0.54,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BOS@DET",
+      "bet_type": "totals",
+      "pick": "UNDER 9.0",
+      "model_prob": 0.54,
+      "result": "PUSH",
+      "units": 0.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BOS@DET",
+      "bet_type": "totals",
+      "pick": "UNDER 9.5",
+      "model_prob": 0.665,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BOS@DET",
+      "bet_type": "first_5",
+      "pick": "DET",
+      "model_prob": 0.542,
+      "result": "PUSH",
+      "units": 0.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BOS@DET",
+      "bet_type": "first_inning",
+      "pick": "NRFI",
+      "model_prob": 0.55,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BOS@DET",
+      "bet_type": "team_totals",
+      "pick": "BOS OVER 3.5",
+      "model_prob": 0.552,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BOS@DET",
+      "bet_type": "team_totals",
+      "pick": "BOS UNDER 4.5",
+      "model_prob": 0.626,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BOS@DET",
+      "bet_type": "team_totals",
+      "pick": "DET OVER 3.5",
+      "model_prob": 0.623,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BOS@DET",
+      "bet_type": "team_totals",
+      "pick": "DET UNDER 4.5",
+      "model_prob": 0.561,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "TOR@TB",
+      "bet_type": "moneyline",
+      "pick": "TOR",
+      "model_prob": 0.514,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "TOR@TB",
+      "bet_type": "run_line",
+      "pick": "TB +1.5",
+      "model_prob": 0.653,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "TOR@TB",
+      "bet_type": "totals",
+      "pick": "UNDER 8.5",
+      "model_prob": 0.561,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "TOR@TB",
+      "bet_type": "totals",
+      "pick": "UNDER 9.0",
+      "model_prob": 0.561,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "TOR@TB",
+      "bet_type": "totals",
+      "pick": "UNDER 9.5",
+      "model_prob": 0.682,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "TOR@TB",
+      "bet_type": "first_5",
+      "pick": "TOR",
+      "model_prob": 0.504,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "TOR@TB",
+      "bet_type": "first_inning",
+      "pick": "NRFI",
+      "model_prob": 0.567,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "TOR@TB",
+      "bet_type": "team_totals",
+      "pick": "TOR OVER 3.5",
+      "model_prob": 0.585,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "TOR@TB",
+      "bet_type": "team_totals",
+      "pick": "TOR UNDER 4.5",
+      "model_prob": 0.597,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "TOR@TB",
+      "bet_type": "team_totals",
+      "pick": "TB OVER 3.5",
+      "model_prob": 0.56,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "TOR@TB",
+      "bet_type": "team_totals",
+      "pick": "TB UNDER 4.5",
+      "model_prob": 0.619,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "PHI@MIA",
+      "bet_type": "moneyline",
+      "pick": "PHI",
+      "model_prob": 0.503,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "PHI@MIA",
+      "bet_type": "run_line",
+      "pick": "MIA +1.5",
+      "model_prob": 0.663,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "PHI@MIA",
+      "bet_type": "totals",
+      "pick": "UNDER 8.5",
+      "model_prob": 0.573,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "PHI@MIA",
+      "bet_type": "totals",
+      "pick": "UNDER 9.0",
+      "model_prob": 0.573,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "PHI@MIA",
+      "bet_type": "totals",
+      "pick": "UNDER 9.5",
+      "model_prob": 0.693,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "PHI@MIA",
+      "bet_type": "first_5",
+      "pick": "MIA",
+      "model_prob": 0.529,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "PHI@MIA",
+      "bet_type": "first_inning",
+      "pick": "NRFI",
+      "model_prob": 0.506,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "PHI@MIA",
+      "bet_type": "team_totals",
+      "pick": "PHI OVER 3.5",
+      "model_prob": 0.567,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "PHI@MIA",
+      "bet_type": "team_totals",
+      "pick": "PHI UNDER 4.5",
+      "model_prob": 0.613,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "PHI@MIA",
+      "bet_type": "team_totals",
+      "pick": "MIA OVER 3.5",
+      "model_prob": 0.56,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "PHI@MIA",
+      "bet_type": "team_totals",
+      "pick": "MIA UNDER 4.5",
+      "model_prob": 0.619,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BAL@NYY",
+      "bet_type": "moneyline",
+      "pick": "NYY",
+      "model_prob": 0.58,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BAL@NYY",
+      "bet_type": "run_line",
+      "pick": "BAL +1.5",
+      "model_prob": 0.589,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BAL@NYY",
+      "bet_type": "totals",
+      "pick": "OVER 8.5",
+      "model_prob": 0.673,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BAL@NYY",
+      "bet_type": "totals",
+      "pick": "OVER 9.0",
+      "model_prob": 0.548,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BAL@NYY",
+      "bet_type": "totals",
+      "pick": "OVER 9.5",
+      "model_prob": 0.548,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BAL@NYY",
+      "bet_type": "first_5",
+      "pick": "NYY",
+      "model_prob": 0.555,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BAL@NYY",
+      "bet_type": "first_inning",
+      "pick": "NRFI",
+      "model_prob": 0.507,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BAL@NYY",
+      "bet_type": "team_totals",
+      "pick": "BAL OVER 3.5",
+      "model_prob": 0.681,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BAL@NYY",
+      "bet_type": "team_totals",
+      "pick": "BAL OVER 4.5",
+      "model_prob": 0.498,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BAL@NYY",
+      "bet_type": "team_totals",
+      "pick": "NYY OVER 3.5",
+      "model_prob": 0.784,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "BAL@NYY",
+      "bet_type": "team_totals",
+      "pick": "NYY OVER 4.5",
+      "model_prob": 0.623,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CIN@CHC",
+      "bet_type": "moneyline",
+      "pick": "CHC",
+      "model_prob": 0.563,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CIN@CHC",
+      "bet_type": "run_line",
+      "pick": "CIN +1.5",
+      "model_prob": 0.606,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CIN@CHC",
+      "bet_type": "totals",
+      "pick": "OVER 8.5",
+      "model_prob": 0.617,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CIN@CHC",
+      "bet_type": "totals",
+      "pick": "OVER 9.0",
+      "model_prob": 0.487,
+      "result": "PUSH",
+      "units": 0.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CIN@CHC",
+      "bet_type": "totals",
+      "pick": "OVER 9.5",
+      "model_prob": 0.487,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CIN@CHC",
+      "bet_type": "first_5",
+      "pick": "CHC",
+      "model_prob": 0.583,
+      "result": "PUSH",
+      "units": 0.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CIN@CHC",
+      "bet_type": "first_inning",
+      "pick": "NRFI",
+      "model_prob": 0.544,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CIN@CHC",
+      "bet_type": "team_totals",
+      "pick": "CIN OVER 3.5",
+      "model_prob": 0.649,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CIN@CHC",
+      "bet_type": "team_totals",
+      "pick": "CIN UNDER 4.5",
+      "model_prob": 0.536,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CIN@CHC",
+      "bet_type": "team_totals",
+      "pick": "CHC OVER 3.5",
+      "model_prob": 0.745,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CIN@CHC",
+      "bet_type": "team_totals",
+      "pick": "CHC OVER 4.5",
+      "model_prob": 0.572,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CLE@KC",
+      "bet_type": "moneyline",
+      "pick": "KC",
+      "model_prob": 0.518,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CLE@KC",
+      "bet_type": "run_line",
+      "pick": "CLE +1.5",
+      "model_prob": 0.649,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CLE@KC",
+      "bet_type": "totals",
+      "pick": "OVER 8.5",
+      "model_prob": 0.547,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CLE@KC",
+      "bet_type": "totals",
+      "pick": "OVER 9.0",
+      "model_prob": 0.415,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CLE@KC",
+      "bet_type": "totals",
+      "pick": "UNDER 9.5",
+      "model_prob": 0.585,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CLE@KC",
+      "bet_type": "first_5",
+      "pick": "CLE",
+      "model_prob": 0.534,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CLE@KC",
+      "bet_type": "first_inning",
+      "pick": "NRFI",
+      "model_prob": 0.529,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CLE@KC",
+      "bet_type": "team_totals",
+      "pick": "CLE OVER 3.5",
+      "model_prob": 0.635,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CLE@KC",
+      "bet_type": "team_totals",
+      "pick": "CLE UNDER 4.5",
+      "model_prob": 0.549,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CLE@KC",
+      "bet_type": "team_totals",
+      "pick": "KC OVER 3.5",
+      "model_prob": 0.666,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CLE@KC",
+      "bet_type": "team_totals",
+      "pick": "KC OVER 4.5",
+      "model_prob": 0.482,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "MIL@STL",
+      "bet_type": "moneyline",
+      "pick": "MIL",
+      "model_prob": 0.514,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "MIL@STL",
+      "bet_type": "run_line",
+      "pick": "STL +1.5",
+      "model_prob": 0.653,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "MIL@STL",
+      "bet_type": "totals",
+      "pick": "OVER 8.5",
+      "model_prob": 0.586,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "MIL@STL",
+      "bet_type": "totals",
+      "pick": "OVER 9.0",
+      "model_prob": 0.455,
+      "result": "PUSH",
+      "units": 0.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "MIL@STL",
+      "bet_type": "totals",
+      "pick": "UNDER 9.5",
+      "model_prob": 0.545,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "MIL@STL",
+      "bet_type": "first_5",
+      "pick": "MIL",
+      "model_prob": 0.509,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "MIL@STL",
+      "bet_type": "first_inning",
+      "pick": "NRFI",
+      "model_prob": 0.508,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "MIL@STL",
+      "bet_type": "team_totals",
+      "pick": "MIL OVER 3.5",
+      "model_prob": 0.69,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "MIL@STL",
+      "bet_type": "team_totals",
+      "pick": "MIL OVER 4.5",
+      "model_prob": 0.507,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "MIL@STL",
+      "bet_type": "team_totals",
+      "pick": "STL OVER 3.5",
+      "model_prob": 0.668,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "MIL@STL",
+      "bet_type": "team_totals",
+      "pick": "STL OVER 4.5",
+      "model_prob": 0.484,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "LAD@HOU",
+      "bet_type": "moneyline",
+      "pick": "LAD",
+      "model_prob": 0.526,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "LAD@HOU",
+      "bet_type": "run_line",
+      "pick": "HOU +1.5",
+      "model_prob": 0.642,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "LAD@HOU",
+      "bet_type": "totals",
+      "pick": "OVER 8.5",
+      "model_prob": 0.532,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "LAD@HOU",
+      "bet_type": "totals",
+      "pick": "UNDER 9.0",
+      "model_prob": 0.468,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "LAD@HOU",
+      "bet_type": "totals",
+      "pick": "UNDER 9.5",
+      "model_prob": 0.599,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "LAD@HOU",
+      "bet_type": "first_5",
+      "pick": "HOU",
+      "model_prob": 0.502,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "LAD@HOU",
+      "bet_type": "first_inning",
+      "pick": "YRFI",
+      "model_prob": 0.512,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "LAD@HOU",
+      "bet_type": "team_totals",
+      "pick": "LAD OVER 3.5",
+      "model_prob": 0.662,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "LAD@HOU",
+      "bet_type": "team_totals",
+      "pick": "LAD OVER 4.5",
+      "model_prob": 0.478,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "LAD@HOU",
+      "bet_type": "team_totals",
+      "pick": "HOU OVER 3.5",
+      "model_prob": 0.617,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "LAD@HOU",
+      "bet_type": "team_totals",
+      "pick": "HOU UNDER 4.5",
+      "model_prob": 0.566,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CWS@LAA",
+      "bet_type": "moneyline",
+      "pick": "CWS",
+      "model_prob": 0.528,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CWS@LAA",
+      "bet_type": "run_line",
+      "pick": "LAA +1.5",
+      "model_prob": 0.64,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CWS@LAA",
+      "bet_type": "totals",
+      "pick": "OVER 8.5",
+      "model_prob": 0.508,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CWS@LAA",
+      "bet_type": "totals",
+      "pick": "UNDER 9.0",
+      "model_prob": 0.492,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CWS@LAA",
+      "bet_type": "totals",
+      "pick": "UNDER 9.5",
+      "model_prob": 0.621,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CWS@LAA",
+      "bet_type": "first_5",
+      "pick": "LAA",
+      "model_prob": 0.529,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CWS@LAA",
+      "bet_type": "first_inning",
+      "pick": "NRFI",
+      "model_prob": 0.532,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CWS@LAA",
+      "bet_type": "team_totals",
+      "pick": "CWS OVER 3.5",
+      "model_prob": 0.649,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CWS@LAA",
+      "bet_type": "team_totals",
+      "pick": "CWS UNDER 4.5",
+      "model_prob": 0.536,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CWS@LAA",
+      "bet_type": "team_totals",
+      "pick": "LAA OVER 3.5",
+      "model_prob": 0.599,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "CWS@LAA",
+      "bet_type": "team_totals",
+      "pick": "LAA UNDER 4.5",
+      "model_prob": 0.583,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "ATL@SEA",
+      "bet_type": "moneyline",
+      "pick": "ATL",
+      "model_prob": 0.571,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "ATL@SEA",
+      "bet_type": "run_line",
+      "pick": "SEA +1.5",
+      "model_prob": 0.597,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "ATL@SEA",
+      "bet_type": "totals",
+      "pick": "OVER 8.5",
+      "model_prob": 0.526,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "ATL@SEA",
+      "bet_type": "totals",
+      "pick": "UNDER 9.0",
+      "model_prob": 0.474,
+      "result": "PUSH",
+      "units": 0.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "ATL@SEA",
+      "bet_type": "totals",
+      "pick": "UNDER 9.5",
+      "model_prob": 0.604,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "ATL@SEA",
+      "bet_type": "first_5",
+      "pick": "ATL",
+      "model_prob": 0.574,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "ATL@SEA",
+      "bet_type": "first_inning",
+      "pick": "YRFI",
+      "model_prob": 0.529,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "ATL@SEA",
+      "bet_type": "team_totals",
+      "pick": "ATL OVER 3.5",
+      "model_prob": 0.696,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "ATL@SEA",
+      "bet_type": "team_totals",
+      "pick": "ATL OVER 4.5",
+      "model_prob": 0.513,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "ATL@SEA",
+      "bet_type": "team_totals",
+      "pick": "SEA OVER 3.5",
+      "model_prob": 0.573,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "ATL@SEA",
+      "bet_type": "team_totals",
+      "pick": "SEA UNDER 4.5",
+      "model_prob": 0.608,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "SD@SF",
+      "bet_type": "moneyline",
+      "pick": "SD",
+      "model_prob": 0.545,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "SD@SF",
+      "bet_type": "run_line",
+      "pick": "SF +1.5",
+      "model_prob": 0.624,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "SD@SF",
+      "bet_type": "totals",
+      "pick": "UNDER 8.5",
+      "model_prob": 0.625,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "SD@SF",
+      "bet_type": "totals",
+      "pick": "UNDER 9.0",
+      "model_prob": 0.625,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "SD@SF",
+      "bet_type": "totals",
+      "pick": "UNDER 9.5",
+      "model_prob": 0.737,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "SD@SF",
+      "bet_type": "first_5",
+      "pick": "SD",
+      "model_prob": 0.55,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "SD@SF",
+      "bet_type": "first_inning",
+      "pick": "NRFI",
+      "model_prob": 0.601,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "SD@SF",
+      "bet_type": "team_totals",
+      "pick": "SD OVER 3.5",
+      "model_prob": 0.562,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "SD@SF",
+      "bet_type": "team_totals",
+      "pick": "SD UNDER 4.5",
+      "model_prob": 0.617,
+      "result": "WIN",
+      "units": 0.909
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "SD@SF",
+      "bet_type": "team_totals",
+      "pick": "SF OVER 3.5",
+      "model_prob": 0.48,
+      "result": "LOSS",
+      "units": -1.0
+    },
+    {
+      "date": "2026-05-04",
+      "matchup": "SD@SF",
+      "bet_type": "team_totals",
+      "pick": "SF UNDER 4.5",
+      "model_prob": 0.686,
+      "result": "WIN",
+      "units": 0.909
     }
   ]
 }
