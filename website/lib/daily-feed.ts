@@ -16,7 +16,7 @@ import path from "node:path";
 import { api } from "./api";
 import type { ArchivedPick, SlateDetail } from "./types";
 
-export const DAILY_FEED_PATH = "data/mlb/mlb_daily.json";
+export const DAILY_FEED_PATH = "../public/data/mlb/mlb_daily.json";
 export const DAILY_FEED_VERSION = 1;
 
 // ---------------------------------------------------------------------------
