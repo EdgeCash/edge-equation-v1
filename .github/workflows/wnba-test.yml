@@ -1,0 +1,24 @@
+name: WNBA Engine Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-wnba:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+
+      - name: Run WNBA Engine
+        run: |
+          python -m edge_equation.engines.wnba.run_daily
