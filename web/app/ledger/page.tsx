@@ -42,11 +42,14 @@ export default async function LedgerPage({ searchParams }: LedgerRouteProps) {
   const sportFilter = parseSport(sp.sport);
   const resultFilter = parseResult(sp.result);
   const clvFilter = parseClv(sp.clv);
+  const marketFilter = parseMarket(sp.mkt);
   const page = Math.max(1, parseInt(String(sp.page ?? "1"), 10) || 1);
 
   const all = await loadAllPicks();
+  const availableMarkets = distinctMarkets(all);
   const filtered = applyFilters(all, {
     sport: sportFilter, result: resultFilter, clv: clvFilter,
+    market: marketFilter,
   });
   const summary = summarizePicks(filtered);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -79,6 +82,8 @@ export default async function LedgerPage({ searchParams }: LedgerRouteProps) {
           sport={sportFilter}
           result={resultFilter}
           clv={clvFilter}
+          market={marketFilter}
+          availableMarkets={availableMarkets}
         />
         <SummaryStrip summary={summary} />
         {visible.length === 0 ? (
@@ -117,6 +122,7 @@ export default async function LedgerPage({ searchParams }: LedgerRouteProps) {
             sport: sportFilter,
             result: resultFilter,
             clv: clvFilter,
+            market: marketFilter,
           }}
         />
       </section>
@@ -152,9 +158,30 @@ function parseClv(v: string | string[] | undefined): CLVFilter {
 }
 
 
+function parseMarket(v: string | string[] | undefined): string | null {
+  if (!v) return null;
+  const raw = String(Array.isArray(v) ? v[0] : v).trim();
+  return raw.length > 0 && raw.length < 64 ? raw : null;
+}
+
+
+function distinctMarkets(picks: PickRecord[]): string[] {
+  const seen = new Set<string>();
+  for (const p of picks) {
+    if (p.bet_type && p.bet_type.trim()) seen.add(p.bet_type.trim());
+  }
+  return Array.from(seen).sort();
+}
+
+
 function applyFilters(
   picks: PickRecord[],
-  filters: { sport: SportKey | "all"; result: ResultFilter; clv: CLVFilter },
+  filters: {
+    sport: SportKey | "all";
+    result: ResultFilter;
+    clv: CLVFilter;
+    market: string | null;
+  },
 ): PickRecord[] {
   return picks.filter((p) => {
     if (filters.sport !== "all" && p.sport !== filters.sport) return false;
@@ -171,6 +198,9 @@ function applyFilters(
     if (filters.clv === "negative" && !(p.clv_pct !== null && p.clv_pct < 0)) {
       return false;
     }
+    if (filters.market && (p.bet_type ?? "") !== filters.market) {
+      return false;
+    }
     return true;
   });
 }
@@ -180,24 +210,27 @@ function applyFilters(
 
 
 function Filters({
-  sport, result, clv,
+  sport, result, clv, market, availableMarkets,
 }: {
   sport: SportKey | "all";
   result: ResultFilter;
   clv: CLVFilter;
+  market: string | null;
+  availableMarkets: string[];
 }) {
+  const baseFilters = { sport, result, clv, market };
   return (
     <div className="chalk-card p-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-4 overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-4">
       <FilterGroup label="Sport">
         <FilterChip
-          href={hrefFor({ sport: "all", result, clv })}
+          href={hrefFor({ ...baseFilters, sport: "all" })}
           active={sport === "all"}
           label="All"
         />
         {SPORTS.map((s) => (
           <FilterChip
             key={s}
-            href={hrefFor({ sport: s, result, clv })}
+            href={hrefFor({ ...baseFilters, sport: s })}
             active={sport === s}
             label={SPORT_LABEL[s]}
           />
@@ -207,7 +240,7 @@ function Filters({
         {(["all", "WIN", "LOSS", "PUSH", "PENDING"] as const).map((r) => (
           <FilterChip
             key={r}
-            href={hrefFor({ sport, result: r, clv })}
+            href={hrefFor({ ...baseFilters, result: r })}
             active={result === r}
             label={r === "all" ? "All" : r}
           />
@@ -215,21 +248,38 @@ function Filters({
       </FilterGroup>
       <FilterGroup label="CLV">
         <FilterChip
-          href={hrefFor({ sport, result, clv: "all" })}
+          href={hrefFor({ ...baseFilters, clv: "all" })}
           active={clv === "all"}
           label="All"
         />
         <FilterChip
-          href={hrefFor({ sport, result, clv: "positive" })}
+          href={hrefFor({ ...baseFilters, clv: "positive" })}
           active={clv === "positive"}
           label="+CLV"
         />
         <FilterChip
-          href={hrefFor({ sport, result, clv: "negative" })}
+          href={hrefFor({ ...baseFilters, clv: "negative" })}
           active={clv === "negative"}
           label="−CLV"
         />
       </FilterGroup>
+      {availableMarkets.length > 0 && (
+        <FilterGroup label="Market">
+          <FilterChip
+            href={hrefFor({ ...baseFilters, market: null })}
+            active={!market}
+            label="All"
+          />
+          {availableMarkets.map((m) => (
+            <FilterChip
+              key={`mkt-${m}`}
+              href={hrefFor({ ...baseFilters, market: m })}
+              active={m === market}
+              label={m}
+            />
+          ))}
+        </FilterGroup>
+      )}
     </div>
   );
 }
@@ -270,11 +320,13 @@ function hrefFor(filters: {
   sport: SportKey | "all";
   result: ResultFilter;
   clv: CLVFilter;
+  market: string | null;
 }): string {
   const params = new URLSearchParams();
   if (filters.sport !== "all") params.set("sport", filters.sport);
   if (filters.result !== "all") params.set("result", filters.result);
   if (filters.clv !== "all") params.set("clv", filters.clv);
+  if (filters.market) params.set("mkt", filters.market);
   const qs = params.toString();
   return qs ? `/ledger?${qs}` : "/ledger";
 }
@@ -445,6 +497,7 @@ function Pagination({
     sport: SportKey | "all";
     result: ResultFilter;
     clv: CLVFilter;
+    market: string | null;
   };
 }) {
   if (total <= 1) return null;
@@ -452,6 +505,7 @@ function Pagination({
   if (extra.sport !== "all") params.set("sport", extra.sport);
   if (extra.result !== "all") params.set("result", extra.result);
   if (extra.clv !== "all") params.set("clv", extra.clv);
+  if (extra.market) params.set("mkt", extra.market);
   const baseQs = params.toString();
   const buildHref = (page: number) => {
     const merged = new URLSearchParams(baseQs);
