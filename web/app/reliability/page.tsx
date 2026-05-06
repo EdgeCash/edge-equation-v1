@@ -103,9 +103,10 @@ function SportPanel({
           {SPORT_LABEL[sport]} hub →
         </Link>
       </header>
-      <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_240px]">
+      <div className="mt-4 grid gap-4 lg:gap-6 lg:grid-cols-[1fr_240px]">
         <ReliabilityDiagram picks={rows} />
-        <div className="space-y-3 text-xs text-chalk-300">
+        <div className="text-xs text-chalk-300">
+          <div className="space-y-3">
           <div>
             <p className="text-[10px] uppercase tracking-wider text-chalk-500">
               <MetricTip term="brier" label="Brier score" />
@@ -137,6 +138,7 @@ function SportPanel({
               that bucket. Sparse buckets are noisier and shouldn&apos;t
               be over-interpreted.
             </p>
+          </div>
           </div>
         </div>
       </div>
