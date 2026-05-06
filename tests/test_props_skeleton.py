@@ -249,12 +249,19 @@ def test_build_edge_picks_filters_below_min_tier():
 
 def test_build_edge_picks_classifies_moderate_at_7pp():
     """Post 2026-05-02 the edge ladder is 12/8/5/2.5pp. A 7pp edge
-    classifies as MODERATE; previously this would have been STRONG."""
+    classifies as MODERATE; previously this would have been STRONG.
+
+    Calibration shrink is disabled here so the test pins ladder math
+    directly without the May-2026 prob-shrink-toward-market layer
+    pulling probs into a different tier (covered separately in
+    test_props_calibration.py).
+    """
     line = _line(side="Over", american_odds=+250)  # implied ~28.6%
     proj = ProjectedSide(market=line.market, player_name=line.player_name,
                           line_value=0.5, side="Over",
                           model_prob=0.36, confidence=0.5)  # ~7.4pp edge
-    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
+    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN,
+                             apply_calibration=False)
     assert len(picks) == 1
     assert picks[0].tier == Tier.MODERATE
     assert picks[0].edge_pp > 5.0
@@ -266,7 +273,8 @@ def test_build_edge_picks_classifies_strong_at_8pp_with_high_prob():
     proj = ProjectedSide(market=line.market, player_name=line.player_name,
                           line_value=0.5, side="Over",
                           model_prob=0.62, confidence=0.5)  # ~9.6pp edge
-    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
+    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN,
+                             apply_calibration=False)
     assert len(picks) == 1
     assert picks[0].tier == Tier.STRONG
 
@@ -277,7 +285,8 @@ def test_build_edge_picks_demotes_elite_when_model_prob_below_floor():
     proj = ProjectedSide(market=line.market, player_name=line.player_name,
                           line_value=0.5, side="Over",
                           model_prob=0.46, confidence=0.5)  # ~13pp edge
-    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN)
+    picks = build_edge_picks([line], [proj], min_tier=Tier.LEAN,
+                             apply_calibration=False)
     assert len(picks) == 1
     assert picks[0].tier == Tier.STRONG
     assert picks[0].edge_pp > 12.0
@@ -292,7 +301,8 @@ def test_build_edge_picks_sorts_by_edge_desc():
     b_proj = ProjectedSide(market=b.market, player_name=b.player_name,
                               line_value=0.5, side="Over",
                               model_prob=0.32, confidence=0.5)
-    picks = build_edge_picks([b, a], [b_proj, a_proj], min_tier=Tier.LEAN)
+    picks = build_edge_picks([b, a], [b_proj, a_proj], min_tier=Tier.LEAN,
+                             apply_calibration=False)
     assert [p.player_name for p in picks] == ["big_edge", "small_edge"]
 
 

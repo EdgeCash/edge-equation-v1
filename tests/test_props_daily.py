@@ -222,12 +222,17 @@ def test_build_props_card_happy_path_renders_top_board(monkeypatch):
                           lambda cfg, outs, dt: None)
 
     # Inject per-player rates so the projection produces a real edge
-    # vs the +250 line (28.6% implied) → model 36% → 7.4pp STRONG.
+    # vs the +250 line (28.6% implied). Pre-2026-05-06 the test used
+    # 0.10 / PA which yielded a 7.4pp raw edge -- enough for STRONG.
+    # The May-2026 calibration shrink pulls model_prob toward the de-
+    # vigged market, so the rate needs to be higher to clear the LEAN
+    # floor post-shrink. 0.20 / PA blends to ~0.16 lam, raw model_prob
+    # ~0.45, calibrated ~0.37 -> ~10pp edge -> STRONG.
     rates = {
         "Aaron Judge": BatterRollingRates(
             player_id=1, player_name="Aaron Judge", n_pa=300,
             end_date="2026-04-28", lookback_days=60,
-            rate_per_pa={"HR": 0.10},
+            rate_per_pa={"HR": 0.20},
         ),
     }
     card = daily_mod.build_props_card(
