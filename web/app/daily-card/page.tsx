@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { AlertBanner } from "../../components/AlertBanner";
 import { ChalkboardBackground } from "../../components/ChalkboardBackground";
 import { DailyCardTable } from "../../components/DailyCardTable";
+import { EmailSignup } from "../../components/EmailSignup";
 import { loadAlertReport } from "../../lib/alerts";
 import { getDailyData, type TodaysPlay } from "../../lib/types";
 
@@ -93,6 +94,16 @@ export default async function DailyCardPage() {
             .
           </p>
         )}
+      </section>
+
+      <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-12">
+        <EmailSignup
+          headline="Want this in your inbox?"
+          subline={
+            "One daily card per day, before 11 AM CDT. "
+            + "Same picks, same parlays, same data. Unsubscribe any time."
+          }
+        />
       </section>
     </>
   );
