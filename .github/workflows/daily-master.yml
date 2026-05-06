@@ -149,9 +149,18 @@ jobs:
       - name: Commit and push outputs
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          # Add every output dir the catalog declared. xargs handles
-          # the multi-line list cleanly.
-          echo "${{ steps.paths.outputs.paths }}" | xargs -r git add || true
+          # Add each declared output path individually so a missing
+          # dir (e.g. an empty slate produced no player_logs/ for a
+          # sport) doesn't abort `git add` and silently leave
+          # `latest.json` + `calibration_alerts.json` un-staged.
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            if [ -e "$path" ]; then
+              git add "$path"
+            else
+              echo "Skipping missing path: $path"
+            fi
+          done <<< "${{ steps.paths.outputs.paths }}"
           if git diff --staged --quiet; then
             echo "No data changes to commit."
             exit 0
@@ -159,15 +168,23 @@ jobs:
           DATE_TAG=$(date -u +"%Y-%m-%d")
           git commit -m "Daily master — $DATE_TAG (every engine + unified feed)"
           # Pull --rebase before push so a manual workflow_dispatch
-          # mid-cron doesn't fail with non-fast-forward.
+          # mid-cron doesn't fail with non-fast-forward. If all three
+          # attempts fail, hard-fail the step — silent push failures
+          # let stale data sit on main.
+          pushed=0
           for attempt in 1 2 3; do
             if git push; then
+              pushed=1
               break
             fi
             echo "Push attempt $attempt failed — pulling --rebase and retrying."
             git pull --rebase origin main
             sleep $((attempt * 2))
           done
+          if [ "$pushed" -ne 1 ]; then
+            echo "::error::Push failed after 3 attempts — daily data not published."
+            exit 1
+          fi
 
       - name: Dry-run notice
         if: ${{ github.event.inputs.dry_run == 'true' }}

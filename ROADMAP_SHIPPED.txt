@@ -1,0 +1,78 @@
+EDGEEQUATION — SHORT-TERM ROADMAP: SHIPPED
+==========================================
+Tone: Facts. Not Feelings. No hype. No gating.
+
+ENGINE FOUNDATIONS (pre-roadmap)
+--------------------------------
+- MLB stack finalized — strict 3–6 leg parlays, 11 AM CDT cron polish.   (#160)
+- WNBA — full MLB blueprint port, feature-flagged.                       (#161)
+- NCAAF + NFL — football engines jump-started off MLB/WNBA blueprint,
+  feature-flagged so they don't ship picks until quality bar is hit.     (#162)
+- Closing-line snapshot logger — every Odds API call forwards CLV data. (#158)
+
+WEBSITE PHASES (pre-roadmap)
+----------------------------
+- Phase 1 — search, profiles, analytics hub.                             (#163)
+- Phase 2 — per-sport hubs, parlay viewer, tooltips, methodology.        (#165)
+- Phase 3 — track record, reliability, ledger, downloads.                (#166)
+- Phase 4 — Data Center, game logs, live context, mobile pass.           (#167)
+- ci — master daily workflow + run_daily_all.py ENGINE_CATALOG.          (#168)
+- ci — master workflow runs legacy MLB spreadsheet before all engines.   (#169)
+
+ROADMAP ITEMS 1–5 (this sprint)
+-------------------------------
+
+ITEM 1 — Player profile data writers                                     (#170)
+  • Per-player game logs (last 25, sport-specific stat columns).
+  • "Today's context" sidecar (matchup, venue, weather, lineup, umpire).
+  • Wired into /player/<sport>/<id> with Limited Data fallback.
+
+ITEM 2 — Calibration-drift alerts                                        (#171)
+  • Per-sport reliability monitor; flags critical/warning when realized
+    hit rate drifts >X pp from predicted in 50+ pick rolling window.
+  • Writes alert report consumed by /reliability AlertBanner.
+
+ITEM 2.5 — Critical failsafe + workflow push retry                       (#172)
+  (Slid in mid-sprint per user.)
+  • Engines never publish picks for already-started games.
+  • All per-sport workflows: 3-attempt git pull --rebase retry on push
+    race. Hard-fail if all 3 attempts fail.
+
+ITEM 3 — Email opt-in + daily digest                                    (#173)
+  • Resend-powered broadcast list, double opt-in, /api/subscribe.
+  • Daily digest exporter — top picks per sport, CLV summary, link to
+    /daily-card. Cron-triggered after master engine run.
+
+ITEM 4 — Open Graph images + shareability                               (#174)
+  • next/og ImageResponse per route (daily-card, parlays, sport hub,
+    player, team). Chalkboard theme matches site.
+  • One-tap share on profile + parlay pages.
+
+ITEM 5 — Search v2 + Filters                                            (#175)
+  • web/lib/fuzzy.ts — zero-dep fuzzy matcher.
+    Score ladder: exact → alnum-equal → prefix → substring →
+    Levenshtein typo (≤2 dist for queries ≥4 chars) → subsequence.
+  • searchEntries() rewires to score over display + id + sport;
+    typing "judge" reaches Aaron Judge; typo "juge" still resolves.
+  • Profile pages (/player, /team) gain Result + Market filter chips
+    on top of existing Last-N + Home/Away.
+  • /ledger gains a Market chip group; pagination preserves ?mkt=.
+  • /reliability gains a Sport chip group that collapses the panel
+    stack to one sport.
+  • All filter state is URL-param driven (server-component re-render,
+    no client state). No new deps. Build clean.
+
+STATUS
+------
+Items 1–5: ALL MERGED to main.
+Engines: MLB live; WNBA/NFL/NCAAF feature-flagged.
+Failsafes: upcoming-games-only + calibration-drift + workflow push
+           retry all live.
+Web: every page on the post-roadmap surface ships with filters,
+     OG images, and fuzzy search.
+
+NEXT (open / suggested — not yet scoped)
+----------------------------------------
+- Lift WNBA / NFL / NCAAF feature flags once each sport hits its
+  quality bar (Brier < 0.246, sample size threshold).
+- Long-term roadmap items beyond Search v2.
