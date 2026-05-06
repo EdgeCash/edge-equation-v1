@@ -1,7 +1,7 @@
 {
-  "picks_total": 6,
+  "picks_total": 8,
   "picks_with_close": 0,
-  "picks_graded": 6,
+  "picks_graded": 8,
   "overall": {
     "n": 0,
     "mean_clv_pct": null,
@@ -19,40 +19,51 @@
     "neutral": 0
   },
   "record_overall": {
-    "n": 6,
-    "wins": 3,
-    "losses": 3,
+    "n": 8,
+    "wins": 4,
+    "losses": 4,
     "pushes": 0,
     "hit_rate": 50.0,
-    "units_pl": 0.8,
-    "roi_pct": 13.33,
+    "units_pl": 0.63,
+    "roi_pct": 7.88,
     "mean_clv_pct": null,
     "n_with_clv": 0
   },
   "record_30d": {
-    "n": 6,
-    "wins": 3,
-    "losses": 3,
+    "n": 8,
+    "wins": 4,
+    "losses": 4,
     "pushes": 0,
     "hit_rate": 50.0,
-    "units_pl": 0.8,
-    "roi_pct": 13.33,
+    "units_pl": 0.63,
+    "roi_pct": 7.88,
     "mean_clv_pct": null,
     "n_with_clv": 0
   },
   "by_bet_type": {},
   "record_by_bet_type": {
     "run_line": {
-      "n": 6,
+      "n": 7,
       "wins": 3,
-      "losses": 3,
+      "losses": 4,
       "pushes": 0,
-      "hit_rate": 50.0,
-      "units_pl": 0.8,
-      "roi_pct": 13.33,
+      "hit_rate": 42.9,
+      "units_pl": -0.2,
+      "roi_pct": -2.86,
+      "mean_clv_pct": null,
+      "n_with_clv": 0
+    },
+    "totals": {
+      "n": 1,
+      "wins": 1,
+      "losses": 0,
+      "pushes": 0,
+      "hit_rate": 100.0,
+      "units_pl": 0.83,
+      "roi_pct": 83.0,
       "mean_clv_pct": null,
       "n_with_clv": 0
     }
   },
-  "generated_at": "2026-05-06T22:34:19.884977Z"
+  "generated_at": "2026-05-06T22:59:02.189980Z"
 }
