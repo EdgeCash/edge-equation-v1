@@ -82,6 +82,7 @@ def build_props_card(
     persist: bool = True,
     settle_yesterday: bool = True,
     top_n: int = 8,
+    passed_markets: Optional[set[str]] = None,
 ) -> PropsCard:
     """Build a `PropsCard` for `target_date`.
 
@@ -96,6 +97,13 @@ def build_props_card(
         before rendering the ledger so today's email reflects last
         night's W/L.
     top_n : Maximum number of picks to surface in the top board.
+    passed_markets : When provided, drops every line whose
+        `market.canonical` is NOT in this set BEFORE projection.
+        This is the BRAND_GUIDE rolling-backtest gate -- pass the
+        set returned by `gates.market_gate(<backtest_summary>)` and
+        the daily orchestrator only ships markets that historically
+        clear +1% ROI / Brier <0.246 over 200+ bets. None means no
+        gate (all markets allowed; cold-start behaviour).
     """
     cfg = (config or get_default_config()).resolve_paths()
     target = target_date or _date.today().isoformat()
@@ -117,6 +125,26 @@ def build_props_card(
         # email has something useful.
         card.ledger_text = _safe_render_ledger(cfg, target)
         return card
+
+    # 1b. Apply the BRAND_GUIDE rolling-backtest market gate. Drops
+    # entire markets that don't pass the +1% ROI / Brier <0.246 / 200+
+    # bets test, before we spend Statcast lookups on them. None == cold
+    # start (all markets allowed).
+    if passed_markets is not None:
+        n_before = len(lines)
+        lines = [
+            ln for ln in lines if ln.market.canonical in passed_markets
+        ]
+        n_dropped = n_before - len(lines)
+        if n_dropped:
+            log.info(
+                "props daily: market gate dropped %d/%d lines "
+                "(allowed: %s)",
+                n_dropped, n_before, sorted(passed_markets),
+            )
+        if not lines:
+            card.ledger_text = _safe_render_ledger(cfg, target)
+            return card
 
     # 2. Load per-player rates for every distinct (player, role) pair
     # on the slate. The caller may pre-populate `rates_by_player` to
