@@ -1,19 +1,13 @@
 name: NCAAF Daily
 
 # Builds today's NCAAF picks JSON (per-row outputs + both strict
-# parlay engines) and commits the new files to main, which triggers
-# an automatic Vercel redeploy. Mirror of nfl-daily.yml.
+# parlay engines) and commits the new files to main.
 #
-# Cutoff: site live by 11:00 AM CDT (16:00 UTC during DST). Same
-# CDT/CST cron pair as the other sports.
-#
-# FEATURE-FLAGGED OFF via the NCAAF_PIPELINE_ENABLED variable until
-# the 2026 season cutover. Strict parlay engines layered on top via
-# EDGE_FEATURE_NCAAF_PARLAYS.
+# CRON SCHEDULE REMOVED — `daily-master.yml` is the canonical
+# scheduler for every sport. This workflow stays available for
+# ad-hoc operator runs via "Run workflow" when a NCAAF-only
+# rebuild is needed.
 on:
-  schedule:
-    - cron: "0 14 * * *"   # 09:00 CDT (Mar–Nov)
-    - cron: "0 15 * * *"   # 09:00 CST (Nov–Mar)
   workflow_dispatch:
     inputs:
       date:
