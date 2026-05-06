@@ -63,6 +63,10 @@ export default async function DailyCardPage() {
               ET
             </time>
           </p>
+          <p className="mt-3 text-xs font-mono text-chalk-500 border-t border-chalkboard-700/60 pt-3">
+            Picks shown only for games not yet started ·{" "}
+            <UpcomingOnlyTimestamp generatedAt={generatedAt} />
+          </p>
         </div>
       </section>
 
@@ -144,6 +148,23 @@ function EmptyCard({
         </p>
       )}
     </div>
+  );
+}
+
+/* ---------- Failsafe footer timestamp ---------- */
+
+function UpcomingOnlyTimestamp({ generatedAt }: { generatedAt: string }) {
+  const stamp = new Date(generatedAt).toLocaleString("en-US", {
+    timeZone: "America/Chicago",
+    hour: "numeric",
+    minute: "2-digit",
+    month: "short",
+    day: "numeric",
+  });
+  return (
+    <span>
+      Last updated: {stamp} CDT
+    </span>
   );
 }
 

@@ -1500,6 +1500,11 @@ class DailySpreadsheet:
                     "edge_pct": r.get("edge_pct"),
                     "kelly_pct": r.get("kelly_pct"),
                     "kelly_advice": r.get("kelly_advice"),
+                    # Surface game_time on every row so the upcoming-only
+                    # failsafe (applied below) has a timestamp to filter on.
+                    # The source tabs already populate this field; we just
+                    # forward it to today's-card rows.
+                    "game_time": r.get("game_time"),
                 })
 
         priced = [r for r in rows if r.get("edge_pct") is not None]
@@ -1512,6 +1517,27 @@ class DailySpreadsheet:
         plays = [r for r in priced if _meets_threshold(r)]
         if top_n and len(plays) > top_n:
             plays = plays[:top_n]
+
+        # AUDIT-LOCKED FAILSAFE — never publish picks for games
+        # already started or completed. Applied after the threshold
+        # cut so dropped rows are recorded as Started, not Filtered.
+        from edge_equation.engines.upcoming_only import filter_to_upcoming
+        plays, skipped_started = filter_to_upcoming(
+            plays,
+            get_time=lambda r: r.get("game_time"),
+            get_status=None,
+            get_label=lambda r: (
+                f"MLB legacy card {r.get('matchup', '?')} "
+                f"{r.get('bet_type', '?')} {r.get('pick', '?')}"
+            ),
+            log_prefix="upcoming-only",
+        )
+        if skipped_started:
+            print(
+                f"[upcoming-only] MLB legacy card: kept {len(plays)} "
+                f"plays; dropped {len(skipped_started)} started "
+                f"games.",
+            )
 
         # Portfolio cap — same-game bets are correlated; cap the sum of
         # half-Kelly across one matchup at portfolio_cap_per_game (% of
@@ -1569,7 +1595,7 @@ class DailySpreadsheet:
                 "bet_type", "pick", "model_prob",
                 "fair_odds_dec", "market_odds_dec", "market_odds_american",
                 "book", "edge_pct", "kelly_pct", "kelly_advice",
-                "portfolio_scaled_from",
+                "portfolio_scaled_from", "game_time",
             ],
             "backfill_columns": [
                 "date", "matchup", "starting_pitchers",

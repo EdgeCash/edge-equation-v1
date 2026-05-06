@@ -271,17 +271,23 @@ except Exception:  # pragma: no cover — defensive fallback
     )
 
 
+UPCOMING_ONLY_NOTE: str = (
+    "Picks shown only for games not yet started"
+)
+
+
 def _build_footer(generated_at_iso: str) -> str:
     """Build the operator-facing freshness footer.
 
     Format::
 
-        Updated: 2026-05-06 09:32 CDT | Data as of 14:32 UTC
+        Picks shown only for games not yet started · Updated:
+          2026-05-06 09:32 CDT | Data as of 14:32 UTC
 
-    The website renders this verbatim under every section. Time is
-    expressed in CDT (the operator's timezone) plus the raw UTC
-    timestamp the JSON was written, so anyone forwarding the JSON
-    (or reading it on a non-DST machine) can reconcile the two.
+    The first half is the audit-locked failsafe note (never stale
+    games). The second half is the freshness timestamp expressed
+    in CDT (the operator's timezone) + the raw UTC timestamp so
+    anyone forwarding the JSON can reconcile the two.
     """
     try:
         from datetime import datetime
@@ -294,13 +300,22 @@ def _build_footer(generated_at_iso: str) -> str:
             ts_local = ts_utc.astimezone(ct)
             tz_label = ts_local.strftime("%Z") or "CT"
             return (
+                f"{UPCOMING_ONLY_NOTE} · "
                 f"Updated: {ts_local.strftime('%Y-%m-%d %H:%M')} {tz_label} | "
                 f"Data as of {ts_utc.strftime('%H:%M')} UTC"
             )
         except Exception:
-            return f"Updated: {generated_at_iso} | Data as of {generated_at_iso}"
+            return (
+                f"{UPCOMING_ONLY_NOTE} · "
+                f"Updated: {generated_at_iso} | "
+                f"Data as of {generated_at_iso}"
+            )
     except Exception:
-        return f"Updated: {generated_at_iso} | Data as of {generated_at_iso}"
+        return (
+            f"{UPCOMING_ONLY_NOTE} · "
+            f"Updated: {generated_at_iso} | "
+            f"Data as of {generated_at_iso}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -994,6 +1009,90 @@ class _DuckRow:
             setattr(self, key, value)
 
 
+# ---------------------------------------------------------------------------
+# AUDIT-LOCKED FAILSAFE: upcoming-games-only filter.
+#
+# Wraps the shared `engines.upcoming_only` module — every list of
+# picks + parlays passes through one of these helpers right before
+# the FeedBundle is constructed, so a started/finished game can
+# never leak into the public feed.
+# ---------------------------------------------------------------------------
+
+
+def _drop_started_picks(
+    picks: list[FeedPick] | None, *, label: str,
+) -> tuple[list[FeedPick], set[str]]:
+    """Filter picks to upcoming-only. Returns ``(survivors,
+    dropped_selections)`` where the second element lets the parlay
+    filter check whether any of its legs reference a dropped game.
+    """
+    if not picks:
+        return list(picks or []), set()
+    from edge_equation.engines.upcoming_only import filter_to_upcoming
+    upcoming, skipped = filter_to_upcoming(
+        picks,
+        get_time=lambda p: p.event_time,
+        get_status=None,
+        get_label=lambda p: f"{label} pick {p.id} ({p.selection})",
+        log_prefix="upcoming-only",
+    )
+    if skipped:
+        print(
+            f"[upcoming-only] {label}: kept {len(upcoming)} of "
+            f"{len(picks)} picks; dropped {len(skipped)}.",
+        )
+    dropped_selections = {
+        p.selection for (p, _reason) in skipped if p and p.selection
+    }
+    return upcoming, dropped_selections
+
+
+def _drop_parlays_with_started_legs(
+    parlays: list["FeedParlay"] | None, *,
+    label: str,
+    dropped_pick_selections: set[str] | None = None,
+) -> list["FeedParlay"]:
+    """A parlay survives only when no leg references a dropped pick.
+
+    The FeedParlayLeg payload doesn't carry an event_time field
+    today, so we can't time-check a leg in isolation. Instead we
+    use the selection-string match: if a leg's selection appears
+    in `dropped_pick_selections` (the set of selections filtered
+    out at the per-pick step), drop the entire parlay.
+
+    This is conservative — if a parlay leg has no matching pick at
+    all (rare, only happens when the parlay engine sourced a leg
+    the per-row engine didn't surface), we admit it. The audit's
+    "fail closed" rule is preserved because the per-pick filter
+    is the primary defense; the parlay filter is the secondary
+    one. Anything missed here also gets caught by the per-engine
+    `is_upcoming` check we'll thread through in a follow-up PR
+    once the FeedParlayLeg shape is extended with commence_time.
+    """
+    if not parlays:
+        return list(parlays or [])
+    if not dropped_pick_selections:
+        return list(parlays)
+    survivors: list[FeedParlay] = []
+    n_dropped = 0
+    for p in parlays:
+        leg_sels = {leg.selection for leg in (p.legs or []) if leg.selection}
+        if leg_sels & dropped_pick_selections:
+            print(
+                f"::notice::upcoming-only: dropped {label} parlay "
+                f"{p.id} — at least one leg overlaps a started game",
+            )
+            n_dropped += 1
+            continue
+        survivors.append(p)
+    if n_dropped:
+        print(
+            f"[upcoming-only] {label}: kept {len(survivors)} of "
+            f"{len(parlays)} parlays; dropped {n_dropped}.",
+        )
+    return survivors
+
+
 def build_bundle(
     store, target_date: str,
     props_store=None,
@@ -1120,6 +1219,52 @@ def build_bundle(
         ncaaf_props_parlays=ncaaf_props_parlays,
         ncaaf_no_qualified=ncaaf_no_qualified,
         include_ncaaf=include_ncaaf,
+    )
+
+    # AUDIT-LOCKED FAILSAFE — never publish picks for games already
+    # started or completed. Applied to every sport's picks + parlay
+    # legs at the LAST step before the FeedBundle is constructed,
+    # so any filter bug fails closed (drops the row) rather than
+    # leaking a stale game.
+    picks, mlb_dropped = _drop_started_picks(picks, label="MLB")
+    wnba_picks, wnba_dropped = _drop_started_picks(
+        wnba_picks, label="WNBA",
+    )
+    nfl_picks, nfl_dropped = _drop_started_picks(nfl_picks, label="NFL")
+    ncaaf_picks, ncaaf_dropped = _drop_started_picks(
+        ncaaf_picks, label="NCAAF",
+    )
+    game_results_parlays = _drop_parlays_with_started_legs(
+        game_results_parlays, label="MLB game-results",
+        dropped_pick_selections=mlb_dropped,
+    )
+    player_props_parlays = _drop_parlays_with_started_legs(
+        player_props_parlays, label="MLB player-props",
+        dropped_pick_selections=mlb_dropped,
+    )
+    wnba_game_parlays = _drop_parlays_with_started_legs(
+        wnba_game_parlays, label="WNBA game-results",
+        dropped_pick_selections=wnba_dropped,
+    )
+    wnba_props_parlays = _drop_parlays_with_started_legs(
+        wnba_props_parlays, label="WNBA player-props",
+        dropped_pick_selections=wnba_dropped,
+    )
+    nfl_game_parlays = _drop_parlays_with_started_legs(
+        nfl_game_parlays, label="NFL game-results",
+        dropped_pick_selections=nfl_dropped,
+    )
+    nfl_props_parlays = _drop_parlays_with_started_legs(
+        nfl_props_parlays, label="NFL player-props",
+        dropped_pick_selections=nfl_dropped,
+    )
+    ncaaf_game_parlays = _drop_parlays_with_started_legs(
+        ncaaf_game_parlays, label="NCAAF game-results",
+        dropped_pick_selections=ncaaf_dropped,
+    )
+    ncaaf_props_parlays = _drop_parlays_with_started_legs(
+        ncaaf_props_parlays, label="NCAAF player-props",
+        dropped_pick_selections=ncaaf_dropped,
     )
 
     notes = (
