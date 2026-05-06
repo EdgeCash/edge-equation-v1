@@ -106,6 +106,48 @@ def edge_floor_for(
     return DEFAULT_EDGE_THRESHOLDS_BY_MARKET.get(bet_type, 3.0)
 
 
+FLAT_DECIMAL_ODDS = 1.909  # -110, the assumed historical price
+
+
+def prob_floor_for(
+    bet_type: str,
+    decimal_odds: float = FLAT_DECIMAL_ODDS,
+    overrides: dict[str, float] | None = None,
+) -> float:
+    """Translate a per-market edge floor (in %) into a model-probability
+    floor at the assumed flat price. At -110 (decimal 1.909), edge_pct =
+    prob * 1.909 - 1 ; so prob_floor = (1 + edge/100) / decimal_odds.
+
+    This is what the play-only gate uses to decide which historical bets
+    "would have been published" — i.e., simulate the production filter
+    against a flat-price backfill where we don't have historical odds.
+    """
+    edge_floor_pct = edge_floor_for(bet_type, overrides=overrides)
+    return (1.0 + edge_floor_pct / 100.0) / decimal_odds
+
+
+def select_summary_for_gate(
+    backtest_payload: dict | None,
+) -> tuple[list[dict] | None, str]:
+    """Pick the right summary slice to feed `market_gate`.
+
+    The original gate consumed `summary_by_bet_type`, which scores every
+    line the model touched (e.g. 1752 totals = 3 lines x 584 games). That
+    over-states sample size and dilutes both ROI and Brier with marginal
+    rows the production filter would have dropped. When the backtest
+    provides `summary_by_bet_type_play_only`, prefer it — it represents
+    the slice we'd actually publish.
+
+    Returns (summary, source_label). source_label is for logging only.
+    """
+    if not backtest_payload:
+        return None, "none"
+    play = backtest_payload.get("summary_by_bet_type_play_only")
+    if play:
+        return play, "play_only"
+    return backtest_payload.get("summary_by_bet_type"), "all"
+
+
 def parse_threshold_overrides(args: list[str] | None) -> dict[str, float]:
     """Parse `--edge-threshold MARKET=PCT` repeated CLI flags into a dict.
     Skips malformed entries silently rather than aborting the run."""
