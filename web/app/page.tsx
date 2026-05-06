@@ -1,16 +1,36 @@
 import Link from "next/link";
+
+import { AnalyticsHub } from "../components/AnalyticsHub";
 import { ChalkboardBackground } from "../components/ChalkboardBackground";
 import { TierBadge } from "../components/TierBadge";
+import { TransparencyNote } from "../components/TransparencyNote";
+import {
+  BacktestSummary,
+  SPORTS,
+  SportKey,
+  getBacktestSummary,
+  getDailyFeed,
+} from "../lib/feed";
+
 
 export const dynamic = "force-dynamic";
 
-export default function HomePage() {
+
+export default async function HomePage() {
+  const feed = await getDailyFeed();
+  const snapshots: Partial<Record<SportKey, BacktestSummary | null>> = {};
+  for (const sport of SPORTS) {
+    snapshots[sport] = await getBacktestSummary(sport);
+  }
+
   return (
     <>
       <Hero />
+      <AnalyticsHub feed={feed} snapshots={snapshots} />
       <TierExplainer />
       <Pillars />
       <CallToAction />
+      <TransparencyNote />
     </>
   );
 }
@@ -23,15 +43,15 @@ function Hero() {
       <ChalkboardBackground intensity="full" />
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
         <p className="font-chalk text-2xl text-elite/80 -rotate-1 inline-block">
-          v5.0 · MLB
+          v5.0 · MLB · WNBA · NFL · NCAAF
         </p>
         <h1 className="mt-2 text-4xl sm:text-6xl font-bold tracking-tight text-chalk-50 max-w-4xl">
           Facts. Not <span className="text-elite">Feelings</span>.
         </h1>
         <p className="mt-6 text-lg sm:text-xl text-chalk-300 max-w-2xl leading-relaxed">
           Transparent sports analytics. Honest modeling, rigorous testing,
-          public learning. We track every pick against the closing line and
-          publish the math behind it.
+          public learning. Every pick tracked against the closing line —
+          across four sports and counting.
         </p>
 
         <div className="mt-10 flex flex-wrap gap-4">
@@ -220,8 +240,9 @@ function CallToAction() {
         Today&apos;s plays. <span className="text-elite">Or none, if the math says pass.</span>
       </h2>
       <p className="mt-4 text-chalk-300 max-w-2xl mx-auto">
-        New card published every morning by 11:00 AM ET. Each play priced and
-        tier-graded against the live market.
+        New card published every morning before 11:00 AM CDT. Each play
+        priced and tier-graded against the live market. Click any name
+        in any card for the full data view.
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-4">
         <Link href="/daily-card" className="btn-primary">
