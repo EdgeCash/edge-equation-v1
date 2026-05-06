@@ -29,7 +29,13 @@ SaaS features; no other sports.
 
 from __future__ import annotations
 
-from .thresholds import MLB_PARLAY_RULES, MLBParlayRules
+from .thresholds import (
+    MLB_PARLAY_RULES,
+    MLBParlayRules,
+    PARLAY_CARD_NOTE,
+    PARLAY_TRANSPARENCY_NOTE,
+    NO_QUALIFIED_PARLAY_MESSAGE,
+)
 from .game_results_parlay import (
     MLBGameResultsParlayEngine,
     build_game_results_parlay,
@@ -45,6 +51,9 @@ from .run_daily import MLBDailyRunner, build_unified_mlb_card
 __all__ = [
     "MLB_PARLAY_RULES",
     "MLBParlayRules",
+    "PARLAY_CARD_NOTE",
+    "PARLAY_TRANSPARENCY_NOTE",
+    "NO_QUALIFIED_PARLAY_MESSAGE",
     "MLBGameResultsParlayEngine",
     "MLBPlayerPropsParlayEngine",
     "MLBDailyRunner",

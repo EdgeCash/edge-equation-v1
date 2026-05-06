@@ -322,3 +322,71 @@ def test_engine_registry_exposes_two_new_parlay_keys():
     assert "mlb_game_results_parlay" in keys
     assert "mlb_player_props_parlay" in keys
     assert "mlb_daily" in keys
+
+
+# ---------------------------------------------------------------------------
+# Final polish — transparency note, CLV logger, footer, status flags
+# ---------------------------------------------------------------------------
+
+
+def test_parlay_card_carries_transparency_note():
+    """Every parlay card payload exposes the audit-locked transparency
+    sentence so the website + daily card render the same string."""
+    card = MLBGameResultsParlayEngine().run(
+        full_game_outputs=[], nrfi_rows=[],
+    )
+    assert "Facts. Not Feelings." in card.transparency_note
+    assert "≥4pp" in card.transparency_note or "4pp" in card.transparency_note
+
+    props_card = MLBPlayerPropsParlayEngine().run(prop_outputs=[])
+    assert "Facts. Not Feelings." in props_card.transparency_note
+
+
+def test_render_card_block_includes_transparency_note():
+    """Plain-text renderer surfaces the transparency note in the
+    header AND in the no-qualified branch."""
+    from edge_equation.engines.mlb.game_results_parlay import (
+        render_card_block as render_game,
+    )
+    text = render_game([], header="GAME-RESULTS PARLAY")
+    assert "Facts. Not Feelings." in text
+
+
+def test_log_parlay_clv_snapshot_safe_on_empty_input():
+    """The CLV snapshot helper is best-effort — an empty candidate
+    list returns 0 without raising."""
+    from edge_equation.engines.mlb.game_results_parlay import (
+        log_parlay_clv_snapshot,
+    )
+    n = log_parlay_clv_snapshot(
+        candidates=[], universe="game_results", target_date="2026-05-06",
+    )
+    assert n == 0
+
+
+def test_thresholds_export_transparency_note():
+    from edge_equation.engines.mlb import (
+        PARLAY_TRANSPARENCY_NOTE, NO_QUALIFIED_PARLAY_MESSAGE,
+    )
+    assert "Facts. Not Feelings." in PARLAY_TRANSPARENCY_NOTE
+    assert "No qualified parlay today" in NO_QUALIFIED_PARLAY_MESSAGE
+
+
+def test_feed_bundle_carries_footer_and_market_status():
+    """The website FeedBundle JSON exposes the freshness footer +
+    per-market availability flags so the daily-edge page can render
+    'Updated …' and 'Pending' / 'Limited Data' badges."""
+    from datetime import datetime, timezone
+    from edge_equation.engines.website.build_daily_feed import (
+        FeedBundle,
+    )
+    bundle = FeedBundle(
+        date="2026-05-06",
+        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        market_status={"nrfi": "OK", "fullgame": "Limited Data"},
+    )
+    out = bundle.to_dict()
+    assert "footer" in out and "Updated:" in out["footer"]
+    assert out["market_status"]["fullgame"] == "Limited Data"
+    assert out["parlays"]["transparency_note"]
+    assert "Facts. Not Feelings." in out["parlays"]["transparency_note"]

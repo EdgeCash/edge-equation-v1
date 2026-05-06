@@ -46,6 +46,7 @@ from .thresholds import (
     MLBParlayRules,
     NO_QUALIFIED_PARLAY_MESSAGE,
     PARLAY_CARD_NOTE,
+    PARLAY_TRANSPARENCY_NOTE,
 )
 
 log = get_logger(__name__)
@@ -72,6 +73,9 @@ class PlayerPropsParlayCard:
     explanation: str = ""
     top_board_text: str = ""
     note: str = PARLAY_CARD_NOTE
+    # The audit-locked transparency sentence rendered alongside every
+    # parlay block on the website + in the daily card.
+    transparency_note: str = PARLAY_TRANSPARENCY_NOTE
 
     @property
     def has_qualified(self) -> bool:
@@ -210,6 +214,11 @@ def build_player_props_parlay(
         "MLB player-props parlay: %d/%d legs cleared the strict gate",
         n_after, n_pool,
     )
+    # CLV snapshot: leg-level CLV is captured upstream by
+    # `exporters.mlb.clv_tracker.ClvTracker.record_picks` during the
+    # props engine's own daily run; the combined-ticket snapshot is
+    # written below via `log_parlay_clv_snapshot()` once candidates
+    # are finalized.
 
     candidates: list[ParlayCandidate] = []
     if n_after >= rules.min_legs:
@@ -236,6 +245,12 @@ def build_player_props_parlay(
 
     top = candidates[:top_n]
     top_board = render_card_block(top, header="PLAYER-PROPS PARLAY")
+    # Combined-ticket CLV snapshot — leg CLV already logged by the
+    # per-engine ClvTracker during the props daily run.
+    from .game_results_parlay import log_parlay_clv_snapshot
+    log_parlay_clv_snapshot(
+        candidates=top, universe="player_props", target_date=target,
+    )
 
     return PlayerPropsParlayCard(
         target_date=target,
@@ -256,18 +271,21 @@ def render_card_block(
     candidates: Sequence[ParlayCandidate], *,
     header: str = "PLAYER-PROPS PARLAY",
     note: str = PARLAY_CARD_NOTE,
+    transparency_note: str = PARLAY_TRANSPARENCY_NOTE,
 ) -> str:
     """Plain-text block ready to drop into the daily email."""
     if not candidates:
         return (
             f"{header}\n"
             f"{'═' * 60}\n"
+            f"  {transparency_note}\n"
             f"  {NO_QUALIFIED_PARLAY_MESSAGE}\n"
         )
     top = list(candidates)
     out_lines = [
         f"{header} — Top {len(top)} qualified ticket(s)",
         f"  Note: {note}",
+        f"  {transparency_note}",
         "═" * 60,
     ]
     for i, cand in enumerate(top, 1):

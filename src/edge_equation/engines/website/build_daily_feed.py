@@ -163,16 +163,27 @@ class FeedBundle:
     game_results_parlays: list[FeedParlay] = field(default_factory=list)
     player_props_parlays: list[FeedParlay] = field(default_factory=list)
     no_qualified_parlay: dict[str, str] = field(default_factory=dict)
+    # Per-market data-availability flags. Keys: 'nrfi' / 'fullgame' /
+    # 'props' / 'game_results_parlay' / 'player_props_parlay'. Each
+    # value is one of "OK" / "Pending" / "Limited Data" so the
+    # website can render an inline badge next to a section that
+    # didn't have a full data feed at publish time.
+    market_status: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
             "version": 1,
             "generated_at": self.generated_at,
+            "footer": _build_footer(self.generated_at),
             "date": self.date,
             "source": "run_daily.py",
             "notes": self.notes,
             "picks": [p.to_dict() for p in self.picks],
             "parlays": {
+                # Audit-locked transparency note for both parlay
+                # universes — surfaces verbatim in the daily card and
+                # the website's parlay section.
+                "transparency_note": PARLAY_TRANSPARENCY_NOTE,
                 "game_results": [
                     p.to_dict() for p in self.game_results_parlays
                 ],
@@ -181,7 +192,56 @@ class FeedBundle:
                 ],
                 "no_qualified_message": self.no_qualified_parlay,
             },
+            "market_status": self.market_status,
         }
+
+
+# Audit-locked transparency note that accompanies every parlay
+# section on EdgeEquation.com. Imported from the parlay engine's
+# thresholds module so the website renders the same string the
+# engine prints in its daily card.
+try:
+    from edge_equation.engines.mlb.thresholds import (
+        PARLAY_TRANSPARENCY_NOTE,
+    )
+except Exception:  # pragma: no cover — defensive fallback
+    PARLAY_TRANSPARENCY_NOTE = (
+        "Parlays built only from legs meeting strict edge thresholds "
+        "(≥4pp or ELITE tier, positive EV after vig). "
+        "No plays forced. Facts. Not Feelings."
+    )
+
+
+def _build_footer(generated_at_iso: str) -> str:
+    """Build the operator-facing freshness footer.
+
+    Format::
+
+        Updated: 2026-05-06 09:32 CDT | Data as of 14:32 UTC
+
+    The website renders this verbatim under every section. Time is
+    expressed in CDT (the operator's timezone) plus the raw UTC
+    timestamp the JSON was written, so anyone forwarding the JSON
+    (or reading it on a non-DST machine) can reconcile the two.
+    """
+    try:
+        from datetime import datetime
+        try:
+            from zoneinfo import ZoneInfo
+            ct = ZoneInfo("America/Chicago")
+            ts_utc = datetime.fromisoformat(
+                generated_at_iso.replace("Z", "+00:00"),
+            )
+            ts_local = ts_utc.astimezone(ct)
+            tz_label = ts_local.strftime("%Z") or "CT"
+            return (
+                f"Updated: {ts_local.strftime('%Y-%m-%d %H:%M')} {tz_label} | "
+                f"Data as of {ts_utc.strftime('%H:%M')} UTC"
+            )
+        except Exception:
+            return f"Updated: {generated_at_iso} | Data as of {generated_at_iso}"
+    except Exception:
+        return f"Updated: {generated_at_iso} | Data as of {generated_at_iso}"
 
 
 # ---------------------------------------------------------------------------
@@ -891,9 +951,10 @@ def build_bundle(
     combination exists, the bundle's ``no_qualified_parlay`` slot
     carries the audit's "No qualified parlay today …" string.
     """
-    picks = _load_nrfi_picks(store, target_date)
-    picks.extend(_load_props_picks(props_store, target_date))
-    picks.extend(_load_fullgame_picks(fullgame_store, target_date))
+    nrfi_picks = _load_nrfi_picks(store, target_date)
+    props_picks = _load_props_picks(props_store, target_date)
+    fullgame_picks = _load_fullgame_picks(fullgame_store, target_date)
+    picks = list(nrfi_picks) + list(props_picks) + list(fullgame_picks)
 
     game_results_parlays: list[FeedParlay] = []
     player_props_parlays: list[FeedParlay] = []
@@ -914,6 +975,15 @@ def build_bundle(
         player_props_parlays = []
         no_qualified = {}
 
+    market_status = _build_market_status(
+        nrfi_picks=nrfi_picks,
+        props_picks=props_picks,
+        fullgame_picks=fullgame_picks,
+        game_results_parlays=game_results_parlays,
+        player_props_parlays=player_props_parlays,
+        no_qualified=no_qualified,
+    )
+
     notes = (
         "Public-testing release. Manual operator trigger. Lineups + "
         "weather + umpires confirmed at publish time."
@@ -929,7 +999,50 @@ def build_bundle(
         game_results_parlays=game_results_parlays,
         player_props_parlays=player_props_parlays,
         no_qualified_parlay=no_qualified,
+        market_status=market_status,
     )
+
+
+def _build_market_status(
+    *, nrfi_picks, props_picks, fullgame_picks,
+    game_results_parlays, player_props_parlays, no_qualified,
+) -> dict[str, str]:
+    """Compute the per-market availability flags for the website.
+
+    Each section gets one of three statuses:
+    * ``OK``           — section has data and rendered normally.
+    * ``Pending``      — engine ran but produced 0 picks (e.g. lineups
+                          not yet posted or no qualified parlay today).
+    * ``Limited Data`` — engine couldn't run (DuckDB missing, no
+                          predictions for the date, etc.) so the
+                          section is empty for an upstream reason.
+
+    Operators see the same labels in the daily card; the website
+    surfaces them as inline badges so a cold-traffic visitor knows
+    whether an empty section is "no plays today" vs "still loading".
+    """
+    def _flag(picks_list, present_when_list_empty: str = "Pending") -> str:
+        if picks_list:
+            return "OK"
+        return present_when_list_empty
+
+    return {
+        "nrfi": _flag(nrfi_picks),
+        "fullgame": _flag(fullgame_picks),
+        "props": _flag(props_picks),
+        "game_results_parlay": (
+            "OK" if game_results_parlays else (
+                "Pending" if "game_results" in no_qualified
+                else "Limited Data"
+            )
+        ),
+        "player_props_parlay": (
+            "OK" if player_props_parlays else (
+                "Pending" if "player_props" in no_qualified
+                else "Limited Data"
+            )
+        ),
+    }
 
 
 def write_bundle(bundle: FeedBundle, out_path: str | Path) -> None:

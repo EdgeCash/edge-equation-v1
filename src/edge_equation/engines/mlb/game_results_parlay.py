@@ -50,9 +50,96 @@ from .thresholds import (
     MLBParlayRules,
     NO_QUALIFIED_PARLAY_MESSAGE,
     PARLAY_CARD_NOTE,
+    PARLAY_TRANSPARENCY_NOTE,
 )
 
 log = get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# CLV snapshot — combined-ticket logger
+#
+# Per-leg closing-line snapshots already flow through the existing
+# `edge_equation.exporters.mlb.clv_tracker.ClvTracker.record_picks`
+# during each per-market engine's own daily run (see PR #158). The
+# helper below adds a parallel snapshot for the COMBINED parlay
+# ticket so the public ledger can quote post-vig CLV at the parlay
+# level too. Soft import: if the exporter package isn't installed
+# (e.g. the slim CI runner), the call is a no-op so the parlay
+# engine still publishes.
+# ---------------------------------------------------------------------------
+
+
+def log_parlay_clv_snapshot(
+    *,
+    candidates: Sequence[ParlayCandidate],
+    universe: str,
+    target_date: str,
+) -> int:
+    """Persist a CLV row for every published parlay ticket.
+
+    Each row stores the combined American odds we published at, along
+    with the joint probability + EV the engine quoted, so a downstream
+    closing-line snapshot job can compute the ticket's CLV against the
+    eventual close.
+
+    Returns the number of tickets persisted (0 when the CLV exporter
+    is unavailable or the candidate list is empty).
+    """
+    if not candidates:
+        return 0
+    try:
+        # Soft import — keeps the parlay engine importable in
+        # environments that don't have the exporters package.
+        from edge_equation.exporters.mlb.clv_tracker import ClvTracker
+        from pathlib import Path
+    except Exception:
+        log.debug(
+            "log_parlay_clv_snapshot: ClvTracker import failed — skipping",
+        )
+        return 0
+
+    out_dir = Path("website") / "public" / "data" / "mlb"
+    try:
+        tracker = ClvTracker(out_dir)
+        rows: list[dict] = []
+        for i, cand in enumerate(candidates, 1):
+            rows.append({
+                "date": target_date,
+                "matchup": f"{universe}_parlay_{i}",
+                "bet_type": f"{universe}_parlay",
+                "pick": (
+                    f"{cand.n_legs}-leg @ "
+                    f"{cand.combined_decimal_odds:.2f}x"
+                ),
+                "model_prob": float(cand.joint_prob_corr),
+                "edge_pct": float(cand.edge_pp),
+                "kelly_pct": 0.0,
+                "kelly_advice": (
+                    f"flat {cand.stake_units:g}u (strict-policy default)"
+                ),
+                "market_odds_dec": float(cand.combined_decimal_odds),
+                "market_odds_american": float(cand.combined_american_odds),
+                "book": "consensus",
+            })
+        # ClvTracker.record_picks is idempotent on the deterministic
+        # pick_id (date|matchup|bet_type|pick), so re-runs of the
+        # daily workflow don't create duplicate rows.
+        try:
+            tracker.record_picks(rows, odds_source="parlay_engine")
+        except Exception as e:
+            log.debug(
+                "log_parlay_clv_snapshot: record_picks failed (%s): %s",
+                type(e).__name__, e,
+            )
+            return 0
+        return len(rows)
+    except Exception as e:
+        log.debug(
+            "log_parlay_clv_snapshot: tracker init failed (%s): %s",
+            type(e).__name__, e,
+        )
+        return 0
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +192,10 @@ class GameResultsParlayCard:
     explanation: str = ""
     top_board_text: str = ""
     note: str = PARLAY_CARD_NOTE
+    # The audit-locked transparency sentence rendered alongside every
+    # parlay block so cold-traffic readers see the strict-policy
+    # framing without scrolling away from the ticket.
+    transparency_note: str = PARLAY_TRANSPARENCY_NOTE
 
     @property
     def has_qualified(self) -> bool:
@@ -370,6 +461,13 @@ def build_game_results_parlay(
         "MLB game-results parlay: %d/%d legs cleared the strict gate",
         n_after, n_pool,
     )
+    # CLV snapshot: every leg sourced from the full-game / NRFI engines
+    # already inherits its closing-line snapshot from the
+    # `exporters.mlb.clv_tracker.ClvTracker.record_picks` call those
+    # engines run during their own daily passes, so each leg this
+    # parlay engine consumes carries `clv_pp` straight through. The
+    # combined-ticket CLV is logged here via
+    # `log_parlay_clv_snapshot()` once the candidate list is built.
 
     candidates: list[ParlayCandidate] = []
     if n_after >= rules.min_legs:
@@ -401,6 +499,12 @@ def build_game_results_parlay(
 
     top = candidates[:top_n]
     top_board = render_card_block(top, header="GAME-RESULTS PARLAY")
+    # Log every published combined ticket via the shared CLV snapshot
+    # helper — the closing-line tracker now records both the legs (via
+    # the per-engine daily runs) and the combined ticket (here).
+    log_parlay_clv_snapshot(
+        candidates=top, universe="game_results", target_date=target,
+    )
 
     return GameResultsParlayCard(
         target_date=target,
@@ -421,18 +525,21 @@ def render_card_block(
     candidates: Sequence[ParlayCandidate], *,
     header: str = "GAME-RESULTS PARLAY",
     note: str = PARLAY_CARD_NOTE,
+    transparency_note: str = PARLAY_TRANSPARENCY_NOTE,
 ) -> str:
     """Plain-text block ready to drop into the daily email."""
     if not candidates:
         return (
             f"{header}\n"
             f"{'═' * 60}\n"
+            f"  {transparency_note}\n"
             f"  {NO_QUALIFIED_PARLAY_MESSAGE}\n"
         )
     top = list(candidates)
     out_lines = [
         f"{header} — Top {len(top)} qualified ticket(s)",
         f"  Note: {note}",
+        f"  {transparency_note}",
         "═" * 60,
     ]
     for i, cand in enumerate(top, 1):

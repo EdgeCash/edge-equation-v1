@@ -220,6 +220,16 @@ PARLAY_CARD_NOTE: str = (
 )
 
 
+# The audit-locked transparency sentence. Surfaced verbatim on every
+# parlay section of EdgeEquation.com and in every parlay block of the
+# daily card. Editing this text is a one-place change.
+PARLAY_TRANSPARENCY_NOTE: str = (
+    "Parlays built only from legs meeting strict edge thresholds "
+    "(≥4pp or ELITE tier, positive EV after vig). "
+    "No plays forced. Facts. Not Feelings."
+)
+
+
 NO_QUALIFIED_PARLAY_MESSAGE: str = (
     "No qualified parlay today — data does not support a "
     "high-confidence combination."
