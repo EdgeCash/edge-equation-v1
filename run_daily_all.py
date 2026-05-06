@@ -328,6 +328,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "fast smoke runs."
         ),
     )
+    parser.add_argument(
+        "--skip-email-digest", action="store_true",
+        help=(
+            "Skip the public email digest send. Useful for fast "
+            "smoke runs (also a no-op when EDGE_FEATURE_EMAIL_DIGEST "
+            "isn't 'on')."
+        ),
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     if args.list_sports:
@@ -390,6 +398,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             _build_calibration_alerts(
                 sports=[e.sport for e in successful],
             )
+        # Send today's email digest to the public subscriber list.
+        # No-op when EDGE_FEATURE_EMAIL_DIGEST isn't 'on' or the
+        # Resend env vars aren't set — soft-fail by design so a
+        # missing key never crashes the daily build.
+        if not args.skip_email_digest:
+            _build_and_send_email_digest()
     return 0
 
 
@@ -479,6 +493,71 @@ def _build_calibration_alerts(*, sports: list[str]) -> None:
     except Exception as e:
         print(
             f"[run_daily_all] calibration alerts failed "
+            f"({type(e).__name__}: {e}) — continuing.",
+            file=sys.stderr,
+        )
+
+
+def _build_and_send_email_digest() -> None:
+    """Build today's email digest from the unified daily feed and
+    send it via Resend. Best-effort — a missing API key, missing
+    audience, or missing FROM address all log a clean 'skipped'
+    line and return without crashing the master pipeline.
+    """
+    try:
+        from edge_equation.exporters.email_digest import (
+            build_digest, load_config, send_digest,
+        )
+    except Exception as e:
+        print(
+            f"[run_daily_all] email digest skipped — import failed "
+            f"({type(e).__name__}: {e})",
+            file=sys.stderr,
+        )
+        return
+    feed_path = (
+        REPO_ROOT / "website" / "public" / "data" / "daily" / "latest.json"
+    )
+    if not feed_path.exists():
+        print(
+            "[run_daily_all] email digest skipped — daily/latest.json "
+            "not on disk yet.",
+            file=sys.stderr,
+        )
+        return
+    try:
+        import json as _json
+        feed = _json.loads(feed_path.read_text())
+    except Exception as e:
+        print(
+            f"[run_daily_all] email digest skipped — feed unreadable "
+            f"({type(e).__name__}: {e})",
+            file=sys.stderr,
+        )
+        return
+    try:
+        digest = build_digest(feed)
+        config = load_config()
+        result = send_digest(digest, config)
+        if result.get("sent"):
+            print(
+                "[run_daily_all] email digest sent · broadcast_id="
+                f"{result.get('broadcast_id')}",
+            )
+        elif result.get("skipped_reason"):
+            print(
+                "[run_daily_all] email digest skipped — "
+                f"{result['skipped_reason']}",
+            )
+        else:
+            print(
+                "[run_daily_all] email digest FAILED — "
+                f"{result.get('error')}",
+                file=sys.stderr,
+            )
+    except Exception as e:
+        print(
+            f"[run_daily_all] email digest failed "
             f"({type(e).__name__}: {e}) — continuing.",
             file=sys.stderr,
         )

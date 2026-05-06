@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AlertBanner } from "../components/AlertBanner";
 import { AnalyticsHub } from "../components/AnalyticsHub";
 import { ChalkboardBackground } from "../components/ChalkboardBackground";
+import { EmailSignup } from "../components/EmailSignup";
 import { TierBadge } from "../components/TierBadge";
 import { TransparencyNote } from "../components/TransparencyNote";
 import { loadAlertReport } from "../lib/alerts";
@@ -34,6 +35,9 @@ export default async function HomePage() {
       <TierExplainer />
       <Pillars />
       <CallToAction />
+      <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-12">
+        <EmailSignup />
+      </section>
       <TransparencyNote />
     </>
   );
