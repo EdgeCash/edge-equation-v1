@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { headers } from "next/headers";
+import { AlertBanner } from "../../components/AlertBanner";
 import { ChalkboardBackground } from "../../components/ChalkboardBackground";
 import { DailyCardTable } from "../../components/DailyCardTable";
+import { loadAlertReport } from "../../lib/alerts";
 import { getDailyData, type TodaysPlay } from "../../lib/types";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +14,10 @@ export default async function DailyCardPage() {
   const proto = h.get("x-forwarded-proto") ?? "https";
   const origin = host ? `${proto}://${host}` : undefined;
 
-  const data = await getDailyData(origin);
+  const [data, alerts] = await Promise.all([
+    getDailyData(origin),
+    loadAlertReport(),
+  ]);
 
   if (!data) {
     return <DataUnavailable />;
@@ -28,6 +33,7 @@ export default async function DailyCardPage() {
 
   return (
     <>
+      <AlertBanner report={alerts} />
       <section className="relative overflow-hidden border-b border-chalkboard-600/40">
         <ChalkboardBackground />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">

@@ -143,6 +143,7 @@ def output_paths_to_commit() -> list[str]:
         paths.append(f"website/public/data/{entry.sport}/player_logs/")
         paths.append(f"website/public/data/{entry.sport}/context_today/")
     paths.append("website/public/data/daily/")
+    paths.append("website/public/data/calibration_alerts.json")
     # De-dupe while preserving order.
     seen: set[str] = set()
     deduped: list[str] = []
@@ -320,6 +321,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "after the engines run. Useful for fast smoke runs."
         ),
     )
+    parser.add_argument(
+        "--skip-alerts", action="store_true",
+        help=(
+            "Skip the calibration-drift alert checker. Useful for "
+            "fast smoke runs."
+        ),
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     if args.list_sports:
@@ -373,6 +381,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if not args.skip_player_profiles:
             _build_player_profiles(
                 target_date=target,
+                sports=[e.sport for e in successful],
+            )
+        # Compute calibration-drift alerts so the website banner +
+        # the GitHub Actions run summary surface any sport whose
+        # Brier or ROI has drifted past the publish gate.
+        if not args.skip_alerts:
+            _build_calibration_alerts(
                 sports=[e.sport for e in successful],
             )
     return 0
@@ -431,6 +446,39 @@ def _build_player_profiles(
     except Exception as e:
         print(
             f"[run_daily_all] player profiles failed "
+            f"({type(e).__name__}: {e}) — continuing.",
+            file=sys.stderr,
+        )
+
+
+def _build_calibration_alerts(*, sports: list[str]) -> None:
+    """Run the calibration-drift checker over the freshly-published
+    picks log for each sport. Best-effort — any failure logs a
+    warning and falls through.
+    """
+    try:
+        from edge_equation.exporters.calibration_alerts import (
+            build_report,
+            log_alerts_to_console,
+            write_report,
+        )
+    except Exception as e:
+        print(
+            f"[run_daily_all] calibration alerts skipped — import "
+            f"failed ({type(e).__name__}: {e})",
+            file=sys.stderr,
+        )
+        return
+    try:
+        report = build_report(
+            sports=sports or ("mlb", "wnba", "nfl", "ncaaf"),
+        )
+        written = write_report(report)
+        log_alerts_to_console(report)
+        print(f"[run_daily_all] calibration alerts → {written}")
+    except Exception as e:
+        print(
+            f"[run_daily_all] calibration alerts failed "
             f"({type(e).__name__}: {e}) — continuing.",
             file=sys.stderr,
         )
