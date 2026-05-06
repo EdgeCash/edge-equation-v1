@@ -39,10 +39,31 @@ from typing import Any, Callable, Optional
 # the parlay-only keys are gated, the per-row engine is always live.
 ENV_WNBA_PARLAYS_ENABLED = "EDGE_FEATURE_WNBA_PARLAYS"
 
+# Feature-flag env vars for the NFL + NCAAF strict-parlay engines.
+# Same default-off semantics as WNBA so jump-starting football
+# doesn't affect live MLB / WNBA cards until the operator flips
+# them on for season testing.
+ENV_NFL_PARLAYS_ENABLED = "EDGE_FEATURE_NFL_PARLAYS"
+ENV_NCAAF_PARLAYS_ENABLED = "EDGE_FEATURE_NCAAF_PARLAYS"
+
 
 def _wnba_parlays_enabled() -> bool:
     return (
         os.environ.get(ENV_WNBA_PARLAYS_ENABLED, "").strip().lower()
+        in {"1", "true", "on", "yes"}
+    )
+
+
+def _nfl_parlays_enabled() -> bool:
+    return (
+        os.environ.get(ENV_NFL_PARLAYS_ENABLED, "").strip().lower()
+        in {"1", "true", "on", "yes"}
+    )
+
+
+def _ncaaf_parlays_enabled() -> bool:
+    return (
+        os.environ.get(ENV_NCAAF_PARLAYS_ENABLED, "").strip().lower()
         in {"1", "true", "on", "yes"}
     )
 
@@ -131,6 +152,74 @@ def _factory_wnba_daily() -> Any:
     return WNBADailyRunner()
 
 
+def _factory_nfl_game_results_parlay() -> Any:
+    if not _nfl_parlays_enabled():
+        raise ImportError(
+            f"NFL parlays are feature-flagged off "
+            f"(set {ENV_NFL_PARLAYS_ENABLED}=on to enable)."
+        )
+    from edge_equation.engines.nfl.game_results_parlay import (
+        NFLGameResultsParlayEngine,
+    )
+    return NFLGameResultsParlayEngine()
+
+
+def _factory_nfl_player_props_parlay() -> Any:
+    if not _nfl_parlays_enabled():
+        raise ImportError(
+            f"NFL parlays are feature-flagged off "
+            f"(set {ENV_NFL_PARLAYS_ENABLED}=on to enable)."
+        )
+    from edge_equation.engines.nfl.player_props_parlay import (
+        NFLPlayerPropsParlayEngine,
+    )
+    return NFLPlayerPropsParlayEngine()
+
+
+def _factory_nfl_daily() -> Any:
+    if not _nfl_parlays_enabled():
+        raise ImportError(
+            f"NFL daily unified runner is feature-flagged off "
+            f"(set {ENV_NFL_PARLAYS_ENABLED}=on to enable)."
+        )
+    from edge_equation.engines.nfl.parlay_runner import NFLDailyRunner
+    return NFLDailyRunner()
+
+
+def _factory_ncaaf_game_results_parlay() -> Any:
+    if not _ncaaf_parlays_enabled():
+        raise ImportError(
+            f"NCAAF parlays are feature-flagged off "
+            f"(set {ENV_NCAAF_PARLAYS_ENABLED}=on to enable)."
+        )
+    from edge_equation.engines.ncaaf.game_results_parlay import (
+        NCAAFGameResultsParlayEngine,
+    )
+    return NCAAFGameResultsParlayEngine()
+
+
+def _factory_ncaaf_player_props_parlay() -> Any:
+    if not _ncaaf_parlays_enabled():
+        raise ImportError(
+            f"NCAAF parlays are feature-flagged off "
+            f"(set {ENV_NCAAF_PARLAYS_ENABLED}=on to enable)."
+        )
+    from edge_equation.engines.ncaaf.player_props_parlay import (
+        NCAAFPlayerPropsParlayEngine,
+    )
+    return NCAAFPlayerPropsParlayEngine()
+
+
+def _factory_ncaaf_daily() -> Any:
+    if not _ncaaf_parlays_enabled():
+        raise ImportError(
+            f"NCAAF daily unified runner is feature-flagged off "
+            f"(set {ENV_NCAAF_PARLAYS_ENABLED}=on to enable)."
+        )
+    from edge_equation.engines.ncaaf.parlay_runner import NCAAFDailyRunner
+    return NCAAFDailyRunner()
+
+
 # ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
@@ -150,6 +239,16 @@ ENGINE_REGISTRY: dict[str, Callable[[], Any]] = {
     "wnba_game_results_parlay": _factory_wnba_game_results_parlay,
     "wnba_player_props_parlay": _factory_wnba_player_props_parlay,
     "wnba_daily": _factory_wnba_daily,
+    # NFL — gated on EDGE_FEATURE_NFL_PARLAYS until 2026 season
+    # testing clears.
+    "nfl_game_results_parlay": _factory_nfl_game_results_parlay,
+    "nfl_player_props_parlay": _factory_nfl_player_props_parlay,
+    "nfl_daily": _factory_nfl_daily,
+    # NCAAF — gated on EDGE_FEATURE_NCAAF_PARLAYS until 2026 season
+    # testing clears.
+    "ncaaf_game_results_parlay": _factory_ncaaf_game_results_parlay,
+    "ncaaf_player_props_parlay": _factory_ncaaf_player_props_parlay,
+    "ncaaf_daily": _factory_ncaaf_daily,
 }
 
 

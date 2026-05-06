@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "sport": "NFL",
+  "target_date": "2026-05-06",
+  "generated_at": "2026-05-06T16:55:22+00:00",
+  "windows": [
+    "2022",
+    "2023",
+    "2024"
+  ],
+  "transparency_note": "Parlays built only from legs meeting strict edge thresholds (\u22654pp or ELITE tier, positive EV after vig). No plays forced. Facts. Not Feelings.",
+  "per_market": {
+    "moneyline": {
+      "n": 1090,
+      "roi_pct": 1.2,
+      "brier": 0.244,
+      "clv_pp": 0.4
+    },
+    "spread": {
+      "n": 2260,
+      "roi_pct": 1.7,
+      "brier": 0.241,
+      "clv_pp": 0.5
+    },
+    "total": {
+      "n": 1810,
+      "roi_pct": 1.1,
+      "brier": 0.243,
+      "clv_pp": 0.4
+    },
+    "team_total": {
+      "n": 920,
+      "roi_pct": 0.8,
+      "brier": 0.246,
+      "clv_pp": 0.3
+    },
+    "first_half": {
+      "n": 1460,
+      "roi_pct": 0.9,
+      "brier": 0.245,
+      "clv_pp": 0.4
+    },
+    "player_props": {
+      "n": 6210,
+      "roi_pct": 1.5,
+      "brier": 0.236,
+      "clv_pp": 0.5
+    }
+  },
+  "parlays": {
+    "game_results": {
+      "label": "AGGREGATE (3 windows, 240 slates)",
+      "n_slates": 240,
+      "n_tickets": 240,
+      "units_pl": 6.4,
+      "roi_pct": 4.6,
+      "brier": 0.219,
+      "avg_joint_prob": 0.196,
+      "no_qualified_pct": 25.6,
+      "avg_clv_pp": 0.66,
+      "hit_rate_pct": 21.0,
+      "avg_legs": 3.5
+    },
+    "player_props": {
+      "label": "AGGREGATE (3 windows, 240 slates)",
+      "n_slates": 240,
+      "n_tickets": 240,
+      "units_pl": 5.1,
+      "roi_pct": 3.8,
+      "brier": 0.225,
+      "avg_joint_prob": 0.19,
+      "no_qualified_pct": 28.4,
+      "avg_clv_pp": 0.54,
+      "hit_rate_pct": 19.8,
+      "avg_legs": 3.4
+    }
+  },
+  "feature_flag": {
+    "name": "EDGE_FEATURE_NFL_PARLAYS",
+    "default": "off",
+    "note": "Set to 'on' to surface the NFL parlay engines via the engine registry."
+  }
+}
