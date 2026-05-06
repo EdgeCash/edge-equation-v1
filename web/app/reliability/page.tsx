@@ -12,6 +12,7 @@
 
 import Link from "next/link";
 
+import { AlertBanner } from "../../components/AlertBanner";
 import { ChalkboardBackground } from "../../components/ChalkboardBackground";
 import { MetricTip } from "../../components/MetricTip";
 import {
@@ -19,6 +20,7 @@ import {
   brierScore,
 } from "../../components/ReliabilityDiagram";
 import { TransparencyNote } from "../../components/TransparencyNote";
+import { loadAlertReport, summaryFor } from "../../lib/alerts";
 import { SPORTS, SPORT_LABEL, SportKey } from "../../lib/feed";
 import { loadAllPicks, bySport } from "../../lib/picks-history";
 
@@ -28,10 +30,12 @@ export const dynamic = "force-dynamic";
 
 export default async function ReliabilityPage() {
   const picks = await loadAllPicks();
+  const alerts = await loadAlertReport();
   const map = bySport(picks);
 
   return (
     <>
+      <AlertBanner report={alerts} />
       <section className="relative border-b border-chalkboard-600/40">
         <ChalkboardBackground />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-12">
@@ -61,12 +65,14 @@ export default async function ReliabilityPage() {
         {SPORTS.map((sport) => {
           const rows = map.get(sport) ?? [];
           const brier = brierScore(rows);
+          const summary = summaryFor(alerts, sport);
           return (
             <SportPanel
               key={sport}
               sport={sport}
               rows={rows}
               brier={brier}
+              status={summary?.status ?? "no_data"}
             />
           );
         })}
@@ -79,11 +85,12 @@ export default async function ReliabilityPage() {
 
 
 function SportPanel({
-  sport, rows, brier,
+  sport, rows, brier, status,
 }: {
   sport: SportKey;
   rows: import("../../lib/picks-history").PickRecord[];
   brier: { score: number | null; n: number };
+  status: "ok" | "warning" | "critical" | "no_data";
 }) {
   return (
     <div className="chalk-card p-5">
@@ -92,8 +99,9 @@ function SportPanel({
           <p className="text-[11px] uppercase tracking-wider text-chalk-500 font-mono">
             {SPORT_LABEL[sport]}
           </p>
-          <h2 className="mt-1 text-xl font-semibold text-chalk-50">
+          <h2 className="mt-1 text-xl font-semibold text-chalk-50 flex items-center gap-3">
             {SPORT_LABEL[sport]} reliability
+            <StatusBadge status={status} />
           </h2>
         </div>
         <Link
@@ -143,5 +151,36 @@ function SportPanel({
         </div>
       </div>
     </div>
+  );
+}
+
+
+function StatusBadge({
+  status,
+}: { status: "ok" | "warning" | "critical" | "no_data" }) {
+  if (status === "no_data") {
+    return (
+      <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border border-chalkboard-700/60 text-chalk-500">
+        Limited data
+      </span>
+    );
+  }
+  if (status === "ok") {
+    return (
+      <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border border-strong/40 bg-strong/10 text-strong">
+        Calibrated
+      </span>
+    );
+  }
+  const cls =
+    status === "critical"
+      ? "border-nosignal/60 bg-nosignal/10 text-nosignal"
+      : "border-moderate/60 bg-moderate/10 text-moderate";
+  return (
+    <span
+      className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border ${cls}`}
+    >
+      {status === "critical" ? "Critical drift" : "Drifting"}
+    </span>
   );
 }

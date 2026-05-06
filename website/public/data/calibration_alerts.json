@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-06T19:25:58Z",
+  "publish_gate": 0.246,
+  "summary": {
+    "mlb": {
+      "brier": 0.223,
+      "n": 5,
+      "roi_pct": 36.01,
+      "status": "no_data"
+    },
+    "wnba": {
+      "brier": null,
+      "n": 0,
+      "roi_pct": null,
+      "status": "no_data"
+    },
+    "nfl": {
+      "brier": null,
+      "n": 0,
+      "roi_pct": null,
+      "status": "no_data"
+    },
+    "ncaaf": {
+      "brier": null,
+      "n": 0,
+      "roi_pct": null,
+      "status": "no_data"
+    }
+  },
+  "alerts": []
+}

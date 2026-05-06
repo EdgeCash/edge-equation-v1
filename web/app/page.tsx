@@ -1,9 +1,11 @@
 import Link from "next/link";
 
+import { AlertBanner } from "../components/AlertBanner";
 import { AnalyticsHub } from "../components/AnalyticsHub";
 import { ChalkboardBackground } from "../components/ChalkboardBackground";
 import { TierBadge } from "../components/TierBadge";
 import { TransparencyNote } from "../components/TransparencyNote";
+import { loadAlertReport } from "../lib/alerts";
 import {
   BacktestSummary,
   SPORTS,
@@ -18,6 +20,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const feed = await getDailyFeed();
+  const alerts = await loadAlertReport();
   const snapshots: Partial<Record<SportKey, BacktestSummary | null>> = {};
   for (const sport of SPORTS) {
     snapshots[sport] = await getBacktestSummary(sport);
@@ -25,6 +28,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <AlertBanner report={alerts} />
       <Hero />
       <AnalyticsHub feed={feed} snapshots={snapshots} />
       <TierExplainer />
