@@ -1,42 +1,36 @@
 game,market,side,american,decimal,book,vig_free_pct
-SD @ SF,run_line,SD -3.5,-440,1.2273,fanduel,
-SD @ SF,run_line,SF +3.5,+290,3.9,fanduel,
-SD @ SF,totals,OVER 6.5,+235,3.35,fanduel,27.9%
-SD @ SF,totals,UNDER 6.5,-340,1.2941,fanduel,72.1%
-CWS @ LAA,moneyline,CWS,+3500,36.0,fanduel,2.7%
-CWS @ LAA,moneyline,LAA,-50000,1.002,fanduel,97.3%
-CWS @ LAA,run_line,CWS +5.5,+134,2.34,fanduel,
-CWS @ LAA,run_line,LAA -5.5,-180,1.5556,fanduel,
-CWS @ LAA,totals,OVER 9.5,-154,1.6494,fanduel,56.7%
-CWS @ LAA,totals,UNDER 9.5,+116,2.16,fanduel,43.3%
-ATL @ SEA,moneyline,ATL,+500,6.0,fanduel,15.7%
-ATL @ SEA,moneyline,SEA,-850,1.1176,fanduel,84.3%
-ATL @ SEA,run_line,ATL +1.5,+162,2.62,fanduel,
-ATL @ SEA,run_line,SEA -1.5,-220,1.4545,fanduel,
-ATL @ SEA,totals,OVER 3.5,-108,1.9259,fanduel,48.6%
-ATL @ SEA,totals,UNDER 3.5,-122,1.8197,fanduel,51.4%
-ATH @ PHI,moneyline,ATH,+144,2.44,fanduel,39.3%
-ATH @ PHI,moneyline,PHI,-172,1.5814,fanduel,60.7%
-ATH @ PHI,run_line,ATH +1.5,-140,1.7143,fanduel,
-ATH @ PHI,run_line,PHI -1.5,+116,2.16,fanduel,
+CWS @ LAA,run_line,CWS +5.5,-210,1.4762,fanduel,
+CWS @ LAA,run_line,LAA -5.5,+154,2.54,fanduel,
+CWS @ LAA,totals,OVER 9.5,-148,1.6757,fanduel,55.9%
+CWS @ LAA,totals,UNDER 9.5,+112,2.12,fanduel,44.1%
+ATL @ SEA,moneyline,ATL,+480,5.8,fanduel,16.2%
+ATL @ SEA,moneyline,SEA,-800,1.125,fanduel,83.8%
+ATL @ SEA,run_line,ATL +1.5,-900,1.1111,fanduel,
+ATL @ SEA,run_line,SEA -1.5,+490,5.9,fanduel,
+ATL @ SEA,totals,OVER 3.5,+168,2.68,fanduel,34.9%
+ATL @ SEA,totals,UNDER 3.5,-230,1.4348,fanduel,65.1%
+ATH @ PHI,moneyline,ATH,+140,2.4,fanduel,40.0%
+ATH @ PHI,moneyline,PHI,-166,1.6024,fanduel,60.0%
+ATH @ PHI,run_line,ATH +1.5,-142,1.7042,fanduel,
+ATH @ PHI,run_line,PHI -1.5,+118,2.18,fanduel,
 ATH @ PHI,totals,OVER 8.5,-104,1.9615,fanduel,48.5%
 ATH @ PHI,totals,UNDER 8.5,-118,1.8475,fanduel,51.5%
 BAL @ MIA,moneyline,BAL,+110,2.1,fanduel,45.7%
 BAL @ MIA,moneyline,MIA,-130,1.7692,fanduel,54.3%
-BAL @ MIA,run_line,BAL +1.5,-194,1.5155,fanduel,
-BAL @ MIA,run_line,MIA -1.5,+160,2.6,fanduel,
-BAL @ MIA,totals,OVER 8.5,-118,1.8475,fanduel,51.5%
-BAL @ MIA,totals,UNDER 8.5,-104,1.9615,fanduel,48.5%
+BAL @ MIA,run_line,BAL +1.5,-196,1.5102,fanduel,
+BAL @ MIA,run_line,MIA -1.5,+162,2.62,fanduel,
+BAL @ MIA,totals,OVER 8.5,-108,1.9259,fanduel,49.6%
+BAL @ MIA,totals,UNDER 8.5,-112,1.8929,fanduel,50.4%
 BOS @ DET,moneyline,BOS,-108,1.9259,fanduel,50.0%
 BOS @ DET,moneyline,DET,-108,1.9259,fanduel,50.0%
-BOS @ DET,run_line,BOS -1.5,+152,2.52,fanduel,
-BOS @ DET,run_line,DET +1.5,-184,1.5435,fanduel,
-BOS @ DET,totals,OVER 8.5,-108,1.9259,fanduel,49.6%
-BOS @ DET,totals,UNDER 8.5,-112,1.8929,fanduel,50.4%
+BOS @ DET,run_line,BOS -1.5,+150,2.5,fanduel,
+BOS @ DET,run_line,DET +1.5,-182,1.5495,fanduel,
+BOS @ DET,totals,OVER 8.5,-105,1.9524,fanduel,48.9%
+BOS @ DET,totals,UNDER 8.5,-115,1.8696,fanduel,51.1%
 MIN @ WSH,moneyline,MIN,-120,1.8333,fanduel,52.4%
 MIN @ WSH,moneyline,WSH,+102,2.02,fanduel,47.6%
-MIN @ WSH,run_line,MIN -1.5,+130,2.3,fanduel,
-MIN @ WSH,run_line,WSH +1.5,-156,1.641,fanduel,
+MIN @ WSH,run_line,MIN -1.5,+132,2.32,fanduel,
+MIN @ WSH,run_line,WSH +1.5,-160,1.625,fanduel,
 MIN @ WSH,totals,OVER 9.5,-105,1.9524,fanduel,48.9%
 MIN @ WSH,totals,UNDER 9.5,-115,1.8696,fanduel,51.1%
 TEX @ NYY,moneyline,TEX,+146,2.46,fanduel,39.0%
@@ -53,10 +47,10 @@ CIN @ CHC,totals,OVER 8.0,-115,1.8696,fanduel,51.1%
 CIN @ CHC,totals,UNDER 8.0,-105,1.9524,fanduel,48.9%
 CLE @ KC,moneyline,CLE,+116,2.16,fanduel,44.7%
 CLE @ KC,moneyline,KC,-134,1.7463,fanduel,55.3%
-CLE @ KC,run_line,CLE +1.5,-200,1.5,fanduel,
-CLE @ KC,run_line,KC -1.5,+164,2.64,fanduel,
-CLE @ KC,totals,OVER 7.5,-106,1.9434,fanduel,49.1%
-CLE @ KC,totals,UNDER 7.5,-114,1.8772,fanduel,50.9%
+CLE @ KC,run_line,CLE +1.5,-192,1.5208,fanduel,
+CLE @ KC,run_line,KC -1.5,+158,2.58,fanduel,
+CLE @ KC,totals,OVER 7.5,-104,1.9615,fanduel,48.5%
+CLE @ KC,totals,UNDER 7.5,-118,1.8475,fanduel,51.5%
 NYM @ COL,moneyline,NYM,-164,1.6098,fanduel,59.7%
 NYM @ COL,moneyline,COL,+138,2.38,fanduel,40.3%
 NYM @ COL,run_line,COL +1.5,-113,1.885,fanduel,
