@@ -1,34 +1,60 @@
 section,date,team,opponent,status,conviction_pct,side,opp_sp_name,opp_sp_factor,opp_bp_factor,team_total_proj,pick_3.5,pick_4.5,kelly_line,model_prob,fair_odds_dec,kelly_pct,kelly_advice,status_reason,runs,result_3.5,result_4.5
-projection,2026-05-05,BOS,DET,PASS,64.6,AWAY,,,,3.98,OVER,UNDER,UNDER 4.5,0.646,1.548,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,DET,BOS,PASS,60.3,HOME,,,,4.3,OVER,UNDER,UNDER 4.5,0.603,1.659,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,TOR,TB,PASS,62.1,AWAY,,,,4.17,OVER,UNDER,UNDER 4.5,0.621,1.611,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,TB,TOR,PASS,65.0,HOME,,,,3.95,OVER,UNDER,UNDER 4.5,0.65,1.538,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,ATH,PHI,PASS,58.2,AWAY,,,,4.67,OVER,OVER,OVER 3.5,0.582,1.717,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,PHI,ATH,PASS,62.0,HOME,,,,4.91,OVER,OVER,OVER 3.5,0.62,1.614,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,BAL,MIA,PASS,64.2,AWAY,,,,4.01,OVER,UNDER,UNDER 4.5,0.642,1.557,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,MIA,BAL,PASS,58.9,HOME,,,,4.4,OVER,UNDER,UNDER 4.5,0.589,1.698,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,MIN,WSH,PASS,60.9,AWAY,,,,4.84,OVER,OVER,OVER 3.5,0.609,1.642,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,WSH,MIN,PASS,72.4,HOME,,,,5.63,OVER,OVER,OVER 3.5,0.724,1.382,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,TEX,NYY,PASS,60.4,AWAY,,,,4.29,OVER,UNDER,UNDER 4.5,0.604,1.655,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,NYY,TEX,PASS,64.2,HOME,,,,5.06,OVER,OVER,OVER 3.5,0.642,1.557,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,CIN,CHC,PASS,57.9,AWAY,,,,4.65,OVER,OVER,OVER 3.5,0.579,1.726,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,CHC,CIN,PASS,63.3,HOME,,,,5.0,OVER,OVER,OVER 3.5,0.633,1.579,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,CLE,KC,PASS,61.7,AWAY,,,,4.2,OVER,UNDER,UNDER 4.5,0.617,1.622,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,KC,CLE,PASS,61.2,HOME,,,,4.23,OVER,UNDER,UNDER 4.5,0.612,1.633,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,MIL,STL,PASS,58.4,AWAY,,,,4.68,OVER,OVER,OVER 3.5,0.584,1.712,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,STL,MIL,PASS,57.9,HOME,,,,4.65,OVER,OVER,OVER 3.5,0.579,1.726,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,LAD,HOU,PASS,64.2,AWAY,,,,5.06,OVER,OVER,OVER 3.5,0.642,1.557,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,HOU,LAD,PASS,68.2,HOME,,,,3.7,OVER,UNDER,UNDER 4.5,0.682,1.466,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,CWS,LAA,PASS,62.1,AWAY,,,,4.92,OVER,OVER,OVER 3.5,0.621,1.61,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,LAA,CWS,PASS,59.2,HOME,,,,4.38,OVER,UNDER,UNDER 4.5,0.592,1.69,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,PIT,AZ,PASS,72.5,AWAY,,,,5.64,OVER,OVER,OVER 3.5,0.725,1.379,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,AZ,PIT,PASS,61.5,HOME,,,,4.88,OVER,OVER,OVER 3.5,0.615,1.626,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,ATL,SEA,PASS,60.6,AWAY,,,,4.28,OVER,UNDER,UNDER 4.5,0.606,1.651,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,SEA,ATL,PASS,67.7,HOME,,,,3.74,OVER,UNDER,UNDER 4.5,0.677,1.477,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,SD,SF,PASS,58.8,AWAY,,,,3.59,OVER,UNDER,UNDER 3.5,0.588,1.701,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,SF,SD,PASS,60.3,HOME,,,,3.49,UNDER,UNDER,UNDER 3.5,0.603,1.657,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,NYM,COL,PASS,69.6,AWAY,,,,5.43,OVER,OVER,OVER 3.5,0.696,1.437,5.0,2u,Market gated off (Brier 0.2554),,,
-projection,2026-05-05,COL,NYM,PASS,65.4,HOME,,,,5.14,OVER,OVER,OVER 3.5,0.654,1.529,5.0,2u,Market gated off (Brier 0.2554),,,
+projection,2026-05-06,TOR,TB,PASS,55.9,AWAY,,,,3.67,OVER,UNDER,UNDER 3.5,0.5592,1.743,5.0,2u,No market price available,,,
+projection,2026-05-06,TB,TOR,PASS,60.2,HOME,,,,4.11,OVER,UNDER,UNDER 4.5,0.6024,1.593,5.0,2u,No market price available,,,
+projection,2026-05-06,MIL,STL,PASS,58.7,AWAY,,,,4.82,OVER,OVER,OVER 3.5,0.5872,1.642,5.0,2u,No market price available,,,
+projection,2026-05-06,STL,MIL,PASS,58.7,HOME,,,,4.82,OVER,OVER,OVER 3.5,0.5872,1.642,5.0,2u,No market price available,,,
+projection,2026-05-06,LAD,HOU,PASS,66.2,AWAY,,,,5.45,OVER,OVER,OVER 3.5,0.6624,1.423,5.0,2u,No market price available,,,
+projection,2026-05-06,HOU,LAD,PASS,61.8,HOME,,,,3.96,OVER,UNDER,UNDER 4.5,0.6184,1.543,5.0,2u,No market price available,,,
+projection,2026-05-06,SD,SF,PASS,57.7,AWAY,,,,4.34,OVER,UNDER,UNDER 4.5,0.5768,1.678,5.0,2u,No market price available,,,
+projection,2026-05-06,SF,SD,PASS,57.8,HOME,,,,3.52,OVER,UNDER,UNDER 3.5,0.5776,1.675,5.0,2u,No market price available,,,
+projection,2026-05-06,CWS,LAA,PASS,61.7,AWAY,,,,5.06,OVER,OVER,OVER 3.5,0.6168,1.548,5.0,2u,No market price available,,,
+projection,2026-05-06,LAA,CWS,PASS,57.4,HOME,,,,4.37,OVER,UNDER,UNDER 4.5,0.5736,1.69,5.0,2u,No market price available,,,
+projection,2026-05-06,ATL,SEA,PASS,56.6,AWAY,,,,4.43,OVER,UNDER,UNDER 4.5,0.5664,1.715,5.0,2u,No market price available,,,
+projection,2026-05-06,SEA,ATL,PASS,60.5,HOME,,,,4.09,OVER,UNDER,UNDER 4.5,0.6048,1.586,5.0,2u,No market price available,,,
+projection,2026-05-06,BOS,DET,PASS,56.9,AWAY,,,,4.67,OVER,OVER,OVER 3.5,0.5688,1.707,5.0,2u,No market price available,,,
+projection,2026-05-06,DET,BOS,PASS,60.6,HOME,,,,4.07,OVER,UNDER,UNDER 4.5,0.6064,1.579,5.0,2u,No market price available,,,
+projection,2026-05-06,ATH,PHI,PASS,58.9,AWAY,,,,4.23,OVER,UNDER,UNDER 4.5,0.5888,1.636,5.0,2u,No market price available,,,
+projection,2026-05-06,PHI,ATH,PASS,61.0,HOME,,,,5.01,OVER,OVER,OVER 3.5,0.6104,1.567,5.0,2u,No market price available,,,
+projection,2026-05-06,BAL,MIA,PASS,60.1,AWAY,,,,4.12,OVER,UNDER,UNDER 4.5,0.6008,1.596,5.0,2u,No market price available,,,
+projection,2026-05-06,MIA,BAL,PASS,55.8,HOME,,,,4.5,OVER,UNDER,UNDER 4.5,0.5584,1.745,5.0,2u,No market price available,,,
+projection,2026-05-06,MIN,WSH,PASS,70.6,AWAY,,,,5.86,OVER,OVER,OVER 3.5,0.7056,1.32,5.0,2u,No market price available,,,
+projection,2026-05-06,WSH,MIN,PASS,63.8,HOME,,,,5.24,OVER,OVER,OVER 3.5,0.6384,1.487,5.0,2u,No market price available,,,
+projection,2026-05-06,TEX,NYY,PASS,56.4,AWAY,,,,3.63,OVER,UNDER,UNDER 3.5,0.564,1.724,5.0,2u,No market price available,,,
+projection,2026-05-06,NYY,TEX,PASS,60.3,HOME,,,,4.95,OVER,OVER,OVER 3.5,0.6032,1.589,5.0,2u,No market price available,,,
+projection,2026-05-06,CIN,CHC,PASS,61.1,AWAY,,,,4.03,OVER,UNDER,UNDER 4.5,0.6112,1.566,5.0,2u,No market price available,,,
+projection,2026-05-06,CHC,CIN,PASS,61.7,HOME,,,,5.06,OVER,OVER,OVER 3.5,0.6168,1.548,5.0,2u,No market price available,,,
+projection,2026-05-06,CLE,KC,PASS,56.5,AWAY,,,,4.64,OVER,OVER,OVER 3.5,0.5648,1.721,5.0,2u,No market price available,,,
+projection,2026-05-06,KC,CLE,PASS,56.1,HOME,,,,4.61,OVER,OVER,OVER 3.5,0.5608,1.735,5.0,2u,No market price available,,,
+projection,2026-05-06,NYM,COL,PASS,58.1,AWAY,,,,4.77,OVER,OVER,OVER 3.5,0.5808,1.663,5.0,2u,No market price available,,,
+projection,2026-05-06,COL,NYM,PASS,55.4,HOME,,,,4.55,OVER,OVER,OVER 3.5,0.5536,1.765,4.5,2u,No market price available,,,
+projection,2026-05-06,PIT,AZ,PASS,60.0,AWAY,,,,4.92,OVER,OVER,OVER 3.5,0.6,1.601,5.0,2u,No market price available,,,
+projection,2026-05-06,AZ,PIT,PASS,57.9,HOME,,,,4.32,OVER,UNDER,UNDER 4.5,0.5792,1.67,5.0,2u,No market price available,,,
+backfill,2026-05-05,BOS,DET,,,AWAY,,,,,,,,,,,,,10,OVER,OVER
+backfill,2026-05-05,DET,BOS,,,HOME,,,,,,,,,,,,,3,UNDER,UNDER
+backfill,2026-05-05,TOR,TB,,,AWAY,,,,,,,,,,,,,3,UNDER,UNDER
+backfill,2026-05-05,TB,TOR,,,HOME,,,,,,,,,,,,,4,OVER,UNDER
+backfill,2026-05-05,ATH,PHI,,,AWAY,,,,,,,,,,,,,1,UNDER,UNDER
+backfill,2026-05-05,PHI,ATH,,,HOME,,,,,,,,,,,,,9,OVER,OVER
+backfill,2026-05-05,BAL,MIA,,,AWAY,,,,,,,,,,,,,9,OVER,OVER
+backfill,2026-05-05,MIA,BAL,,,HOME,,,,,,,,,,,,,7,OVER,OVER
+backfill,2026-05-05,MIN,WSH,,,AWAY,,,,,,,,,,,,,11,OVER,OVER
+backfill,2026-05-05,WSH,MIN,,,HOME,,,,,,,,,,,,,3,UNDER,UNDER
+backfill,2026-05-05,TEX,NYY,,,AWAY,,,,,,,,,,,,,4,OVER,UNDER
+backfill,2026-05-05,NYY,TEX,,,HOME,,,,,,,,,,,,,7,OVER,OVER
+backfill,2026-05-05,CIN,CHC,,,AWAY,,,,,,,,,,,,,2,UNDER,UNDER
+backfill,2026-05-05,CHC,CIN,,,HOME,,,,,,,,,,,,,3,UNDER,UNDER
+backfill,2026-05-05,CLE,KC,,,AWAY,,,,,,,,,,,,,3,UNDER,UNDER
+backfill,2026-05-05,KC,CLE,,,HOME,,,,,,,,,,,,,5,OVER,OVER
+backfill,2026-05-05,LAD,HOU,,,AWAY,,,,,,,,,,,,,1,UNDER,UNDER
+backfill,2026-05-05,HOU,LAD,,,HOME,,,,,,,,,,,,,2,UNDER,UNDER
+backfill,2026-05-05,CWS,LAA,,,AWAY,,,,,,,,,,,,,3,UNDER,UNDER
+backfill,2026-05-05,LAA,CWS,,,HOME,,,,,,,,,,,,,4,OVER,UNDER
+backfill,2026-05-05,PIT,AZ,,,AWAY,,,,,,,,,,,,,0,UNDER,UNDER
+backfill,2026-05-05,AZ,PIT,,,HOME,,,,,,,,,,,,,9,OVER,OVER
+backfill,2026-05-05,ATL,SEA,,,AWAY,,,,,,,,,,,,,3,UNDER,UNDER
+backfill,2026-05-05,SEA,ATL,,,HOME,,,,,,,,,,,,,2,UNDER,UNDER
+backfill,2026-05-05,SD,SF,,,AWAY,,,,,,,,,,,,,10,OVER,OVER
+backfill,2026-05-05,SF,SD,,,HOME,,,,,,,,,,,,,5,OVER,OVER
 backfill,2026-05-04,NYM,COL,,,AWAY,,,,,,,,,,,,,4,OVER,UNDER
 backfill,2026-05-04,COL,NYM,,,HOME,,,,,,,,,,,,,2,UNDER,UNDER
 backfill,2026-05-04,BOS,DET,,,AWAY,,,,,,,,,,,,,5,OVER,OVER

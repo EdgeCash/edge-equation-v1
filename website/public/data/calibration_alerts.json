@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "generated_at": "2026-05-06T19:25:58Z",
+  "generated_at": "2026-05-06T21:57:08Z",
   "publish_gate": 0.246,
   "summary": {
     "mlb": {
-      "brier": 0.223,
-      "n": 5,
-      "roi_pct": 36.01,
+      "brier": 0.2483,
+      "n": 6,
+      "roi_pct": 13.34,
       "status": "no_data"
     },
     "wnba": {

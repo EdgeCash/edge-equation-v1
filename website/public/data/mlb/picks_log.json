@@ -182,8 +182,9 @@
       "closing_book": null,
       "closing_recorded_at": null,
       "clv_pct": null,
-      "result": null,
-      "units": null
+      "result": "LOSS",
+      "units": -1.0,
+      "graded_at": "2026-05-06T21:57:05.988895Z"
     }
   ]
 }
