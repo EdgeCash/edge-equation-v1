@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-06T18:50:38+00:00",
+  "footer": "Updated: 2026-05-06 13:50 CDT | Data as of 18:50 UTC",
+  "date": "2026-05-06",
+  "source": "run_daily.py",
+  "notes": "No picks for this slate yet \u2014 run_daily may not have been triggered, or there were no qualifying games today.",
+  "picks": [],
+  "parlays": {
+    "transparency_note": "Parlays built only from legs meeting strict edge thresholds (\u22654pp or ELITE tier, positive EV after vig). No plays forced. Facts. Not Feelings.",
+    "game_results": [],
+    "player_props": [],
+    "no_qualified_message": {
+      "game_results": "No qualified parlay today \u2014 data does not support a high-confidence combination.",
+      "player_props": "No qualified parlay today \u2014 data does not support a high-confidence combination."
+    }
+  },
+  "wnba": {
+    "picks": [],
+    "parlays": {
+      "transparency_note": "Parlays built only from legs meeting strict edge thresholds (\u22654pp or ELITE tier, positive EV after vig). No plays forced. Facts. Not Feelings.",
+      "game_results": [],
+      "player_props": [],
+      "no_qualified_message": {
+        "game_results": "No qualified parlay today \u2014 data does not support a high-confidence combination.",
+        "player_props": "No qualified parlay today \u2014 data does not support a high-confidence combination."
+      }
+    }
+  },
+  "nfl": {
+    "picks": [],
+    "parlays": {
+      "transparency_note": "Parlays built only from legs meeting strict edge thresholds (\u22654pp or ELITE tier, positive EV after vig). No plays forced. Facts. Not Feelings.",
+      "game_results": [],
+      "player_props": [],
+      "no_qualified_message": {
+        "game_results": "No qualified parlay today \u2014 data does not support a high-confidence combination.",
+        "player_props": "No qualified parlay today \u2014 data does not support a high-confidence combination."
+      }
+    }
+  },
+  "ncaaf": {
+    "picks": [],
+    "parlays": {
+      "transparency_note": "Parlays built only from legs meeting strict edge thresholds (\u22654pp or ELITE tier, positive EV after vig). No plays forced. Facts. Not Feelings.",
+      "game_results": [],
+      "player_props": [],
+      "no_qualified_message": {
+        "game_results": "No qualified parlay today \u2014 data does not support a high-confidence combination.",
+        "player_props": "No qualified parlay today \u2014 data does not support a high-confidence combination."
+      }
+    }
+  },
+  "market_status": {
+    "nrfi": "Pending",
+    "fullgame": "Pending",
+    "props": "Pending",
+    "game_results_parlay": "Pending",
+    "player_props_parlay": "Pending",
+    "wnba": "Pending",
+    "wnba_game_results_parlay": "Pending",
+    "wnba_player_props_parlay": "Pending",
+    "nfl": "Pending",
+    "nfl_game_results_parlay": "Pending",
+    "nfl_player_props_parlay": "Pending",
+    "ncaaf": "Pending",
+    "ncaaf_game_results_parlay": "Pending",
+    "ncaaf_player_props_parlay": "Pending"
+  }
+}
