@@ -7,8 +7,16 @@ import { SearchBar } from "./SearchBar";
 
 const NAV_LINKS = [
   { href: "/daily-card", label: "Daily Card" },
+  { href: "/parlays", label: "Parlays" },
   { href: "/track-record", label: "Track Record" },
   { href: "/methodology", label: "Methodology" },
+];
+
+const SPORT_LINKS = [
+  { href: "/sport/mlb", label: "MLB" },
+  { href: "/sport/wnba", label: "WNBA" },
+  { href: "/sport/nfl", label: "NFL" },
+  { href: "/sport/ncaaf", label: "NCAAF" },
 ];
 
 export function Navigation() {
@@ -34,6 +42,7 @@ export function Navigation() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6 text-sm text-chalk-300 shrink-0">
+          <SportsMenu />
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -93,11 +102,69 @@ export function Navigation() {
                   {link.label}
                 </Link>
               ))}
+              <div className="px-3 pt-2 mt-1 border-t border-chalkboard-700/60">
+                <p className="text-[10px] uppercase tracking-wider text-chalk-500 mb-1">
+                  Sports
+                </p>
+                <div className="grid grid-cols-2 gap-1">
+                  {SPORT_LINKS.map((s) => (
+                    <Link
+                      key={s.href}
+                      href={s.href}
+                      onClick={() => setOpen(false)}
+                      className="px-3 py-2 rounded text-chalk-100 hover:bg-chalkboard-800 hover:text-elite transition-colors text-sm"
+                    >
+                      {s.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </nav>
       )}
     </header>
+  );
+}
+
+
+/** Desktop "Sports" dropdown — hover-opens via group-hover so we
+ * don't pay for client state on the sticky nav. */
+function SportsMenu() {
+  return (
+    <div className="relative group">
+      <button
+        type="button"
+        className="hover:text-elite transition-colors flex items-center gap-1"
+        aria-haspopup="true"
+        aria-expanded="false"
+      >
+        Sports
+        <svg
+          width="11" height="11" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+          strokeLinejoin="round" aria-hidden
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      <div className="pointer-events-none invisible absolute right-0 top-full pt-3 z-40 group-hover:visible group-hover:pointer-events-auto group-focus-within:visible group-focus-within:pointer-events-auto">
+        <div className="rounded-md border border-chalkboard-600/70 bg-chalkboard-950/95 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)] min-w-[160px]">
+          <ul className="py-1">
+            {SPORT_LINKS.map((s) => (
+              <li key={s.href}>
+                <Link
+                  href={s.href}
+                  className="block px-3 py-2 text-sm text-chalk-100 hover:bg-chalkboard-800 hover:text-elite transition-colors"
+                >
+                  {s.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
   );
 }
 
