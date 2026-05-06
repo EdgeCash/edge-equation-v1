@@ -215,7 +215,11 @@ function TestingDisclaimer({ placement }: { placement: "top" | "bottom" }) {
 export default function DailyEdge({ view, error }: Props) {
   const groups = view ? bucket(view.picks) : [];
   const sourceLabel =
-    view?.source === "feed" ? "run_daily.py · static feed" : "FastAPI archive · fallback";
+    view?.source === "todays_card.csv"
+      ? "exporters.mlb.daily_spreadsheet · cron"
+      : view?.source
+      ? `${view.source} · static feed`
+      : "no source";
 
   return (
     <Layout
@@ -246,8 +250,9 @@ export default function DailyEdge({ view, error }: Props) {
           </div>
           <p className="text-edge-text font-mono text-sm">{error}</p>
           <p className="mt-3 text-edge-textDim text-sm">
-            Daily Edge tried <code className="font-mono">/data/daily/latest.json</code>{" "}
-            and the FastAPI archive. Neither responded.
+            Daily Edge tried{" "}
+            <code className="font-mono">website/public/data/mlb/todays_card.csv</code>.
+            The daily MLB cron writes that file at 11 AM ET.
           </p>
         </div>
       )}
@@ -256,8 +261,8 @@ export default function DailyEdge({ view, error }: Props) {
         <div className="mt-10">
           <CardShell
             eyebrow="Awaiting today’s slate"
-            headline="No daily_edge slate has been published yet."
-            subhead="Once run_daily.py writes public/data/daily/latest.json, today's picks will appear here automatically."
+            headline="No daily slate has been published yet."
+            subhead="Once the MLB Daily Spreadsheet workflow writes website/public/data/mlb/todays_card.csv, today's picks will appear here automatically."
           >
             <p className="text-edge-textDim">
               Follow on{" "}

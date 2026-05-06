@@ -73,14 +73,14 @@ jobs:
       # the orchestrator emitted, even when the commit step is skipped.
       - name: List outputs
         run: |
-          if [ -d public/data/mlb ]; then
-            echo "Files in public/data/mlb/:"
-            ls -la public/data/mlb/ || true
+          if [ -d website/public/data/mlb ]; then
+            echo "Files in website/public/data/mlb/:"
+            ls -la website/public/data/mlb/ || true
             echo
             echo "File sizes:"
-            du -h public/data/mlb/* 2>/dev/null || true
+            du -h website/public/data/mlb/* 2>/dev/null || true
           else
-            echo "public/data/mlb/ not found — orchestrator produced no outputs."
+            echo "website/public/data/mlb/ not found — orchestrator produced no outputs."
           fi
 
       # Always upload the outputs as an artifact so dry-run invocations
@@ -91,14 +91,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mlb-daily-${{ github.run_id }}
-          path: public/data/mlb/
+          path: website/public/data/mlb/
           if-no-files-found: warn
           retention-days: 14
 
       - name: Commit and push outputs
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          git add public/data/mlb/ || true
+          git add website/public/data/mlb/ || true
           if git diff --staged --quiet; then
             echo "No data changes to commit."
             exit 0

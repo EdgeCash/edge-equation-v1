@@ -73,7 +73,7 @@ from edge_equation.exporters.mlb.splits_loader import SplitsLoader
 
 SEASON_DEFAULT = 2026
 SEASON_OPENING_DAY = "{season}-03-20"
-DEFAULT_OUTPUT_DIR = REPO_ROOT / "public" / "data" / "mlb"
+DEFAULT_OUTPUT_DIR = REPO_ROOT / "website" / "public" / "data" / "mlb"
 TOTAL_LINES = (8.5, 9.0, 9.5)
 TEAM_TOTAL_LINES = (3.5, 4.5)
 
