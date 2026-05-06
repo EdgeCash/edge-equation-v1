@@ -131,10 +131,17 @@ def list_sports() -> list[str]:
 
 
 def output_paths_to_commit() -> list[str]:
-    """Every directory the master workflow should `git add` after a run."""
+    """Every directory the master workflow should `git add` after a run.
+
+    Includes per-sport `player_logs/` and `context_today/` dirs the
+    profile-data writers populate, so adding a sport to the catalog
+    auto-flows through to the workflow's commit step.
+    """
     paths: list[str] = []
     for entry in ENGINE_CATALOG:
         paths.extend(entry.output_dirs)
+        paths.append(f"website/public/data/{entry.sport}/player_logs/")
+        paths.append(f"website/public/data/{entry.sport}/context_today/")
     paths.append("website/public/data/daily/")
     # De-dupe while preserving order.
     seen: set[str] = set()
@@ -306,6 +313,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "one per line, and exit."
         ),
     )
+    parser.add_argument(
+        "--skip-player-profiles", action="store_true",
+        help=(
+            "Skip the per-player game-log + context_today writers "
+            "after the engines run. Useful for fast smoke runs."
+        ),
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     if args.list_sports:
@@ -353,7 +367,73 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             print(
                 "[run_daily_all] unified feed not written — see warnings above.",
             )
+        # Walk the freshly-written unified feed and emit per-player
+        # game-log + context JSON files so the website's player
+        # profile pages have real data instead of "Limited data".
+        if not args.skip_player_profiles:
+            _build_player_profiles(
+                target_date=target,
+                sports=[e.sport for e in successful],
+            )
     return 0
+
+
+def _build_player_profiles(
+    *, target_date: str, sports: list[str],
+) -> None:
+    """Run the player-profile writers for today's slate.
+
+    Best-effort. If the unified feed isn't readable or the writer
+    module fails to import, we log a warning and exit cleanly so
+    the rest of the master pipeline still wins.
+    """
+    try:
+        from edge_equation.exporters.player_profiles import build_for_slate
+    except Exception as e:
+        print(
+            f"[run_daily_all] player profiles skipped — import failed "
+            f"({type(e).__name__}: {e})",
+            file=sys.stderr,
+        )
+        return
+    feed_path = (
+        REPO_ROOT / "website" / "public" / "data" / "daily" / "latest.json"
+    )
+    if not feed_path.exists():
+        print(
+            "[run_daily_all] player profiles skipped — "
+            "daily/latest.json not on disk yet.",
+            file=sys.stderr,
+        )
+        return
+    try:
+        import json
+        feed = json.loads(feed_path.read_text())
+    except Exception as e:
+        print(
+            f"[run_daily_all] player profiles skipped — feed unreadable "
+            f"({type(e).__name__}: {e})",
+            file=sys.stderr,
+        )
+        return
+    try:
+        summary = build_for_slate(
+            feed,
+            target_date=target_date,
+            sports=sports or None,
+        )
+        for sport, counts in summary.items():
+            print(
+                f"[run_daily_all] {sport} player profiles: "
+                f"{counts.get('logs', 0)} logs · "
+                f"{counts.get('context', 0)} context files",
+            )
+    except Exception as e:
+        print(
+            f"[run_daily_all] player profiles failed "
+            f"({type(e).__name__}: {e}) — continuing.",
+            file=sys.stderr,
+        )
 
 
 if __name__ == "__main__":
