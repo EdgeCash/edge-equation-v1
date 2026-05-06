@@ -89,14 +89,20 @@ jobs:
           git commit -m "Daily NCAAF card — $DATE_TAG (unified card + parlays)"
           # Pull --rebase before push so a concurrent commit doesn't
           # fail us with non-fast-forward. Matches daily-master.yml.
+          pushed=0
           for attempt in 1 2 3; do
             if git push; then
+              pushed=1
               break
             fi
             echo "Push attempt $attempt failed — pulling --rebase and retrying."
             git pull --rebase origin main
             sleep $((attempt * 2))
           done
+          if [ "$pushed" -ne 1 ]; then
+            echo "::error::Push failed after 3 attempts."
+            exit 1
+          fi
 
       - name: Dry-run notice
         if: ${{ github.event.inputs.dry_run == 'true' }}
