@@ -33,7 +33,8 @@ Top-level:
 - `tests_api/` — fastapi-dependent tests
 - `data/` — CSV snapshots + DuckDB caches (gitignored runtime artifacts)
 - `tools/` — diagnostics + sheets utilities
-- `website/` — Next.js dashboard
+- `web/` — Next.js dashboard (Vercel root directory)
+- `website/public/data/` — daily cron output consumed by `web/` at build time
 - `.github/workflows/` — daily cron jobs (slate runs, refresh, settle, NRFI email)
 
 ## Engines
