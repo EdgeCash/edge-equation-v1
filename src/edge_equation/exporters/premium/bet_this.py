@@ -50,6 +50,7 @@ from typing import Any, Dict, Iterable, List, Optional
 REPO_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_MLB_JSON = REPO_ROOT / "website" / "public" / "data" / "mlb" / "mlb_daily.json"
 DEFAULT_WNBA_JSON = REPO_ROOT / "website" / "public" / "data" / "wnba" / "wnba_daily.json"
+DEFAULT_PROPS_JSON = REPO_ROOT / "website" / "public" / "data" / "props" / "props_daily.json"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "website" / "public" / "data" / "premium"
 
 # BRAND_GUIDE-aligned premium thresholds. The per-sport exporter has
@@ -233,6 +234,57 @@ def load_wnba_picks(path: Path = DEFAULT_WNBA_JSON) -> List[PremiumPick]:
 
 
 # ---------------------------------------------------------------------
+# MLB Player-Props loader
+# ---------------------------------------------------------------------
+
+def load_props_picks(path: Path = DEFAULT_PROPS_JSON) -> List[PremiumPick]:
+    """Read the MLB player-props daily payload's `todays_card` slice and
+    emit PremiumPick rows. Conviction is the calibrated model_pct, edge
+    is in percentage points (already divided by 100 from raw prob), and
+    Kelly is converted from `kelly_units` (the props engine's stake) to
+    a percentage-style value matching the MLB / WNBA loaders.
+
+    The props engine's edge ladder + calibration shrink already filtered
+    to STRONG+ rows by the time the JSON was written; this function
+    just shapes them into the unified premium row.
+    """
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text())
+    out: List[PremiumPick] = []
+    for pick in payload.get("todays_card") or []:
+        kelly_units = pick.get("kelly_units")
+        kelly_pct = float(kelly_units) if kelly_units else 0.0
+        kelly_advice = (
+            f"{kelly_pct:.1f}u"
+            if kelly_pct > 0 else "PASS"
+        )
+        market_label = pick.get("market_label") or pick.get("market_type") or ""
+        line = pick.get("line_value")
+        out.append(PremiumPick(
+            sport="MLB-Props",
+            matchup=str(pick.get("player_name") or ""),
+            market=str(market_label),
+            side=str(pick.get("side") or ""),
+            line=str(line) if line is not None else None,
+            conviction_pct=float(pick.get("model_pct") or
+                                  (pick.get("model_prob") or 0.0) * 100.0),
+            edge_pct=float(pick.get("edge_pp") or 0.0),
+            kelly_pct=kelly_pct,
+            kelly_advice=kelly_advice,
+            market_odds_american=_fmt_american(pick.get("american_odds")),
+            book=pick.get("book"),
+            extras={
+                "tier": pick.get("tier"),
+                "color_band": pick.get("color_band"),
+                "blend_n": pick.get("blend_n"),
+                "lam": pick.get("lam"),
+            },
+        ))
+    return out
+
+
+# ---------------------------------------------------------------------
 # Combiner + filter
 # ---------------------------------------------------------------------
 
@@ -354,6 +406,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument("--mlb-json", type=Path, default=DEFAULT_MLB_JSON)
     parser.add_argument("--wnba-json", type=Path, default=DEFAULT_WNBA_JSON)
+    parser.add_argument("--props-json", type=Path, default=DEFAULT_PROPS_JSON)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--date", default=None,
                         help="Override target date label (default: today UTC)")
@@ -368,10 +421,14 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     mlb = load_mlb_picks(args.mlb_json)
     wnba = load_wnba_picks(args.wnba_json)
-    print(f"Premium combiner: {len(mlb)} MLB PLAY rows, {len(wnba)} WNBA card rows")
+    props = load_props_picks(args.props_json)
+    print(
+        f"Premium combiner: {len(mlb)} MLB PLAY rows, "
+        f"{len(wnba)} WNBA card rows, {len(props)} props card rows"
+    )
 
     combined = filter_premium(
-        mlb + wnba,
+        mlb + wnba + props,
         min_conviction=args.min_conviction,
         min_edge_pct=args.min_edge,
         min_kelly_pct=args.min_kelly,
