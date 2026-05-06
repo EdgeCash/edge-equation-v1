@@ -117,7 +117,16 @@ jobs:
           fi
           DATE_TAG=$(date -u +"%Y-%m-%d")
           git commit -m "Daily WNBA card — $DATE_TAG (unified card + parlays)"
-          git push
+          # Pull --rebase before push so a concurrent commit doesn't
+          # fail us with non-fast-forward. Matches daily-master.yml.
+          for attempt in 1 2 3; do
+            if git push; then
+              break
+            fi
+            echo "Push attempt $attempt failed — pulling --rebase and retrying."
+            git pull --rebase origin main
+            sleep $((attempt * 2))
+          done
 
       - name: Dry-run notice
         if: ${{ github.event.inputs.dry_run == 'true' }}
