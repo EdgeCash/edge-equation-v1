@@ -23,8 +23,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      - name: Diagnostic -- which python / pytest is in scope
+        run: |
+          which python && python --version
+          which pytest && pytest --version
+          python -c "import httpx, requests, pandas; print('runtime deps OK')"
+
       - name: Run pytest
-        run: pytest tests/ -v
+        # `python -m pytest` ensures the same interpreter that pip just
+        # populated also runs the tests -- bare `pytest` can resolve to
+        # a separately-installed pytest with a different python that's
+        # missing the project's deps. `--tb=line -rfE` keeps output
+        # compact while still surfacing each failure / error one line.
+        run: python -m pytest tests/ --tb=line -rfE
 
       - name: Summary
         if: always()
