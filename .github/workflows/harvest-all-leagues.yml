@@ -1,0 +1,188 @@
+name: Harvest -- ALL leagues (parallel)
+
+# One-button orchestrator. Fans out into 4 parallel jobs, one per
+# league, each running its dedicated backfill script. Same shape as
+# `scripts/harvest_overnight.py` -- just running on GitHub's runners
+# instead of the operator's laptop.
+#
+# Each job is independent: a failure in NBA won't stop NHL. Outputs
+# are committed back per-league with rebase + retry so concurrent
+# pushes don't race. If two leagues finish within the same second,
+# the second push rebases and retries automatically.
+#
+# Use `--league subset` if you only want to harvest a few leagues.
+
+on:
+  workflow_dispatch:
+    inputs:
+      leagues:
+        description: "Comma-separated subset (default 'all')."
+        required: false
+        default: "all"
+      mlb_seasons:
+        description: "MLB props seasons (space-separated)."
+        required: false
+        default: "2024 2025"
+      nba_seasons:
+        description: "NBA seasons (space-separated)."
+        required: false
+        default: "2024 2025"
+      nhl_seasons:
+        description: "NHL seasons (space-separated)."
+        required: false
+        default: "2024 2025"
+      wnba_seasons:
+        description: "WNBA player-game seasons (space-separated)."
+        required: false
+        default: "2022 2023 2024 2025"
+      rps:
+        description: "Requests / second (all leagues)."
+        required: false
+        default: "1.0"
+      limit:
+        description: "Per-league cap (smoke test). Empty = full pull."
+        required: false
+        default: ""
+      commit:
+        description: "Commit and push outputs (false = artifact only)."
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      leagues: ${{ steps.compute.outputs.leagues }}
+    steps:
+      - id: compute
+        run: |
+          set -euo pipefail
+          INPUT="${{ github.event.inputs.leagues }}"
+          if [ "$INPUT" = "all" ] || [ -z "$INPUT" ]; then
+            LEAGUES='["mlb-props","nba","nhl","wnba-player-games"]'
+          else
+            # turn "nba,nhl" into ["nba","nhl"]
+            LEAGUES=$(echo "$INPUT" | tr ',' '\n' \
+              | sed 's/^[ \t]*//;s/[ \t]*$//' \
+              | grep -v '^$' \
+              | jq -R . | jq -sc .)
+          fi
+          echo "leagues=$LEAGUES" >> "$GITHUB_OUTPUT"
+          echo "Planning to harvest: $LEAGUES"
+
+  harvest:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        league: ${{ fromJson(needs.plan.outputs.leagues) }}
+    concurrency:
+      group: harvest-${{ matrix.league }}-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install runtime dep
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Configure git author
+        run: |
+          git config user.name  "edge-equation-bot"
+          git config user.email "bot@edge-equation.local"
+
+      - name: Resolve script + seasons for this league
+        id: resolve
+        run: |
+          set -euo pipefail
+          case "${{ matrix.league }}" in
+            mlb-props)
+              echo "script=scripts/backfill_player_games.py"          >> "$GITHUB_OUTPUT"
+              echo "seasons=${{ github.event.inputs.mlb_seasons }}"   >> "$GITHUB_OUTPUT"
+              echo "data_dir=data/backfill/mlb/"                      >> "$GITHUB_OUTPUT"
+              ;;
+            nba)
+              echo "script=scripts/backfill_nba_games.py"             >> "$GITHUB_OUTPUT"
+              echo "seasons=${{ github.event.inputs.nba_seasons }}"   >> "$GITHUB_OUTPUT"
+              echo "data_dir=data/backfill/nba/"                      >> "$GITHUB_OUTPUT"
+              ;;
+            nhl)
+              echo "script=scripts/backfill_nhl_games.py"             >> "$GITHUB_OUTPUT"
+              echo "seasons=${{ github.event.inputs.nhl_seasons }}"   >> "$GITHUB_OUTPUT"
+              echo "data_dir=data/backfill/nhl/"                      >> "$GITHUB_OUTPUT"
+              ;;
+            wnba-player-games)
+              echo "script=scripts/backfill_wnba_player_games.py"     >> "$GITHUB_OUTPUT"
+              echo "seasons=${{ github.event.inputs.wnba_seasons }}"  >> "$GITHUB_OUTPUT"
+              echo "data_dir=data/backfill/wnba/"                     >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error::Unknown league: ${{ matrix.league }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Run backfill for ${{ matrix.league }}
+        run: |
+          set -euo pipefail
+          ARGS=( --seasons ${{ steps.resolve.outputs.seasons }} --rps ${{ github.event.inputs.rps }} )
+          if [ -n "${{ github.event.inputs.limit }}" ]; then
+            ARGS+=( --limit ${{ github.event.inputs.limit }} )
+          fi
+          echo "Running: ${{ steps.resolve.outputs.script }} ${ARGS[@]}"
+          python "${{ steps.resolve.outputs.script }}" "${ARGS[@]}"
+
+      - name: Show what changed
+        run: |
+          DIR="${{ steps.resolve.outputs.data_dir }}"
+          ls -la "$DIR" || true
+          find "$DIR" -name '*.jsonl' -exec sh -c '
+            f="$1"; echo "  $f: $(wc -l < "$f") lines, $(du -h "$f" | cut -f1)"
+          ' _ {} \;
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harvest-${{ matrix.league }}-${{ github.run_id }}
+          path: ${{ steps.resolve.outputs.data_dir }}**/*.jsonl
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit and push (resume-safe)
+        if: ${{ github.event.inputs.commit != 'false' }}
+        run: |
+          set -euo pipefail
+          git add "${{ steps.resolve.outputs.data_dir }}" || true
+          if git diff --staged --quiet; then
+            echo "[${{ matrix.league }}] No new rows to commit."
+            exit 0
+          fi
+          git pull --rebase origin "${{ github.ref_name }}" || true
+          git commit -m "harvest(${{ matrix.league }}): seasons ${{ steps.resolve.outputs.seasons }} (run ${{ github.run_id }})"
+          for attempt in 1 2 3 4; do
+            if git push origin "HEAD:${{ github.ref_name }}"; then
+              echo "[${{ matrix.league }}] Push OK on attempt $attempt"
+              exit 0
+            fi
+            echo "[${{ matrix.league }}] Push failed -- rebase + retry ($attempt)"
+            git pull --rebase origin "${{ github.ref_name }}" || true
+            sleep $((2 ** attempt))
+          done
+          echo "::error::[${{ matrix.league }}] Failed to push after 4 attempts"
+          exit 1

@@ -1,0 +1,107 @@
+name: Harvest -- WNBA player-game stats
+
+# Pulls per-game player stats (PRA / 3PM / FG / minutes) from ESPN's
+# summary boxscore endpoint into
+# `data/backfill/wnba/<season>/player_games.jsonl`. Walks the existing
+# per-season `games.json` files; only games already on disk are
+# fetched. Resumable.
+
+on:
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: "Space-separated seasons (default: 2022 2023 2024 2025)."
+        required: false
+        default: "2022 2023 2024 2025"
+      rps:
+        description: "Requests / second to ESPN."
+        required: false
+        default: "1.0"
+      limit:
+        description: "Cap games/season (smoke test). Empty = full slate."
+        required: false
+        default: ""
+      commit:
+        description: "Commit and push outputs (false = artifact only)."
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    concurrency:
+      group: harvest-wnba-player-games-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install runtime dep
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Configure git author
+        run: |
+          git config user.name  "edge-equation-bot"
+          git config user.email "bot@edge-equation.local"
+
+      - name: Run backfill
+        run: |
+          set -euo pipefail
+          ARGS=( --seasons ${{ github.event.inputs.seasons }} --rps ${{ github.event.inputs.rps }} )
+          if [ -n "${{ github.event.inputs.limit }}" ]; then
+            ARGS+=( --limit ${{ github.event.inputs.limit }} )
+          fi
+          echo "Running: scripts/backfill_wnba_player_games.py ${ARGS[@]}"
+          python scripts/backfill_wnba_player_games.py "${ARGS[@]}"
+
+      - name: Show what changed
+        run: |
+          for f in data/backfill/wnba/*/player_games.jsonl; do
+            [ -f "$f" ] || continue
+            echo "  $f: $(wc -l < "$f") lines, $(du -h "$f" | cut -f1)"
+          done
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wnba-player-games-${{ github.run_id }}
+          path: data/backfill/wnba/*/player_games.jsonl
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit and push (resume-safe)
+        if: ${{ github.event.inputs.commit != 'false' }}
+        run: |
+          set -euo pipefail
+          git add data/backfill/wnba/ || true
+          if git diff --staged --quiet; then
+            echo "No new rows to commit."
+            exit 0
+          fi
+          git pull --rebase origin "${{ github.ref_name }}" || true
+          git commit -m "harvest(wnba-player-games): seasons ${{ github.event.inputs.seasons }} (run ${{ github.run_id }})"
+          for attempt in 1 2 3 4; do
+            if git push origin "HEAD:${{ github.ref_name }}"; then
+              echo "Push OK on attempt $attempt"
+              exit 0
+            fi
+            git pull --rebase origin "${{ github.ref_name }}" || true
+            sleep $((2 ** attempt))
+          done
+          echo "::error::Failed to push after 4 attempts"
+          exit 1
