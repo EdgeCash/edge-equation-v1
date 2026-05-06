@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: "/daily-card", label: "Daily Card" },
   { href: "/parlays", label: "Parlays" },
   { href: "/track-record", label: "Track Record" },
+  { href: "/ledger", label: "Ledger" },
   { href: "/methodology", label: "Methodology" },
 ];
 
