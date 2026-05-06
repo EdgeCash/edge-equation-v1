@@ -68,6 +68,35 @@ _TIER_ORDER = {
 }
 
 
+def _resolve_market_gate(
+    summary_path: Path,
+) -> tuple[Optional[set[str]], Dict[str, str]]:
+    """Read a backtest summary JSON and return ``(passed_markets,
+    notes)``. Missing / malformed file -> cold-start (None, {}).
+
+    Mirrors the MLB game-results gate. Prefers
+    `summary_by_bet_type_play_only` so the gate evaluates the slice the
+    production filter would actually publish.
+    """
+    from edge_equation.engines.props_prizepicks.gates import (
+        market_gate, select_summary_for_gate,
+    )
+    if not summary_path.exists():
+        log.info("market gate: %s missing -- cold-start", summary_path)
+        return None, {}
+    try:
+        payload = json.loads(summary_path.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        log.warning(
+            "market gate: failed to read %s (%s) -- cold-start",
+            summary_path, e,
+        )
+        return None, {}
+    summary, source = select_summary_for_gate(payload)
+    log.info("market gate: source=%s", source)
+    return market_gate(summary)
+
+
 def _pick_to_dict(pick) -> Dict[str, Any]:
     """Flatten a PropOutput into a JSON-serialisable row."""
     return {
@@ -199,6 +228,17 @@ def main(argv: Optional[List[str]] = None) -> int:
                         help="Skip writing predictions to DuckDB.")
     parser.add_argument("--no-flag-check", action="store_true",
                         help="Run even when EDGE_FEATURE_PROPS_PIPELINE is off.")
+    parser.add_argument(
+        "--backtest-summary", type=Path, default=None,
+        help="Path to a props_backtest_summary.json. When provided, the "
+             "BRAND_GUIDE rolling-backtest gate filters the slate to "
+             "markets passing +1%% ROI / Brier <0.246 / 200+ bets.",
+    )
+    parser.add_argument(
+        "--no-gate", action="store_true",
+        help="Force cold-start mode (all markets allowed) even when "
+             "--backtest-summary is supplied.",
+    )
     args = parser.parse_args(argv)
 
     if not args.no_flag_check and not _flag_on():
@@ -212,10 +252,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     target_date = args.date or _today_utc()
     print(f"Props Daily -- target {target_date}")
 
+    # Resolve the rolling-backtest gate.
+    passed_markets = None
+    gate_notes: Dict[str, str] = {}
+    if args.backtest_summary and not args.no_gate:
+        passed_markets, gate_notes = _resolve_market_gate(args.backtest_summary)
+        print(f"  market gate             {sorted(passed_markets) if passed_markets else 'cold-start (all markets)'}")
+        for k, v in gate_notes.items():
+            print(f"    excluded {k}: {v}")
+
     card = build_props_card(
         target_date=target_date,
         persist=not args.no_persist,
         top_n=args.top_n,
+        passed_markets=passed_markets,
     )
     print(f"  lines fetched           {card.n_lines_fetched}")
     print(f"  projected               {card.n_projected}")
