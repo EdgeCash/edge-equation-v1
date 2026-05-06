@@ -76,10 +76,28 @@ jobs:
           git config user.name  "edge-equation-bot"
           git config user.email "bot@edge-equation.local"
 
+      # MLB has a legacy "daily spreadsheet" exporter that powers
+      # the /daily-card route + populates the MLB DuckDB caches the
+      # unified runner reads from. Must run BEFORE run_daily_all.py
+      # so the unified bundle picks up today's freshly-projected
+      # MLB picks. Best-effort `|| true` so a transient odds-API
+      # blip doesn't cancel the rest of the master run.
+      - name: Build legacy MLB spreadsheet (populates DuckDB caches)
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          EDGE_FEATURE_SPREADSHEET_PIPELINE: "on"
+        run: |
+          ARGS="--include-backfill"
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS="$ARGS --date ${{ github.event.inputs.date }}"
+          fi
+          python -m edge_equation.exporters.mlb.daily_spreadsheet $ARGS \
+            || echo "::warning::Legacy MLB spreadsheet failed; continuing with master."
+
       # Every per-sport feature flag the catalog declares lands in
       # the env for this step. The script enables each sport's
       # parlay engines + unified runner only inside the workflow.
-      - name: Run all engines
+      - name: Run all engines (unified card + parlays)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           EDGE_FEATURE_SPREADSHEET_PIPELINE: "on"
