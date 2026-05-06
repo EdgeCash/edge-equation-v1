@@ -187,7 +187,7 @@ function Filters({
   clv: CLVFilter;
 }) {
   return (
-    <div className="chalk-card p-4 flex flex-wrap items-center gap-4">
+    <div className="chalk-card p-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-4 overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-4">
       <FilterGroup label="Sport">
         <FilterChip
           href={hrefFor({ sport: "all", result, clv })}
@@ -239,8 +239,8 @@ function FilterGroup({
   label, children,
 }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[10px] uppercase tracking-wider text-chalk-500 mr-1">
+    <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap">
+      <span className="text-[10px] uppercase tracking-wider text-chalk-500 mr-1 shrink-0">
         {label}
       </span>
       {children}

@@ -214,8 +214,8 @@ function FilterGroup({
   label, children,
 }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[10px] uppercase tracking-wider text-chalk-500 mr-1">
+    <div className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap">
+      <span className="text-[10px] uppercase tracking-wider text-chalk-500 mr-1 shrink-0">
         {label}
       </span>
       {children}

@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: "/parlays", label: "Parlays" },
   { href: "/track-record", label: "Track Record" },
   { href: "/ledger", label: "Ledger" },
+  { href: "/data", label: "Data" },
   { href: "/methodology", label: "Methodology" },
 ];
 

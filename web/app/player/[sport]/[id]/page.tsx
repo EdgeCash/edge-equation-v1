@@ -13,8 +13,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ChalkboardBackground } from "../../../../components/ChalkboardBackground";
+import { GameLogTable } from "../../../../components/GameLogTable";
 import { ProfileFilters } from "../../../../components/ProfileFilters";
 import { RollingChart } from "../../../../components/RollingChart";
+import { TodaysContextPanel } from "../../../../components/TodaysContextPanel";
 import {
   SPORTS,
   SPORT_LABEL,
@@ -24,6 +26,10 @@ import {
   getEngineSnapshot,
   resolvePlayerProfile,
 } from "../../../../lib/profiles";
+import {
+  loadPlayerGameLog,
+  loadPlayerContextToday,
+} from "../../../../lib/player-data";
 import { TransparencyNote } from "../../../../components/TransparencyNote";
 import { TodayPicksSidebar } from "../../../../components/TodayPicksSidebar";
 import { EngineHistoryTable } from "../../../../components/EngineHistoryTable";
@@ -52,6 +58,8 @@ export default async function PlayerProfilePage({
   const profile = await resolvePlayerProfile(sport, id);
   if (!profile) notFound();
   const snap = await getEngineSnapshot(sport);
+  const gameLog = await loadPlayerGameLog(sport, id);
+  const contextSnapshot = await loadPlayerContextToday(sport, id);
 
   const filtered = applyFilters(profile.history_records, {
     lastN, homeAway,
@@ -120,8 +128,40 @@ export default async function PlayerProfilePage({
 
           <div className="chalk-card p-5">
             <h2 className="text-sm uppercase tracking-wider text-chalk-300 font-mono">
-              Performance context
+              Game logs
             </h2>
+            <p className="text-xs text-chalk-500 mt-1">
+              Last 5 / 10 / 20 game stat lines for {profile.display}.
+              Toggle the window to drill in.
+            </p>
+            <div className="mt-4">
+              <GameLogTable log={gameLog} />
+            </div>
+          </div>
+
+          <div className="chalk-card p-5">
+            <h2 className="text-sm uppercase tracking-wider text-chalk-300 font-mono">
+              Today&apos;s context
+            </h2>
+            <p className="text-xs text-chalk-500 mt-1">
+              The exact values the engine used at projection time —
+              today&apos;s lineup spot, opponent, weather, injury
+              status. Live snapshot.
+            </p>
+            <div className="mt-4">
+              <TodaysContextPanel snapshot={contextSnapshot} />
+            </div>
+          </div>
+
+          <div className="chalk-card p-5">
+            <h2 className="text-sm uppercase tracking-wider text-chalk-300 font-mono">
+              What the model uses ({SPORT_LABEL[sport]})
+            </h2>
+            <p className="text-xs text-chalk-500 mt-1">
+              The static feature inputs the projection layer reads.
+              Today&apos;s actual values land in the panel above when
+              the live context bridge is populated.
+            </p>
             <ContextPanel sport={sport} />
           </div>
         </div>
