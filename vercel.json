@@ -1,4 +1,6 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next"
+  "framework": "nextjs",
+  "buildCommand": "cd web && npm install && npm run build",
+  "installCommand": "echo 'No root install; deps are inside web/'",
+  "outputDirectory": "web/.next"
 }
