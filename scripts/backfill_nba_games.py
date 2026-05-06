@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+"""NBA games backfill from ESPN's free scoreboard API.
+
+Walks day-by-day across each requested season and writes one row per
+completed game to ``data/backfill/nba/<season>/games.jsonl`` (JSONL so
+the file can grow append-only and resume mid-season).
+
+NBA season convention: a season is named by the year it ENDS in -- e.g.
+the 2023-24 season is "season 2024." This matches how Basketball
+Reference and the NBA's own stats schema label seasons. Regular season
+runs roughly mid-October (year N-1) through mid-April (year N), with
+playoffs through mid-June.
+
+ESPN endpoint
+~~~~~~~~~~~~~
+``https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=YYYYMMDD``
+
+Free, no auth, ~150 RPS limit in practice -- we run at 1.0 RPS to be
+polite and stay well clear.
+
+Output schema
+~~~~~~~~~~~~~
+Same column shape as ``data/backfill/wnba/`` so the downstream WNBA
+ProjectionModel + exporter can be reused with minimal branching when
+the NBA engine ports come online.
+
+Usage::
+
+    # First-time run for 2024 + 2025 (resumable):
+    python scripts/backfill_nba_games.py --seasons 2024 2025
+
+    # Smoke test:
+    python scripts/backfill_nba_games.py --seasons 2024 --limit 5
+"""
+from __future__ import annotations
+
+import argparse
+import sys
+import time
+from datetime import date, datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+# Same-dir imports work because scripts/ ships its own _harvest_common.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _harvest_common import (  # noqa: E402
+    FetchStats, RateLimitedClient, graceful_jsonl_writer, graceful_sigint,
+    log_progress, scan_completed_ids, utc_iso,
+)
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_BACKFILL_DIR = REPO_ROOT / "data" / "backfill" / "nba"
+
+ESPN_URL = (
+    "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/"
+    "scoreboard?dates={ymd}"
+)
+
+
+# NBA seasons span calendar years; "season 2024" == 2023-24 league year.
+def season_window(season: int) -> Tuple[date, date]:
+    """Wide window covering preseason -> Finals: Sep 1 (year N-1) to
+    Jul 1 (year N). Catches everything regular + playoffs."""
+    return (date(season - 1, 9, 1), date(season, 7, 1))
+
+
+def iter_dates(start: date, end: date) -> Iterable[date]:
+    cur = start
+    while cur <= end:
+        yield cur
+        cur += timedelta(days=1)
+
+
+def parse_scoreboard(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Pull one row per completed game from an ESPN scoreboard payload.
+
+    ESPN's structure: ``events[].competitions[0].competitors[]`` with
+    ``team.abbreviation`` + ``score`` + ``homeAway``. We collapse the
+    pair into a flat row matching the WNBA backfill shape."""
+    rows: List[Dict[str, Any]] = []
+    for event in payload.get("events") or []:
+        comps = event.get("competitions") or []
+        if not comps:
+            continue
+        comp = comps[0]
+        status = ((comp.get("status") or {}).get("type") or {}).get("name") or ""
+        completed = bool(((comp.get("status") or {}).get("type") or {}).get("completed"))
+        if not completed:
+            continue
+        away = home = None
+        for c in comp.get("competitors") or []:
+            side = c.get("homeAway")
+            if side == "home":
+                home = c
+            elif side == "away":
+                away = c
+        if not home or not away:
+            continue
+        try:
+            home_score = int(home.get("score") or 0)
+            away_score = int(away.get("score") or 0)
+        except (TypeError, ValueError):
+            continue
+        home_abbr = (home.get("team") or {}).get("abbreviation") or ""
+        away_abbr = (away.get("team") or {}).get("abbreviation") or ""
+        if not (home_abbr and away_abbr):
+            continue
+        ml_winner = home_abbr if home_score > away_score else away_abbr
+        margin = abs(home_score - away_score)
+        # Linescores per quarter (Q1..Q4 + OT if any).
+        away_q = _linescores(away)
+        home_q = _linescores(home)
+        rows.append({
+            "date": (comp.get("date") or "")[:10],
+            "game_id": str(event.get("id") or comp.get("id")),
+            "season_type": int(((event.get("season") or {}).get("type") or 0) or 0),
+            "status": status,
+            "completed": completed,
+            "away_team": away_abbr,
+            "home_team": home_abbr,
+            "away_score": away_score,
+            "home_score": home_score,
+            "total_points": home_score + away_score,
+            "ml_winner": ml_winner,
+            "margin": margin,
+            "spread_margin": margin,  # alias for downstream
+            "away_q": away_q,
+            "home_q": home_q,
+            "away_1h": (sum(away_q[:2]) if len(away_q) >= 2 else None),
+            "home_1h": (sum(home_q[:2]) if len(home_q) >= 2 else None),
+            "venue": (comp.get("venue") or {}).get("fullName"),
+        })
+    return rows
+
+
+def _linescores(competitor: Dict[str, Any]) -> List[int]:
+    out: List[int] = []
+    for ls in competitor.get("linescores") or []:
+        try:
+            out.append(int(ls.get("value") or ls.get("displayValue") or 0))
+        except (TypeError, ValueError):
+            out.append(0)
+    return out
+
+
+def backfill_season(
+    season: int,
+    backfill_dir: Path = DEFAULT_BACKFILL_DIR,
+    rps: float = 1.0,
+    limit: Optional[int] = None,
+    log_every: int = 25,
+) -> FetchStats:
+    season_dir = backfill_dir / str(season)
+    out_path = season_dir / "games.jsonl"
+    completed = scan_completed_ids(out_path, id_field="_date_ymd")
+    start, end = season_window(season)
+    days = list(iter_dates(start, end))
+    pending = [d for d in days if d.strftime("%Y%m%d") not in completed]
+    if limit is not None:
+        pending = pending[:limit]
+
+    print(
+        f"[NBA-{season}] window {start} -> {end} "
+        f"({len(days)} days, {len(completed)} cached, {len(pending)} pending)"
+    )
+    stats = FetchStats(skipped=len(completed))
+    if not pending:
+        print(f"[NBA-{season}] nothing to do.")
+        return stats
+
+    client = RateLimitedClient(rps=rps)
+    with graceful_sigint() as was_interrupted, \
+         graceful_jsonl_writer(out_path) as write:
+        for i, d in enumerate(pending, start=1):
+            if was_interrupted():
+                break
+            ymd = d.strftime("%Y%m%d")
+            url = ESPN_URL.format(ymd=ymd)
+            payload = client.get_json(url)
+            if payload is None:
+                stats.errors += 1
+                # Still mark the day so we don't re-hit it next run.
+                write({"_date_ymd": ymd, "_error": "scoreboard_unavailable"})
+                continue
+            rows = parse_scoreboard(payload)
+            for row in rows:
+                row["_date_ymd"] = ymd  # used by resume-scan
+                write(row)
+                stats.rows_written += 1
+            # Day-marker even when ESPN returned no events.
+            if not rows:
+                write({"_date_ymd": ymd, "_no_games": True})
+            stats.fetched += 1
+            log_progress(f"NBA-{season}", i, len(pending), stats, log_every)
+
+    elapsed = time.time() - stats.started_at
+    print(
+        f"[NBA-{season}] done in {elapsed:.0f}s -- "
+        f"days fetched {stats.fetched}, errors {stats.errors}, "
+        f"rows {stats.rows_written}"
+    )
+    return stats
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(prog="backfill_nba_games")
+    parser.add_argument("--seasons", type=int, nargs="+", required=True)
+    parser.add_argument("--backfill-dir", type=Path, default=DEFAULT_BACKFILL_DIR)
+    parser.add_argument("--rps", type=float, default=1.0)
+    parser.add_argument("--limit", type=int, default=None)
+    args = parser.parse_args(argv)
+
+    print(f"[backfill_nba_games] start {utc_iso()}")
+    print(f"  seasons={args.seasons} rps={args.rps} limit={args.limit}")
+    total = FetchStats()
+    for s in args.seasons:
+        st = backfill_season(s, args.backfill_dir, args.rps, args.limit)
+        total.fetched += st.fetched
+        total.errors += st.errors
+        total.rows_written += st.rows_written
+    print(
+        f"[backfill_nba_games] done -- days {total.fetched}, "
+        f"errors {total.errors}, games {total.rows_written}"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
