@@ -28,10 +28,21 @@ import { loadAllPicks, bySport } from "../../lib/picks-history";
 export const dynamic = "force-dynamic";
 
 
-export default async function ReliabilityPage() {
+interface ReliabilityRouteProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+
+export default async function ReliabilityPage({
+  searchParams,
+}: ReliabilityRouteProps) {
+  const sp = (await searchParams) ?? {};
+  const sportFilter = parseSport(sp.sport);
   const picks = await loadAllPicks();
   const alerts = await loadAlertReport();
   const map = bySport(picks);
+  const sportsToShow =
+    sportFilter === "all" ? SPORTS : ([sportFilter] as readonly SportKey[]);
 
   return (
     <>
@@ -62,7 +73,8 @@ export default async function ReliabilityPage() {
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 space-y-6">
-        {SPORTS.map((sport) => {
+        <SportFilter active={sportFilter} />
+        {sportsToShow.map((sport) => {
           const rows = map.get(sport) ?? [];
           const brier = brierScore(rows);
           const summary = summaryFor(alerts, sport);
@@ -80,6 +92,46 @@ export default async function ReliabilityPage() {
 
       <TransparencyNote />
     </>
+  );
+}
+
+
+function parseSport(v: string | string[] | undefined): SportKey | "all" {
+  const raw = String(Array.isArray(v) ? v[0] : v ?? "").toLowerCase();
+  return (SPORTS as readonly string[]).includes(raw)
+    ? (raw as SportKey)
+    : "all";
+}
+
+
+function SportFilter({ active }: { active: SportKey | "all" }) {
+  const hrefFor = (sport: SportKey | "all") =>
+    sport === "all" ? "/reliability" : `/reliability?sport=${sport}`;
+  const chipCls = (isActive: boolean) =>
+    isActive
+      ? "bg-elite/20 text-elite border border-elite/50"
+      : "bg-chalkboard-800/60 text-chalk-300 border border-chalkboard-700/60 hover:text-elite hover:border-elite/40";
+  return (
+    <div className="chalk-card p-3 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap">
+      <span className="text-[10px] uppercase tracking-wider text-chalk-500 mr-1 shrink-0">
+        Sport
+      </span>
+      <Link
+        href={hrefFor("all")}
+        className={`text-[11px] font-mono px-2 py-1 rounded transition-colors ${chipCls(active === "all")}`}
+      >
+        All
+      </Link>
+      {SPORTS.map((s) => (
+        <Link
+          key={s}
+          href={hrefFor(s)}
+          className={`text-[11px] font-mono px-2 py-1 rounded transition-colors ${chipCls(active === s)}`}
+        >
+          {SPORT_LABEL[s]}
+        </Link>
+      ))}
+    </div>
   );
 }
 

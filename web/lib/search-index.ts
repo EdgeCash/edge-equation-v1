@@ -6,10 +6,8 @@
  * name) so the profile pages at /player/[sport]/[id] and
  * /team/[sport]/[id] can resolve back to the underlying pick rows.
  *
- * The index is intentionally lean — we don't ship a fuzzy-search
- * runtime; substring matching against the lowercased name handles
- * the typical "I see Aaron Judge in a card" → click-to-profile flow
- * without a Lunr/Fuse dependency.
+ * Search scoring lives in `lib/fuzzy.ts` — exact / prefix / substring /
+ * Levenshtein-typo / subsequence ladder, no external dependency.
  */
 
 import {
@@ -19,6 +17,7 @@ import {
   SportKey,
   picksForSport,
 } from "./feed";
+import { bestFuzzyScore } from "./fuzzy";
 
 
 export type SearchEntryKind = "player" | "team";
@@ -119,21 +118,35 @@ export function buildSearchIndex(feed: DailyFeed | null): SearchEntry[] {
 }
 
 
-/** Lowercase substring match — minimal but enough for the
- * "I see this name and want the profile" flow the audit calls out. */
+/** Fuzzy + typo-tolerant search.
+ *
+ * Mirrors the audit's "novice typing 'judge' reaches Aaron Judge AND
+ * a typo like 'juge' still resolves" requirement. Scoring lives in
+ * `lib/fuzzy.ts`. We score every entry's `display`, `id`, and
+ * `sport` fields, take the best, and return the top-N sorted by
+ * score descending.
+ *
+ * Empty query returns a stable alphabetical slice (parity with the
+ * old substring-only behaviour the navbar dropdown depends on).
+ */
 export function searchEntries(
   index: SearchEntry[], query: string, limit = 12,
 ): SearchEntry[] {
-  const q = query.trim().toLowerCase();
+  const q = query.trim();
   if (!q) return index.slice(0, limit);
-  return index
-    .filter(
-      (e) =>
-        e.display.toLowerCase().includes(q)
-        || e.id.includes(q)
-        || e.sport.includes(q),
-    )
-    .slice(0, limit);
+
+  const scored: Array<{ entry: SearchEntry; score: number }> = [];
+  for (const entry of index) {
+    const m = bestFuzzyScore(q, [entry.display, entry.id, entry.sport]);
+    if (m.score > 0) {
+      scored.push({ entry, score: m.score });
+    }
+  }
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.entry.display.localeCompare(b.entry.display);
+  });
+  return scored.slice(0, limit).map((s) => s.entry);
 }
 
 

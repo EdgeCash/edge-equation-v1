@@ -63,13 +63,17 @@ export default async function TeamProfilePage({
   const sp = (await searchParams) ?? {};
   const lastN = parseLastN(sp.last);
   const homeAway = parseHomeAway(sp.ha);
+  const result = parseResult(sp.result);
+  const marketType = parseMarketType(sp.mkt);
 
   const profile = await resolveTeamProfile(sport, id);
   if (!profile) notFound();
   const snap = await getEngineSnapshot(sport);
 
-  const filtered =
-    lastN ? profile.history_records.slice(0, lastN) : profile.history_records;
+  const availableMarketTypes = distinctBetTypes(profile.history_records);
+  const filtered = applyFilters(profile.history_records, {
+    lastN, homeAway, result, marketType,
+  });
   const summary = profile.history_summary;
 
   return (
@@ -103,13 +107,17 @@ export default async function TeamProfilePage({
             </h2>
             <p className="text-xs text-chalk-500 mt-1">
               Every CLV-tracked pick the engine published on
-              {" "}{profile.display}. Filter by last N or home/away.
+              {" "}{profile.display}. Filter by last N, home/away,
+              result, or market.
             </p>
             <div className="mt-4">
               <ProfileFilters
                 basePath={`/team/${sport}/${id}`}
                 lastN={lastN}
                 homeAway={homeAway}
+                result={result}
+                marketType={marketType}
+                availableMarketTypes={availableMarketTypes}
               />
             </div>
             <div className="mt-4">
@@ -190,6 +198,71 @@ function parseHomeAway(
   if (raw === "home") return "home";
   if (raw === "away") return "away";
   return null;
+}
+
+
+function parseResult(
+  v: string | string[] | undefined,
+): "all" | "WIN" | "LOSS" | "PUSH" | "PENDING" {
+  if (!v) return "all";
+  const raw = String(Array.isArray(v) ? v[0] : v).toUpperCase();
+  if (raw === "WIN" || raw === "LOSS" || raw === "PUSH" || raw === "PENDING") {
+    return raw;
+  }
+  return "all";
+}
+
+
+function parseMarketType(
+  v: string | string[] | undefined,
+): string | null {
+  if (!v) return null;
+  const raw = String(Array.isArray(v) ? v[0] : v).trim();
+  return raw.length > 0 && raw.length < 64 ? raw : null;
+}
+
+
+function distinctBetTypes(
+  rows: ReadonlyArray<{ bet_type?: string | null }>,
+): string[] {
+  const seen = new Set<string>();
+  for (const r of rows) {
+    if (r.bet_type && r.bet_type.trim()) seen.add(r.bet_type.trim());
+  }
+  return Array.from(seen).sort();
+}
+
+
+function applyFilters<
+  T extends {
+    matchup: string;
+    bet_type?: string | null;
+    result?: "WIN" | "LOSS" | "PUSH" | null;
+  },
+>(
+  rows: T[],
+  filters: {
+    lastN: number | null;
+    homeAway: "home" | "away" | null;
+    result: "all" | "WIN" | "LOSS" | "PUSH" | "PENDING";
+    marketType: string | null;
+  },
+): T[] {
+  let out = rows;
+  if (filters.result !== "all") {
+    if (filters.result === "PENDING") {
+      out = out.filter((r) => r.result === null || r.result === undefined);
+    } else {
+      out = out.filter((r) => r.result === filters.result);
+    }
+  }
+  if (filters.marketType) {
+    out = out.filter((r) => (r.bet_type ?? "") === filters.marketType);
+  }
+  if (filters.lastN) {
+    out = out.slice(0, filters.lastN);
+  }
+  return out;
 }
 
 
