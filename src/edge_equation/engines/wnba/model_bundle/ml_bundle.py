@@ -4,7 +4,41 @@ from typing import Optional, Dict, Any
 
 from ..schema import Output, Market
 from .deterministic import DeterministicWNBA
-from edge_equation.math.isotonic import IsotonicCalibrator
+# v1's canonical isotonic class is IsotonicRegressor (returning an
+# IsotonicFit). We provide a tiny IsotonicCalibrator-shaped wrapper so
+# this bundle keeps the same API the rest of the pipeline expected.
+from edge_equation.math.isotonic import IsotonicRegressor, IsotonicFit
+
+
+class IsotonicCalibrator:
+    """Compatibility wrapper -- predict() takes a float, returns a float.
+    `from_dict` accepts the same shape `IsotonicFit.to_dict()` emits."""
+
+    def __init__(self, fit: IsotonicFit):
+        self._fit = fit
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "IsotonicCalibrator":
+        # IsotonicFit doesn't have a public `from_dict`, but its blocks
+        # serialise to a list of (lo, hi, y) tuples we can re-fit from.
+        # We rebuild an empty regressor seeded with the block boundaries
+        # by feeding (mid_x, y) pairs back through fit().
+        blocks = data.get("blocks") or []
+        xs = [(b.get("lo", 0.0) + b.get("hi", 0.0)) / 2.0 for b in blocks]
+        ys = [b.get("y", 0.0) for b in blocks]
+        if not xs:
+            # Empty calibrator -- identity transform.
+            class _Identity:
+                def predict_one(self, x):
+                    return x
+            return cls(_Identity())  # type: ignore[arg-type]
+        return cls(IsotonicRegressor.fit(xs, ys, increasing=True))
+
+    def transform(self, value: float) -> float:
+        try:
+            return float(IsotonicRegressor.predict(self._fit, value))
+        except Exception:
+            return value
 
 
 class WNBAMLBundle:
@@ -177,10 +211,11 @@ class WNBAMLBundle:
         else:
             proj = 0.0
 
-        edge = proj - line
-        probability = 0.5  # deterministic fallback doesn't compute prob
-        confidence = abs(edge)
-
+        # Probability comes from the deterministic engine's per-market
+        # logistic-over-(proj-line). Grade + edge are computed inside
+        # build_output so we don't double-count or drift from the new
+        # canonical signature.
+        probability = det.prob_over(market, proj, line)
         return det.build_output(
             market=market,
             player=meta.get("player"),
@@ -189,8 +224,6 @@ class WNBAMLBundle:
             projection=proj,
             line=line,
             probability=probability,
-            edge=edge,
-            confidence=confidence,
         )
 
     # ---------------------------------------------------------

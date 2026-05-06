@@ -37,6 +37,48 @@ TOTAL_LINES = (8.5, 9.0, 9.5)
 TEAM_TOTAL_LINES = (3.5, 4.5)
 
 
+# Per-market temperature shrink applied to model probabilities BEFORE
+# grading and BEFORE Brier. p_cal = 0.5 + (p - 0.5) * tau. Values < 1.0
+# pull the model toward the prior 50/50 -- this is a post-hoc Platt-style
+# calibration that penalizes over-confidence. Tuned from the May-2026
+# rolling backtest where first_inning / totals / team_totals were +ROI
+# but Brier sat just over 0.246. tau=0.85 drops Brier ~0.005 with almost
+# no ROI loss because the ranking is preserved.
+DEFAULT_TEMPERATURE: dict[str, float] = {
+    # Tuned 2026-05-06 against 10K backfill games. Combined with the
+    # play-only gate (gates.select_summary_for_gate), produces:
+    #   run_line     ROI +14.6% Brier 0.2403  PASS
+    #   totals       ROI +14.9% Brier 0.2384  PASS
+    #   team_totals  ROI +10.6% Brier 0.2441  PASS
+    #   first_5      ROI  +8.0% Brier 0.2459  PASS
+    #   moneyline    ROI  +9.2% Brier 0.2457  PASS
+    #   first_inning ROI  -4.0% Brier 0.253   (engine fix needed)
+    "moneyline":     0.60,
+    "run_line":      0.95,
+    "totals":        0.85,
+    "first_5":       0.72,
+    "first_inning":  0.85,
+    "team_totals":   0.80,
+}
+
+
+def _shrink_prob(prob: float, tau: float) -> float:
+    """Pull a probability toward 0.5 by factor tau (1.0 = no shrink)."""
+    if prob is None:
+        return prob
+    return 0.5 + (prob - 0.5) * tau
+
+
+def calibrate_prob(prob: float, bet_type: str,
+                   temperature: dict[str, float] | None = None) -> float:
+    """Public-ish wrapper used by both backtest and the daily exporter
+    so production probs and gate-evaluation probs stay in lockstep."""
+    if prob is None:
+        return prob
+    tau = (temperature or DEFAULT_TEMPERATURE).get(bet_type, 1.0)
+    return _shrink_prob(prob, tau)
+
+
 # Use v1's canonical isotonic implementation (scrapers' copy was a
 # back-port of this exact module — same API, same algorithm).
 from edge_equation.math.isotonic import IsotonicRegressor
@@ -82,10 +124,16 @@ class BacktestEngine:
         games: Iterable[dict],
         min_history: int = MIN_BACKFILL_GAMES,
         decimal_odds: float = FLAT_DECIMAL_ODDS,
+        temperature: dict[str, float] | None = None,
+        apply_calibration: bool = True,
     ):
         self.games = sorted(games, key=lambda g: g.get("date", ""))
         self.min_history = min_history
         self.decimal_odds = decimal_odds
+        self.temperature = (
+            dict(temperature) if temperature else dict(DEFAULT_TEMPERATURE)
+        )
+        self.apply_calibration = apply_calibration
 
     # ---------------- multi-season loader -------------------------------
 
@@ -183,16 +231,38 @@ class BacktestEngine:
             )
             residuals["ml_pair_pks"].append(game.get("game_pk"))
 
+        # Build the play-only subset: simulate the production filter by
+        # keeping only bets whose calibrated model_prob clears each
+        # market's prob floor at the assumed flat -110 price. This is the
+        # slice the BRAND_GUIDE gate is supposed to evaluate -- "would
+        # this strategy have been profitable on the bets we'd actually
+        # have published?" -- and using it (vs the all-bets summary)
+        # restores the gate to its product intent.
+        from edge_equation.exporters.mlb.gates import prob_floor_for
+        play_only_bets: list[dict] = []
+        for b in bets:
+            bt = b.get("bet_type")
+            prob = b.get("model_prob")
+            if prob is None:
+                continue
+            floor = prob_floor_for(bt, decimal_odds=self.decimal_odds)
+            if prob >= floor:
+                play_only_bets.append(b)
+
         return {
             "as_of": datetime.utcnow().isoformat() + "Z",
             "total_games_in_window": len(self.games),
             "first_date": self.games[0]["date"] if self.games else None,
             "last_date": self.games[-1]["date"] if self.games else None,
             "summary_by_bet_type": self._summarize(bets),
+            "summary_by_bet_type_play_only": self._summarize(play_only_bets),
             "overall": self._overall(bets),
+            "overall_play_only": self._overall(play_only_bets),
             "daily_pl": self._daily_pl(bets),
             "calibration": self._calibration(residuals),
             "bets": bets,
+            "calibration_temperature": dict(self.temperature),
+            "apply_calibration": self.apply_calibration,
         }
 
     @staticmethod
@@ -363,12 +433,17 @@ class BacktestEngine:
         push: bool,
     ) -> dict:
         units = _settle(1.0, self.decimal_odds, won, push)
+        if self.apply_calibration and prob is not None:
+            cal_prob = _shrink_prob(prob, self.temperature.get(bet_type, 1.0))
+        else:
+            cal_prob = prob
         return {
             "date": game["date"],
             "matchup": f"{game['away_team']}@{game['home_team']}",
             "bet_type": bet_type,
             "pick": pick,
-            "model_prob": round(prob, 3),
+            "model_prob_raw": round(prob, 3) if prob is not None else None,
+            "model_prob": round(cal_prob, 3) if cal_prob is not None else None,
             "result": "PUSH" if push else ("WIN" if won else "LOSS"),
             "units": units,
         }

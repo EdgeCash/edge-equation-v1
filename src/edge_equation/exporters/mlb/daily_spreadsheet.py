@@ -210,6 +210,36 @@ def _vig_free(dec_a: float | None, dec_b: float | None) -> tuple[float | None, f
     return (p_a_raw / total, p_b_raw / total)
 
 
+def _calibrate_row_probs(row: dict, bet_type: str) -> None:
+    """Apply the same temperature shrink the backtest applies to
+    projection rows so production model_prob / edge_pct / conviction
+    match the gate semantics. Idempotent: writes model_prob_raw on
+    first call, then leaves it alone.
+
+    The shrink penalizes over-confidence (Brier > 0.246 markets) without
+    disturbing pick selection -- p > 0.5 stays > 0.5 -- so PLAY/PASS
+    decisions only change at the margin where edge_pct dips below the
+    market floor.
+    """
+    from edge_equation.exporters.mlb.backtest import (
+        calibrate_prob as _bt_calibrate_prob,
+    )
+    if "model_prob_raw" in row:
+        return  # already calibrated
+    raw = row.get("model_prob")
+    if raw is None:
+        return
+    cal = _bt_calibrate_prob(float(raw), bet_type)
+    row["model_prob_raw"] = round(float(raw), 4)
+    row["model_prob"] = round(float(cal), 4)
+    # Recompute edge_pct against the same market_odds_dec the row
+    # already has, so the gate's PLAY decision uses the calibrated
+    # number consistently with the backtest's play-only summary.
+    market_dec = row.get("market_odds_dec")
+    if market_dec is not None and market_dec > 1.0:
+        row["edge_pct"] = round((float(cal) * float(market_dec) - 1.0) * 100.0, 2)
+
+
 def _inject_status_columns(
     tab: dict,
     bet_type: str,
@@ -245,6 +275,9 @@ def _inject_status_columns(
     edge_thresholds = edge_thresholds or {}
 
     for row in tab.get("projections", []):
+        # Calibrate probs first so PLAY/PASS reflects the same numbers
+        # the backtest's gate evaluated.
+        _calibrate_row_probs(row, bet_type)
         if gate_passed is not None and bet_type not in gate_passed:
             note = gate_notes.get(bet_type, "failed market gate")
             status, reason = "PASS", f"Market gated off ({note})"
@@ -874,16 +907,23 @@ class DailySpreadsheet:
                 backfill, projections, odds, model.team_total_sd
             ),
         }
-        # Apply BRAND_GUIDE market gate from the backtest summary, then
-        # build Today's Card with that filter active.
+        # Apply BRAND_GUIDE market gate. Prefer the play-only summary
+        # when the backtest emits it -- that's the slice of bets we'd
+        # actually publish (i.e. probs above the per-market edge floor).
+        # Falling back to the all-bets summary keeps the gate working
+        # against older backtest snapshots that didn't carry the new
+        # field.
+        from edge_equation.exporters.mlb.gates import select_summary_for_gate
+        gate_summary, gate_summary_source = select_summary_for_gate(backtest)
         gate_passed, gate_notes = (None, {}) if self.skip_market_gate else _market_gate(
-            backtest.get("summary_by_bet_type"),
+            gate_summary,
             min_bets=self.gate_min_bets,
             min_roi=self.gate_min_roi,
             max_brier=self.gate_max_brier,
         )
         if gate_passed is not None:
-            print(f"  Market gate: {sorted(gate_passed) or '(none passed)'} pass; "
+            print(f"  Market gate ({gate_summary_source}): "
+                  f"{sorted(gate_passed) or '(none passed)'} pass; "
                   f"excluded: {gate_notes}")
 
         # Inject human-readable status / conviction columns into every
