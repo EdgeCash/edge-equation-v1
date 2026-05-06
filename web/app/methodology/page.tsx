@@ -21,6 +21,8 @@ export default function MethodologyPage() {
         </div>
       </section>
 
+      <MarketsBySport />
+
       <article className="max-w-4xl mx-auto px-4 sm:px-6 py-12 prose prose-invert prose-headings:text-chalk-50 prose-p:text-chalk-300 prose-strong:text-chalk-100 prose-a:text-elite prose-code:text-elite prose-code:bg-chalkboard-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
         <Section title="Projection model">
           <p>
@@ -251,6 +253,140 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <section className="mt-10 first:mt-0">
       <h2 className="chalk-underline">{title}</h2>
       {children}
+    </section>
+  );
+}
+
+
+/* ---------- Markets by sport ---------- */
+
+
+/**
+ * Per-sport / per-market explainer cards. Mirrors the engines'
+ * canonical market sets so a reader can see what we ship per
+ * league at a glance. Strict-policy parlay note carries the same
+ * audit-locked sentence the parlay engines emit.
+ */
+function MarketsBySport() {
+  const sports: Array<{
+    label: string;
+    href: string;
+    flag: string | null;
+    games: string[];
+    props: string[];
+  }> = [
+    {
+      label: "MLB",
+      href: "/sport/mlb",
+      flag: null,
+      games: [
+        "Moneyline", "Run Line", "Total", "Team Total",
+        "First-5 Total", "First-5 ML", "NRFI / YRFI",
+      ],
+      props: [
+        "Hits", "RBI", "HR", "Strikeouts", "Total Bases",
+        "Runs", "SB", "Singles", "Doubles", "Triples",
+      ],
+    },
+    {
+      label: "WNBA",
+      href: "/sport/wnba",
+      flag: "EDGE_FEATURE_WNBA_PARLAYS",
+      games: [
+        "Moneyline", "Spread", "Total", "Team Total",
+      ],
+      props: [
+        "Points", "Rebounds", "Assists", "PRA / PR / PA / RA",
+        "3PM", "Steals", "Blocks", "Stocks", "Turnovers",
+      ],
+    },
+    {
+      label: "NFL",
+      href: "/sport/nfl",
+      flag: "EDGE_FEATURE_NFL_PARLAYS",
+      games: [
+        "Moneyline", "Spread", "Total", "Team Total",
+        "Alt Spread / Total", "First Half / 1Q markets",
+      ],
+      props: [
+        "Pass Yds", "Pass TDs", "Pass Att / Comp / Ints",
+        "Rush Yds", "Rush Att / TDs",
+        "Rec Yds", "Receptions", "Rec TDs",
+        "Anytime TD", "Longest Rec / Rush",
+      ],
+    },
+    {
+      label: "NCAAF",
+      href: "/sport/ncaaf",
+      flag: "EDGE_FEATURE_NCAAF_PARLAYS",
+      games: [
+        "Moneyline", "Spread", "Total", "Team Total",
+        "Alt Spread / Total", "First Half / 1Q markets",
+      ],
+      props: [
+        "Pass Yds", "Pass TDs",
+        "Rush Yds", "Rush TDs",
+        "Rec Yds", "Receptions", "Anytime TD",
+      ],
+    },
+  ];
+
+  return (
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-3xl">
+        <h2 className="text-2xl font-bold text-chalk-50 chalk-underline">
+          Markets by sport
+        </h2>
+        <p className="mt-3 text-sm text-chalk-300 leading-relaxed">
+          Each sport ships the per-row engine plus the two strict
+          parlay engines. Strict policy is identical across sports:
+          3–6 legs, ≥4pp edge or ELITE tier per leg, EV positive
+          after vig. When the math fails, the engine publishes
+          nothing.
+        </p>
+      </div>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        {sports.map((s) => (
+          <article
+            key={s.label}
+            className="chalk-card p-5"
+          >
+            <header className="flex items-baseline justify-between gap-3">
+              <h3 className="text-xl font-semibold text-chalk-50">
+                {s.label}
+              </h3>
+              <a
+                href={s.href}
+                className="text-xs text-elite hover:underline"
+              >
+                Hub →
+              </a>
+            </header>
+            {s.flag && (
+              <p className="mt-1 text-[10px] text-chalk-500 font-mono">
+                Production flag:{" "}
+                <code className="text-chalk-300">{s.flag}</code>
+              </p>
+            )}
+            <div className="mt-4">
+              <p className="text-[10px] uppercase tracking-wider text-chalk-500 font-mono">
+                Game results
+              </p>
+              <p className="mt-1 text-sm text-chalk-100 leading-relaxed">
+                {s.games.join(" · ")}
+              </p>
+            </div>
+            <div className="mt-3">
+              <p className="text-[10px] uppercase tracking-wider text-chalk-500 font-mono">
+                Player props
+              </p>
+              <p className="mt-1 text-sm text-chalk-100 leading-relaxed">
+                {s.props.join(" · ")}
+              </p>
+            </div>
+          </article>
+        ))}
+      </div>
     </section>
   );
 }
