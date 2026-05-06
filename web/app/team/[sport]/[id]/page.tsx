@@ -29,6 +29,24 @@ import {
 export const dynamic = "force-dynamic";
 
 
+export async function generateMetadata({
+  params,
+}: { params: Promise<{ sport: string; id: string }> }) {
+  const { sport: sportRaw, id } = await params;
+  const sport = sportRaw.toLowerCase() as SportKey;
+  if (!(SPORTS as readonly string[]).includes(sport)) return {};
+  const label = SPORT_LABEL[sport];
+  const profile = await resolveTeamProfile(sport, id);
+  const display = profile?.display ?? id.toUpperCase();
+  return {
+    title: `${display} · ${label} team profile`,
+    description:
+      `Engine record on ${display} — every CLV-tracked pick, edge `
+      + `trend, hit rate, ROI, and CLV.`,
+  };
+}
+
+
 interface RouteParams {
   params: Promise<{ sport: string; id: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

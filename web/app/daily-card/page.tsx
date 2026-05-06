@@ -9,6 +9,15 @@ import { getDailyData, type TodaysPlay } from "../../lib/types";
 
 export const dynamic = "force-dynamic";
 
+
+export const metadata = {
+  title: "Today's daily card",
+  description:
+    "Today's full daily card across every sport. Picks shown only "
+    + "for games not yet started. Updated by 11 AM CDT.",
+};
+
+
 export default async function DailyCardPage() {
   const h = await headers();
   const host = h.get("host");

@@ -33,6 +33,15 @@ import {
 export const dynamic = "force-dynamic";
 
 
+export const metadata = {
+  title: "Parlays — strict policy",
+  description:
+    "Every qualified strict-policy parlay across MLB, WNBA, NFL, NCAAF. "
+    + "3–6 legs · ≥4pp edge or ELITE · positive EV after vig. "
+    + "When the math fails, the engine publishes nothing.",
+};
+
+
 type UniverseKey = "all" | "game_results" | "player_props";
 
 
