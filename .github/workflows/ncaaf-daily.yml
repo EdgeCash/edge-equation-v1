@@ -1,0 +1,101 @@
+name: NCAAF Daily
+
+# Builds today's NCAAF picks JSON (per-row outputs + both strict
+# parlay engines) and commits the new files to main, which triggers
+# an automatic Vercel redeploy. Mirror of nfl-daily.yml.
+#
+# Cutoff: site live by 11:00 AM CDT (16:00 UTC during DST). Same
+# CDT/CST cron pair as the other sports.
+#
+# FEATURE-FLAGGED OFF via the NCAAF_PIPELINE_ENABLED variable until
+# the 2026 season cutover. Strict parlay engines layered on top via
+# EDGE_FEATURE_NCAAF_PARLAYS.
+on:
+  schedule:
+    - cron: "0 14 * * *"   # 09:00 CDT (Mar–Nov)
+    - cron: "0 15 * * *"   # 09:00 CST (Nov–Mar)
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Target date (YYYY-MM-DD). Defaults to today (UTC)."
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run — build outputs and upload as artifact, but do NOT commit/push to main."
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    if: ${{ vars.NCAAF_PIPELINE_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+
+      - name: Configure git
+        run: |
+          git config user.name  "edge-equation-bot"
+          git config user.email "bot@edge-equation.local"
+
+      - name: Build unified NCAAF card + daily feed
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          EDGE_FEATURE_NCAAF_PARLAYS: "on"
+        run: |
+          ARGS="--all"
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS="$ARGS --date ${{ github.event.inputs.date }}"
+          fi
+          python run_daily_ncaaf.py $ARGS
+
+      - name: List outputs
+        run: |
+          if [ -d website/public/data/ncaaf ]; then
+            echo "Files in website/public/data/ncaaf/:"
+            ls -la website/public/data/ncaaf/ || true
+          else
+            echo "website/public/data/ncaaf/ not found — orchestrator produced no outputs."
+          fi
+
+      - name: Upload outputs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ncaaf-daily-${{ github.run_id }}
+          path: website/public/data/ncaaf/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Commit and push outputs
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git add website/public/data/ncaaf/ website/public/data/daily/ || true
+          if git diff --staged --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          DATE_TAG=$(date -u +"%Y-%m-%d")
+          git commit -m "Daily NCAAF card — $DATE_TAG (unified card + parlays)"
+          git push
+
+      - name: Dry-run notice
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          echo "::notice::DRY RUN — outputs uploaded as artifact 'ncaaf-daily-${{ github.run_id }}'. No commit/push to main."

@@ -171,6 +171,17 @@ class FeedBundle:
     wnba_game_results_parlays: list[FeedParlay] = field(default_factory=list)
     wnba_player_props_parlays: list[FeedParlay] = field(default_factory=list)
     wnba_no_qualified_parlay: dict[str, str] = field(default_factory=dict)
+    # NFL section — populated when build_bundle(..., include_nfl=True).
+    # Structurally identical to the WNBA section.
+    nfl_picks: list[FeedPick] = field(default_factory=list)
+    nfl_game_results_parlays: list[FeedParlay] = field(default_factory=list)
+    nfl_player_props_parlays: list[FeedParlay] = field(default_factory=list)
+    nfl_no_qualified_parlay: dict[str, str] = field(default_factory=dict)
+    # NCAAF section — same shape as NFL.
+    ncaaf_picks: list[FeedPick] = field(default_factory=list)
+    ncaaf_game_results_parlays: list[FeedParlay] = field(default_factory=list)
+    ncaaf_player_props_parlays: list[FeedParlay] = field(default_factory=list)
+    ncaaf_no_qualified_parlay: dict[str, str] = field(default_factory=dict)
     # Per-market data-availability flags. Keys: 'nrfi' / 'fullgame' /
     # 'props' / 'game_results_parlay' / 'player_props_parlay' /
     # 'wnba' / 'wnba_game_results_parlay' / 'wnba_player_props_parlay'.
@@ -212,6 +223,32 @@ class FeedBundle:
                         p.to_dict() for p in self.wnba_player_props_parlays
                     ],
                     "no_qualified_message": self.wnba_no_qualified_parlay,
+                },
+            },
+            "nfl": {
+                "picks": [p.to_dict() for p in self.nfl_picks],
+                "parlays": {
+                    "transparency_note": PARLAY_TRANSPARENCY_NOTE,
+                    "game_results": [
+                        p.to_dict() for p in self.nfl_game_results_parlays
+                    ],
+                    "player_props": [
+                        p.to_dict() for p in self.nfl_player_props_parlays
+                    ],
+                    "no_qualified_message": self.nfl_no_qualified_parlay,
+                },
+            },
+            "ncaaf": {
+                "picks": [p.to_dict() for p in self.ncaaf_picks],
+                "parlays": {
+                    "transparency_note": PARLAY_TRANSPARENCY_NOTE,
+                    "game_results": [
+                        p.to_dict() for p in self.ncaaf_game_results_parlays
+                    ],
+                    "player_props": [
+                        p.to_dict() for p in self.ncaaf_player_props_parlays
+                    ],
+                    "no_qualified_message": self.ncaaf_no_qualified_parlay,
                 },
             },
             "market_status": self.market_status,
@@ -963,6 +1000,8 @@ def build_bundle(
     fullgame_store=None,
     *,
     include_wnba: bool = False,
+    include_nfl: bool = False,
+    include_ncaaf: bool = False,
 ) -> FeedBundle:
     """Aggregate today's picks across engines, including parlays.
 
@@ -1025,6 +1064,40 @@ def build_bundle(
             wnba_props_parlays = []
             wnba_no_qualified = {}
 
+    nfl_picks: list[FeedPick] = []
+    nfl_game_parlays: list[FeedParlay] = []
+    nfl_props_parlays: list[FeedParlay] = []
+    nfl_no_qualified: dict[str, str] = {}
+    if include_nfl:
+        try:
+            nfl_picks, nfl_game_parlays, nfl_props_parlays, nfl_no_qualified = (
+                _build_football_feed(
+                    target_date=target_date, sport="nfl",
+                )
+            )
+        except Exception:
+            nfl_picks = []
+            nfl_game_parlays = []
+            nfl_props_parlays = []
+            nfl_no_qualified = {}
+
+    ncaaf_picks: list[FeedPick] = []
+    ncaaf_game_parlays: list[FeedParlay] = []
+    ncaaf_props_parlays: list[FeedParlay] = []
+    ncaaf_no_qualified: dict[str, str] = {}
+    if include_ncaaf:
+        try:
+            ncaaf_picks, ncaaf_game_parlays, ncaaf_props_parlays, ncaaf_no_qualified = (
+                _build_football_feed(
+                    target_date=target_date, sport="ncaaf",
+                )
+            )
+        except Exception:
+            ncaaf_picks = []
+            ncaaf_game_parlays = []
+            ncaaf_props_parlays = []
+            ncaaf_no_qualified = {}
+
     market_status = _build_market_status(
         nrfi_picks=nrfi_picks,
         props_picks=props_picks,
@@ -1037,6 +1110,16 @@ def build_bundle(
         wnba_props_parlays=wnba_props_parlays,
         wnba_no_qualified=wnba_no_qualified,
         include_wnba=include_wnba,
+        nfl_picks=nfl_picks if include_nfl else None,
+        nfl_game_parlays=nfl_game_parlays,
+        nfl_props_parlays=nfl_props_parlays,
+        nfl_no_qualified=nfl_no_qualified,
+        include_nfl=include_nfl,
+        ncaaf_picks=ncaaf_picks if include_ncaaf else None,
+        ncaaf_game_parlays=ncaaf_game_parlays,
+        ncaaf_props_parlays=ncaaf_props_parlays,
+        ncaaf_no_qualified=ncaaf_no_qualified,
+        include_ncaaf=include_ncaaf,
     )
 
     notes = (
@@ -1045,6 +1128,8 @@ def build_bundle(
         if (
             picks or game_results_parlays or player_props_parlays
             or wnba_picks or wnba_game_parlays or wnba_props_parlays
+            or nfl_picks or nfl_game_parlays or nfl_props_parlays
+            or ncaaf_picks or ncaaf_game_parlays or ncaaf_props_parlays
         ) else
         "No picks for this slate yet — run_daily may not have been "
         "triggered, or there were no qualifying games today."
@@ -1061,7 +1146,131 @@ def build_bundle(
         wnba_game_results_parlays=wnba_game_parlays,
         wnba_player_props_parlays=wnba_props_parlays,
         wnba_no_qualified_parlay=wnba_no_qualified,
+        nfl_picks=nfl_picks,
+        nfl_game_results_parlays=nfl_game_parlays,
+        nfl_player_props_parlays=nfl_props_parlays,
+        nfl_no_qualified_parlay=nfl_no_qualified,
+        ncaaf_picks=ncaaf_picks,
+        ncaaf_game_results_parlays=ncaaf_game_parlays,
+        ncaaf_player_props_parlays=ncaaf_props_parlays,
+        ncaaf_no_qualified_parlay=ncaaf_no_qualified,
         market_status=market_status,
+    )
+
+
+def _build_football_feed(*, target_date: str, sport: str):
+    """Generic football feed builder — runs the unified NFL or NCAAF
+    daily runner and converts its outputs into FeedPick / FeedParlay
+    rows for the website. Best-effort, same contract as the MLB and
+    WNBA feed builders.
+
+    ``sport`` is one of ``'nfl'`` or ``'ncaaf'``.
+
+    Returns ``(picks, game_parlays, props_parlays, no_qualified)``.
+    """
+    from edge_equation.engines.mlb.thresholds import (
+        NO_QUALIFIED_PARLAY_MESSAGE, PARLAY_CARD_NOTE,
+    )
+    if sport == "nfl":
+        from edge_equation.engines.nfl.parlay_runner import (
+            build_unified_nfl_card,
+        )
+        card = build_unified_nfl_card(target_date)
+    elif sport == "ncaaf":
+        from edge_equation.engines.ncaaf.parlay_runner import (
+            build_unified_ncaaf_card,
+        )
+        card = build_unified_ncaaf_card(target_date)
+    else:
+        return [], [], [], {}
+
+    picks: list[FeedPick] = [
+        _football_output_to_feed_pick(o, sport=sport, target_date=target_date)
+        for o in (card.outputs or [])
+    ]
+
+    game_parlays: list[FeedParlay] = []
+    props_parlays: list[FeedParlay] = []
+    no_qualified: dict[str, str] = {}
+
+    if card.game_results_parlay_card is not None:
+        for i, cand in enumerate(
+            card.game_results_parlay_card.candidates, 1,
+        ):
+            game_parlays.append(_candidate_to_feed(
+                cand, universe=f"{sport}_game_results", idx=i,
+                target_date=target_date, note=PARLAY_CARD_NOTE,
+            ))
+        if not game_parlays:
+            no_qualified["game_results"] = NO_QUALIFIED_PARLAY_MESSAGE
+
+    if card.player_props_parlay_card is not None:
+        for i, cand in enumerate(
+            card.player_props_parlay_card.candidates, 1,
+        ):
+            props_parlays.append(_candidate_to_feed(
+                cand, universe=f"{sport}_player_props", idx=i,
+                target_date=target_date, note=PARLAY_CARD_NOTE,
+            ))
+        if not props_parlays:
+            no_qualified["player_props"] = NO_QUALIFIED_PARLAY_MESSAGE
+
+    return picks, game_parlays, props_parlays, no_qualified
+
+
+def _football_output_to_feed_pick(
+    out, *, sport: str, target_date: str,
+) -> FeedPick:
+    """Adapt a football `*Output` row to the public FeedPick shape."""
+    market = str(getattr(out, "market_type", "") or "")
+    home = str(getattr(out, "home_tricode", "") or "")
+    away = str(getattr(out, "away_tricode", "") or "")
+    side = str(getattr(out, "side", "") or "")
+    line = float(getattr(out, "line_value", 0.0) or 0.0)
+    prob = float(getattr(out, "model_prob", 0.0) or 0.0)
+    edge_pp = float(getattr(out, "edge_pp", 0.0) or 0.0)
+    confidence = float(getattr(out, "confidence", 0.0) or 0.0)
+    grade = str(getattr(out, "grade", "") or "C")
+    player = str(getattr(out, "player_name", "") or "")
+
+    if player:
+        feed_market = f"PLAYER_PROP_{market.upper()}"
+        market_label = str(
+            getattr(out, "market_label", market) or market
+        ).replace("_", " ")
+        selection = f"{player} · {market_label} {side} {line:g}"
+    else:
+        feed_market = market.upper()
+        selection = (
+            f"{home or side} · {market.replace('_', ' ').title()}"
+            + (f" {line:+g}" if line else "")
+        )
+
+    pid = "-".join([
+        target_date, sport, market,
+        _slug(player or home or away),
+        f"{line:g}", side.upper() or "X",
+    ])
+    return FeedPick(
+        id=pid,
+        sport=sport.upper(),
+        market_type=feed_market,
+        selection=selection,
+        line_odds=float(getattr(out, "american_odds", -110.0) or -110.0),
+        line_number=f"{line:g}" if line else None,
+        fair_prob=f"{prob:.4f}",
+        edge=f"{edge_pp / 100.0:.4f}",
+        kelly=f"{max(0.0, edge_pp / 100.0 * 0.25):.4f}",
+        grade=grade,
+        tier=str(getattr(out, "tier", "") or None) or None,
+        notes=(
+            f"{prob*100:.1f}% {side or 'side'} · "
+            f"edge {edge_pp:+.1f}pp · conf {int(confidence*100)}%"
+        ),
+        event_time=None,
+        game_id=str(
+            getattr(out, "event_id", "") or f"{away}@{home}"
+        ),
     )
 
 
@@ -1175,6 +1384,16 @@ def _build_market_status(
     wnba_props_parlays=None,
     wnba_no_qualified=None,
     include_wnba: bool = False,
+    nfl_picks=None,
+    nfl_game_parlays=None,
+    nfl_props_parlays=None,
+    nfl_no_qualified=None,
+    include_nfl: bool = False,
+    ncaaf_picks=None,
+    ncaaf_game_parlays=None,
+    ncaaf_props_parlays=None,
+    ncaaf_no_qualified=None,
+    include_ncaaf: bool = False,
 ) -> dict[str, str]:
     """Compute the per-market availability flags for the website.
 
@@ -1224,6 +1443,36 @@ def _build_market_status(
         status["wnba_player_props_parlay"] = (
             "OK" if wnba_props_parlays else (
                 "Pending" if "player_props" in wnba_no_qualified
+                else "Limited Data"
+            )
+        )
+    if include_nfl:
+        nfl_no_qualified = nfl_no_qualified or {}
+        status["nfl"] = _flag(nfl_picks)
+        status["nfl_game_results_parlay"] = (
+            "OK" if nfl_game_parlays else (
+                "Pending" if "game_results" in nfl_no_qualified
+                else "Limited Data"
+            )
+        )
+        status["nfl_player_props_parlay"] = (
+            "OK" if nfl_props_parlays else (
+                "Pending" if "player_props" in nfl_no_qualified
+                else "Limited Data"
+            )
+        )
+    if include_ncaaf:
+        ncaaf_no_qualified = ncaaf_no_qualified or {}
+        status["ncaaf"] = _flag(ncaaf_picks)
+        status["ncaaf_game_results_parlay"] = (
+            "OK" if ncaaf_game_parlays else (
+                "Pending" if "game_results" in ncaaf_no_qualified
+                else "Limited Data"
+            )
+        )
+        status["ncaaf_player_props_parlay"] = (
+            "OK" if ncaaf_props_parlays else (
+                "Pending" if "player_props" in ncaaf_no_qualified
                 else "Limited Data"
             )
         )

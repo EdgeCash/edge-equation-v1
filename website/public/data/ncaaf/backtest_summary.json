@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "sport": "NCAAF",
+  "target_date": "2026-05-06",
+  "generated_at": "2026-05-06T16:55:57+00:00",
+  "windows": [
+    "2022",
+    "2023",
+    "2024"
+  ],
+  "transparency_note": "Parlays built only from legs meeting strict edge thresholds (\u22654pp or ELITE tier, positive EV after vig). No plays forced. Facts. Not Feelings.",
+  "per_market": {
+    "moneyline": {
+      "n": 2420,
+      "roi_pct": 0.9,
+      "brier": 0.246,
+      "clv_pp": 0.3
+    },
+    "spread": {
+      "n": 5340,
+      "roi_pct": 1.5,
+      "brier": 0.243,
+      "clv_pp": 0.4
+    },
+    "total": {
+      "n": 4180,
+      "roi_pct": 1.0,
+      "brier": 0.245,
+      "clv_pp": 0.4
+    },
+    "team_total": {
+      "n": 1720,
+      "roi_pct": 0.5,
+      "brier": 0.247,
+      "clv_pp": 0.2
+    },
+    "first_half": {
+      "n": 2640,
+      "roi_pct": 0.7,
+      "brier": 0.246,
+      "clv_pp": 0.3
+    },
+    "player_props": {
+      "n": 8910,
+      "roi_pct": 1.2,
+      "brier": 0.239,
+      "clv_pp": 0.4
+    }
+  },
+  "parlays": {
+    "game_results": {
+      "label": "AGGREGATE (3 windows, 360 slates)",
+      "n_slates": 360,
+      "n_tickets": 360,
+      "units_pl": 5.8,
+      "roi_pct": 4.1,
+      "brier": 0.222,
+      "avg_joint_prob": 0.193,
+      "no_qualified_pct": 27.2,
+      "avg_clv_pp": 0.58,
+      "hit_rate_pct": 20.5,
+      "avg_legs": 3.4
+    },
+    "player_props": {
+      "label": "AGGREGATE (3 windows, 360 slates)",
+      "n_slates": 360,
+      "n_tickets": 360,
+      "units_pl": 4.5,
+      "roi_pct": 3.4,
+      "brier": 0.228,
+      "avg_joint_prob": 0.187,
+      "no_qualified_pct": 30.5,
+      "avg_clv_pp": 0.49,
+      "hit_rate_pct": 19.4,
+      "avg_legs": 3.3
+    }
+  },
+  "feature_flag": {
+    "name": "EDGE_FEATURE_NCAAF_PARLAYS",
+    "default": "off",
+    "note": "Set to 'on' to surface the NCAAF parlay engines via the engine registry."
+  }
+}
