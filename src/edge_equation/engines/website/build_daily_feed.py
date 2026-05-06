@@ -770,6 +770,153 @@ def _load_fullgame_picks(store, target_date: str) -> list[FeedPick]:
     return picks
 
 
+def _load_mlb_legacy_picks(target_date: str) -> list[FeedPick]:
+    """Bridge today's MLB picks from the legacy spreadsheet output.
+
+    The legacy MLB exporter (``edge_equation.exporters.mlb.daily_spreadsheet``)
+    is the canonical pricing pipeline today — it pulls odds, projects
+    every game, applies the upcoming-only failsafe, and writes the
+    actionable plays to ``website/public/data/mlb/mlb_daily.json``
+    under ``tabs.todays_card.projections``.
+
+    The unified DuckDB-backed loaders above (full-game / props / NRFI)
+    only return rows when their stores are populated; in production the
+    master workflow runs this exporter without those stores, so without
+    a bridge the public feed shows zero MLB picks even when the
+    spreadsheet found qualifying plays.
+
+    Best-effort: missing file, malformed JSON, or no qualifying rows
+    all return an empty list rather than raising — the unified feed
+    must always render.
+    """
+    repo_root = Path(__file__).resolve().parents[4]
+    legacy_path = (
+        repo_root / "website" / "public" / "data" / "mlb" / "mlb_daily.json"
+    )
+    if not legacy_path.exists():
+        return []
+    try:
+        with legacy_path.open() as fh:
+            data = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return []
+
+    rows = (
+        data.get("tabs", {})
+            .get("todays_card", {})
+            .get("projections", [])
+    )
+    if not rows:
+        return []
+
+    picks: list[FeedPick] = []
+    for r in rows:
+        # Only surface picks for `target_date`. The exporter writes
+        # one slate at a time, but a stale file from yesterday could
+        # otherwise leak into today's feed.
+        if str(r.get("date") or "") != target_date:
+            continue
+        market_type = str(r.get("bet_type") or "").lower()
+        feed_market = _LEGACY_MLB_FEED_MARKET.get(
+            market_type, market_type.upper(),
+        )
+        matchup = str(r.get("matchup") or "")
+        pick_label = str(r.get("pick") or "")
+        selection = _legacy_mlb_selection(matchup, pick_label, market_type)
+        model_prob = _safe_float(r.get("model_prob"))
+        edge_pct_val = _safe_float(r.get("edge_pct"))
+        kelly_pct_val = _safe_float(r.get("kelly_pct"))
+        american = _safe_float(r.get("market_odds_american")) or -110.0
+        kelly_advice = str(r.get("kelly_advice") or "").strip()
+        tier_str = _LEGACY_KELLY_TO_TIER.get(kelly_advice, "NO_PLAY")
+        if tier_str == "NO_PLAY":
+            continue
+
+        line_number = _legacy_mlb_line_number(market_type, pick_label)
+        pid = "-".join([
+            "mlb-legacy",
+            _slug(matchup),
+            market_type,
+            _slug(pick_label),
+        ])
+        picks.append(FeedPick(
+            id=pid,
+            sport="MLB",
+            market_type=feed_market,
+            selection=selection,
+            line_odds=american,
+            line_number=line_number,
+            fair_prob=f"{model_prob:.4f}",
+            edge=f"{(edge_pct_val / 100.0):.4f}",
+            kelly=f"{(kelly_pct_val / 100.0):.4f}",
+            grade=_grade_from_tier(tier_str),
+            tier=tier_str,
+            notes=str(r.get("starting_pitchers") or "") or "",
+            event_time=r.get("game_time") or None,
+            game_id=matchup,
+        ))
+    return picks
+
+
+# Map legacy ``bet_type`` strings (as written by the MLB spreadsheet)
+# to the ``market_type`` strings the website renders.
+_LEGACY_MLB_FEED_MARKET: dict[str, str] = {
+    "moneyline":   "ML",
+    "run_line":    "RUN_LINE",
+    "totals":      "TOTAL",
+    "team_totals": "TEAM_TOTAL",
+    "first_5":     "FIRST_5",
+    "first_inning": "NRFI",
+}
+
+
+# Map the legacy ``kelly_advice`` strings ("PASS"/"0.5u"/"1u"/"2u"/
+# "3u") to the unified Tier enum names. The legacy ladder caps at
+# 3u — there's no native ELITE bucket — so 3u maps to STRONG to
+# avoid mis-labelling. Anything below LEAN is dropped before reaching
+# the public feed.
+_LEGACY_KELLY_TO_TIER: dict[str, str] = {
+    "3u":   "STRONG",
+    "2u":   "STRONG",
+    "1u":   "MODERATE",
+    "0.5u": "LEAN",
+    "PASS": "NO_PLAY",
+}
+
+
+def _legacy_mlb_selection(matchup: str, pick: str, market_type: str) -> str:
+    """Human-readable selection for the legacy MLB rows.
+
+    Mirrors the labels the spreadsheet shows so a reader sees the same
+    pick on the spreadsheet and the website.
+    """
+    if market_type == "totals":
+        # pick already reads "OVER 7.5" / "UNDER 8.5" — use as-is.
+        return f"{pick} · {matchup}"
+    if market_type == "team_totals":
+        return f"{pick} · {matchup}"
+    if market_type == "first_inning":
+        return f"{pick} · {matchup}"
+    return f"{pick} · {matchup}"
+
+
+def _legacy_mlb_line_number(market_type: str, pick: str) -> Optional[str]:
+    """Extract the line value from the legacy ``pick`` string when the
+    market has one (totals / first_5). Returns None for moneyline /
+    run-line / NRFI where the line is implicit."""
+    if market_type not in ("totals", "team_totals", "first_5"):
+        return None
+    parts = pick.strip().split()
+    if len(parts) >= 2:
+        last = parts[-1]
+        try:
+            float(last)
+            return last
+        except ValueError:
+            return None
+    return None
+
+
 def _fullgame_lam_from_blob(blob) -> float:
     """Pull lam_used out of the persisted feature_blob (best-effort)."""
     if not blob:
@@ -1126,7 +1273,18 @@ def build_bundle(
     )
     props_picks = _load_props_picks(props_store, target_date)
     fullgame_picks = _load_fullgame_picks(fullgame_store, target_date)
-    picks = list(nrfi_picks) + list(props_picks) + list(fullgame_picks)
+    legacy_mlb_picks = _load_mlb_legacy_picks(target_date)
+    # De-dupe by FeedPick.id so a row that's surfaced by both the
+    # DuckDB-backed full-game loader and the legacy spreadsheet
+    # bridge doesn't render twice.
+    seen_ids: set[str] = set()
+    picks: list[FeedPick] = []
+    for source in (nrfi_picks, props_picks, fullgame_picks, legacy_mlb_picks):
+        for p in source:
+            if p.id in seen_ids:
+                continue
+            seen_ids.add(p.id)
+            picks.append(p)
 
     game_results_parlays: list[FeedParlay] = []
     player_props_parlays: list[FeedParlay] = []
