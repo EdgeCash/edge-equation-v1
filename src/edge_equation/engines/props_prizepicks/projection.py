@@ -107,6 +107,63 @@ def _confidence_for_blend(n: int, prior_weight: float) -> float:
 PlayerRates = Union[BatterRollingRates, PitcherRollingRates, None]
 
 
+# ---------------------------------------------------------------------------
+# Calibration shrink — same shape as the MLB game-results temperature
+# but pulled toward the vig-adjusted market price, not 0.5. Props
+# markets are asymmetric (e.g. an Under at -250 isn't a coin flip), so
+# pulling toward 0.5 would be wrong; pulling toward what the book
+# thinks penalises Poisson's light-tail over-confidence without
+# distorting picks the model isn't disagreeing with.
+# ---------------------------------------------------------------------------
+
+
+# Per-market temperature: 1.0 = no shrink, 0.0 = pure market.
+# Tuned conservative-by-default. Operators can override at runtime.
+DEFAULT_PROPS_TEMPERATURE: dict[str, float] = {
+    # HR / RBI / Total_Bases are the most over-dispersed markets
+    # (rare-event, fat-tailed) where Poisson under-estimates tail
+    # probability the most -- aggressive shrink toward the book.
+    "HR":          0.55,
+    "RBI":         0.60,
+    "Total_Bases": 0.65,
+    # Hits / K are higher-volume per game, closer to Gaussian; less
+    # shrink because the Poisson approximation is closer to truth.
+    "Hits":        0.75,
+    "K":           0.75,
+}
+
+
+def shrink_prob_toward_market(
+    model_prob: float,
+    market_prob_devigged: float,
+    tau: float,
+) -> float:
+    """Bayesian-style blend: tau*model + (1-tau)*market.
+
+    tau in [0, 1]. tau=1 keeps the raw projection, tau=0 collapses to
+    market. Used as a post-hoc Platt-style shrinker on Poisson outputs
+    that are too confident relative to settled outcomes.
+    """
+    if model_prob is None:
+        return model_prob
+    if market_prob_devigged is None:
+        return model_prob
+    tau = max(0.0, min(1.0, float(tau)))
+    return tau * float(model_prob) + (1.0 - tau) * float(market_prob_devigged)
+
+
+def calibrate_prob(
+    model_prob: float,
+    market_prob_devigged: float,
+    market_canonical: str,
+    temperature: Optional[dict[str, float]] = None,
+) -> float:
+    """Public wrapper used by both the edge builder and any backtest
+    so production probs and gate-evaluation probs stay in lockstep."""
+    tau = (temperature or DEFAULT_PROPS_TEMPERATURE).get(market_canonical, 1.0)
+    return shrink_prob_toward_market(model_prob, market_prob_devigged, tau)
+
+
 def _resolve_rate(
     line: PlayerPropLine,
     rates: PlayerRates,

@@ -67,6 +67,10 @@ class PropEdgePick:
     book: str
     tier: Tier
     tier_classification: TierClassification
+    # Calibration provenance -- raw_model_prob is the un-shrunk Poisson
+    # output, model_prob is the post-shrink prob the gate evaluated.
+    # Lets the dashboard show "we projected X, calibrated to Y."
+    raw_model_prob: float = 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +143,10 @@ def build_edge_picks(
     *,
     min_tier: Tier = Tier.LEAN,
     min_confidence: float = 0.31,
+    apply_calibration: bool = True,
+    calibration_temperature: Optional[dict[str, float]] = None,
+    min_model_prob: float = 0.0,
+    min_edge_pp: float = 0.0,
 ) -> list[PropEdgePick]:
     """Pair each (line, projection), compute edge, classify tier, filter.
 
@@ -161,6 +169,7 @@ def build_edge_picks(
             f"lines / projections length mismatch: "
             f"{len(lines)} vs {len(projections)}",
         )
+    from .projection import calibrate_prob as _calibrate_prob
     devig = build_devig_table(lines)
     picks: list[PropEdgePick] = []
     rank = {Tier.ELITE: 4, Tier.STRONG: 3, Tier.MODERATE: 2,
@@ -169,18 +178,47 @@ def build_edge_picks(
     for line, proj in zip(lines, projections):
         if float(proj.confidence) < min_confidence:
             continue
-        edge_pp, raw, devigged, corrected = compute_edge_pp(
+        # First-pass de-vig + raw edge so we know the market's view.
+        _raw_edge, raw, devigged, corrected = compute_edge_pp(
             line=line, projection=proj,
             devig_total=devig.get(_key_for_pair(line)),
         )
-        # Pass model prob alongside edge so the tiering ELITE floor
-        # (model_prob >= 0.62) can demote large-edge / low-conviction
-        # picks (e.g. RBI Over 0.5 at 37% conviction) from ELITE to
-        # STRONG. See engines.tiering.ELITE_MIN_MODEL_PROB.
+        raw_prob = float(proj.model_prob)
+        # Apply the calibration shrink toward the de-vigged market
+        # price. This is the props analogue of the MLB temperature
+        # shrink toward 0.5: a Bayesian blend that penalises Poisson's
+        # light-tail over-confidence without distorting the picks the
+        # model is in actual disagreement with the book about.
+        if apply_calibration:
+            cal_prob = _calibrate_prob(
+                model_prob=raw_prob,
+                market_prob_devigged=devigged,
+                market_canonical=line.market.canonical,
+                temperature=calibration_temperature,
+            )
+        else:
+            cal_prob = raw_prob
+        # Re-compute edge using the calibrated prob so tier + Premium
+        # filters all see one consistent number.
+        edge_pp = (cal_prob - devigged) * 100.0
+
+        # Premium-style PLAY filters layered on top of the existing
+        # edge ladder. min_model_prob screens out "fade" picks
+        # (e.g. Under 0.5 RBIs at 38% calibrated -- big edge by accident
+        # of vig but no real conviction). min_edge_pp gives the caller
+        # a single floor that combines well with the tier ladder.
+        if cal_prob < min_model_prob:
+            continue
+        if edge_pp < min_edge_pp:
+            continue
+
+        # Pass calibrated model prob to the tiering ELITE floor
+        # (model_prob >= 0.62) so the calibrated result drives the
+        # tier promotion -- not the raw Poisson over-confidence.
         clf = classify_tier(
             market_type=line.market.canonical,
             edge=edge_pp / 100.0,
-            side_probability=float(proj.model_prob),
+            side_probability=float(cal_prob),
         )
         if rank[clf.tier] < floor:
             continue
@@ -190,16 +228,17 @@ def build_edge_picks(
             player_name=line.player_name,
             line_value=line.line_value,
             side=line.side,
-            model_prob=proj.model_prob,
+            model_prob=float(cal_prob),
             market_prob_raw=raw,
             market_prob_devigged=devigged,
             vig_corrected=corrected,
-            edge_pp=edge_pp,
+            edge_pp=float(edge_pp),
             american_odds=line.american_odds,
             decimal_odds=line.decimal_odds,
             book=line.book,
             tier=clf.tier,
             tier_classification=clf,
+            raw_model_prob=raw_prob,
         ))
     picks.sort(key=lambda p: p.edge_pp, reverse=True)
     return picks
