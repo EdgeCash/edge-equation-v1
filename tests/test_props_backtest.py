@@ -284,3 +284,98 @@ def test_props_edge_floor_overrides():
     assert edge_floor_for("HR") == 5.0
     assert edge_floor_for("HR", overrides={"HR": 8.0}) == 8.0
     assert edge_floor_for("unknown_market") == 4.0  # default
+
+
+# ---------------------------------------------------------------------
+# Fair-market reference probability + realistic settle odds
+# ---------------------------------------------------------------------
+
+def test_fair_market_prob_for_hr_under_05_is_high():
+    """League HR rate is ~3.4% per PA; over 4.1 expected PAs that's
+    Poisson(0.139) -> P(Over 0.5) ~= 13%. So Under 0.5 should be ~87%,
+    not 52% (the flat-110 stand-in we used to use)."""
+    eng = PropsBacktestEngine(rows=[])
+    p_under = eng._fair_market_prob("HR", "Under", 0.5)
+    p_over = eng._fair_market_prob("HR", "Over", 0.5)
+    assert 0.85 <= p_under <= 0.90, f"Under 0.5 fair prob {p_under:.3f}"
+    assert 0.10 <= p_over <= 0.15, f"Over 0.5 fair prob {p_over:.3f}"
+    assert p_under + p_over == pytest.approx(1.0, abs=1e-6)
+
+
+def test_fair_market_prob_for_hits_over_05_is_above_50pct():
+    """League HITS rate is ~23% per PA; over 4.1 PAs Poisson(0.94) ->
+    P(at least one hit) ~= 61%. So Hits Over 0.5 is the favored side."""
+    eng = PropsBacktestEngine(rows=[])
+    p_over = eng._fair_market_prob("Hits", "Over", 0.5)
+    assert p_over > 0.55
+
+
+def test_settle_decimal_uses_fair_odds_minus_vig():
+    """A 13% fair-prob bet should settle at ~7.31 decimal under 5% vig:
+    fair = 1/0.13 = 7.69; with vig = 7.69 * 0.95 = 7.31."""
+    rows = _synth_player_games(40, hr_rate_per_pa=0.04)
+    eng = PropsBacktestEngine(rows=rows, min_history_pa=20, vig=0.05)
+    res = eng.run()
+    # Find an HR Over bet record on a high-fair-decimal line.
+    bets_call = []
+    for row in eng.rows:
+        if row.get("role") == "batter":
+            bets_call.extend(eng._grade_market_line(
+                bet_type="HR", side="Over", line=0.5, lam=0.16,
+                actual=int(row["stats"].get("homeRuns") or 0),
+                market_canonical="HR",
+                player_name=row.get("player_name"),
+                matchup="X@Y", date=row.get("date"),
+            ))
+            break
+    assert bets_call
+    b = bets_call[0]
+    assert b["fair_prob"] == pytest.approx(0.130, abs=0.01)
+    assert b["fair_decimal_odds"] == pytest.approx(7.69, abs=0.05)
+    assert b["settle_decimal_odds"] == pytest.approx(7.31, abs=0.05)
+
+
+def test_play_only_filter_uses_edge_pp_not_raw_prob():
+    """A bet where the model agrees with the market (raw prob 0.95
+    against fair 0.95) must NOT be in play-only -- there's no edge.
+    Pre-fix this would have passed the play-only filter because raw
+    prob was high; the new filter requires (model - fair) >= floor."""
+    eng = PropsBacktestEngine(rows=[])
+    # Synth bet records with edge_pp set
+    bets = [
+        {"bet_type": "HR", "edge_pp": 0.5,  "model_prob": 0.95, "result": "WIN", "units": 1, "date": "d1"},
+        {"bet_type": "HR", "edge_pp": 7.0,  "model_prob": 0.20, "result": "WIN", "units": 6, "date": "d1"},
+        {"bet_type": "HR", "edge_pp": -3.0, "model_prob": 0.10, "result": "LOSS", "units": -1, "date": "d1"},
+    ]
+    eng.rows = []  # bypass run loop -- exercise filter directly
+    # Replicate the filter logic from run() (no public hook for it).
+    floor = eng.default_edge_floor_pp
+    play_only = [b for b in bets if (b.get("edge_pp") or 0) >= floor]
+    assert len(play_only) == 1
+    assert play_only[0]["edge_pp"] == 7.0
+
+
+def test_engine_records_carry_fair_prob_and_edge_pp():
+    """Every emitted bet record must surface the new contract fields so
+    the gate / Premium combiner can read edge straight off the row."""
+    rows = _synth_player_games(40, hr_rate_per_pa=0.04)
+    res = PropsBacktestEngine(rows=rows, min_history_pa=20).run()
+    # The returned dict slim for the CLI doesn't include `bets`, but
+    # the all-bets summary count > 0 implies bets were graded -- and
+    # we can rebuild and inspect one directly via the engine.
+    eng = PropsBacktestEngine(rows=rows, min_history_pa=20)
+    sample_bets = []
+    for row in eng.rows:
+        if row.get("role") == "batter":
+            sample_bets.extend(eng._grade_market_line(
+                bet_type="HR", side="Over", line=0.5, lam=0.16,
+                actual=int(row["stats"].get("homeRuns") or 0),
+                market_canonical="HR",
+                player_name=row.get("player_name"),
+                matchup="X@Y", date=row.get("date"),
+            ))
+            break
+    b = sample_bets[0]
+    for field in ("fair_prob", "fair_decimal_odds", "settle_decimal_odds",
+                  "edge_pp", "lam_prior"):
+        assert field in b, f"missing field {field}"

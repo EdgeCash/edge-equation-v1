@@ -265,12 +265,24 @@ def load_player_games(
 @dataclass
 class PropsBacktestEngine:
     rows: List[Dict[str, Any]]
-    decimal_odds: float = FLAT_DECIMAL_ODDS
+    decimal_odds: float = FLAT_DECIMAL_ODDS  # legacy fallback only
     apply_calibration: bool = True
     expected_batter_pa: float = 4.1
     expected_pitcher_bf: float = 22.0
     min_history_pa: int = 30      # batter floor before grading
     min_history_bf: int = 30      # pitcher floor before grading
+    # Vig the book takes on top of fair odds. 0.05 = 5%, the typical
+    # juice on MLB player props at major US books (Fanduel / DK).
+    # Bets settle at fair_decimal_odds * (1 - vig) to reflect the
+    # real price an operator would have paid. Set to 0.0 to backtest
+    # against pure fair odds.
+    vig: float = 0.05
+    # Edge floor in percentage points. A bet is included in the
+    # play-only summary iff (model_prob - fair_market_prob) * 100 >= floor.
+    # The default 5pp matches the MLB game-results gate; markets can
+    # override via `edge_overrides`.
+    default_edge_floor_pp: float = 5.0
+    edge_overrides: Optional[Dict[str, float]] = None
 
     def run(self) -> Dict[str, Any]:
         history = PlayerHistory()
@@ -293,17 +305,22 @@ class PropsBacktestEngine:
                 bets.extend(self._grade_pitcher(row, history))
             history.update_with_row(row)
 
-        # Build the play-only subset using the same prob_floor_for the
-        # MLB game-results gate uses. The threshold dict is wider here
-        # because props markets aren't in `gates.DEFAULT_EDGE_THRESHOLDS_BY_MARKET`;
-        # we plumb them in via a helper.
-        play_only_bets = [
-            b for b in bets
-            if b.get("model_prob") is not None
-            and b["model_prob"] >= prob_floor_for_props(
-                b["bet_type"], decimal_odds=self.decimal_odds,
+        # Build the play-only subset using an EDGE floor, not a raw
+        # probability floor. Required so the play-subset represents
+        # "bets where the model meaningfully disagrees with what the
+        # market should price" -- not just "bets where the trivially-
+        # likely side wins more than 52% of the time at flat -110."
+        play_only_bets: List[Dict[str, Any]] = []
+        for b in bets:
+            edge_pp = b.get("edge_pp")
+            if edge_pp is None:
+                continue
+            floor = (self.edge_overrides or {}).get(
+                b["bet_type"], self.default_edge_floor_pp,
             )
-        ]
+            if edge_pp >= floor:
+                play_only_bets.append(b)
+
         return {
             "as_of": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "n_player_game_rows": len(self.rows),
@@ -314,6 +331,8 @@ class PropsBacktestEngine:
             "overall": _overall(bets),
             "overall_play_only": _overall(play_only_bets),
             "apply_calibration": self.apply_calibration,
+            "vig": self.vig,
+            "default_edge_floor_pp": self.default_edge_floor_pp,
         }
 
     # ------------------------------------------------------------------
@@ -382,28 +401,64 @@ class PropsBacktestEngine:
 
     # ------------------------------------------------------------------
 
+    def _fair_market_prob(
+        self, bet_type: str, side: str, line: float,
+    ) -> float:
+        """Probability the line clears under league-average rates.
+
+        The book's no-vig fair price for HR Over 0.5 isn't 50/50 -- it's
+        ~13% (one in seven PAs ends in a HR for the league, times 4.1
+        expected PAs). Using flat -110 as the reference price made the
+        2026-05-06 backtest report nonsense +70% ROI numbers because the
+        play-only filter just selected the trivially-likely side every
+        time. This computes the right reference: a Poisson(lam_prior)
+        probability for the same line + role.
+        """
+        if bet_type == "K":
+            prior_rate = LEAGUE_PITCHER_PRIOR_PER_BF.get(bet_type, 0.0)
+            lam_prior = prior_rate * self.expected_pitcher_bf
+        else:
+            prior_rate = LEAGUE_BATTER_PRIOR_PER_PA.get(bet_type, 0.0)
+            lam_prior = prior_rate * self.expected_batter_pa
+        p_over = _prob_over_poisson(line, lam_prior)
+        return p_over if side == "Over" else 1.0 - p_over
+
     def _grade_market_line(
         self, *, bet_type: str, side: str, line: float, lam: float,
         actual: int, market_canonical: str, player_name: Optional[str],
         matchup: str, date: Optional[str],
     ) -> List[Dict[str, Any]]:
+        # 1. Model probability for this side.
         p_over = _prob_over_poisson(line, lam)
         prob = p_over if side == "Over" else 1.0 - p_over
-        # We don't know the historical book line at -110, but the
-        # implied probability there is 0.524. Using that as a stand-in
-        # for `market_prob_devigged` lets us apply the same calibration
-        # shrink the live engine applies. The model + market disagree
-        # in opposite directions on Over/Under, so this preserves the
-        # symmetric shrink behaviour the live engine has.
-        market_prob_devigged = 1.0 / self.decimal_odds  # ~0.524
+
+        # 2. Fair-market probability from the league prior. THIS is the
+        # number to compare against, not flat -110.
+        fair_prob = self._fair_market_prob(bet_type, side, line)
+
+        # 3. Calibration shrink toward the fair-market prob -- now
+        # operating against the right reference.
         if self.apply_calibration:
             prob_cal = calibrate_prob(
                 model_prob=prob,
-                market_prob_devigged=market_prob_devigged,
+                market_prob_devigged=fair_prob,
                 market_canonical=market_canonical,
             )
         else:
             prob_cal = prob
+
+        # 4. Edge in percentage points using the calibrated prob.
+        edge_pp = (prob_cal - fair_prob) * 100.0
+
+        # 5. Settle at fair odds discounted by vig. The book would price
+        # at ~5% above fair, so winning at fair odds * (1 - vig) reflects
+        # what an operator actually pays.
+        if fair_prob > 0:
+            fair_decimal = 1.0 / fair_prob
+        else:
+            fair_decimal = 100.0   # any astronomical longshot
+        settle_decimal = max(1.01, fair_decimal * (1.0 - self.vig))
+
         push = (math.floor(line) == line and actual == int(line))
         won = (
             (actual > line) if side == "Over"
@@ -418,10 +473,21 @@ class PropsBacktestEngine:
             "line": line,
             "actual": actual,
             "lam": round(lam, 3),
+            "lam_prior": round(
+                (LEAGUE_PITCHER_PRIOR_PER_BF if bet_type == "K"
+                 else LEAGUE_BATTER_PRIOR_PER_PA).get(bet_type, 0.0)
+                * (self.expected_pitcher_bf if bet_type == "K"
+                   else self.expected_batter_pa),
+                3,
+            ),
+            "fair_prob": round(fair_prob, 4),
+            "fair_decimal_odds": round(fair_decimal, 3),
+            "settle_decimal_odds": round(settle_decimal, 3),
             "model_prob_raw": round(prob, 4),
             "model_prob": round(prob_cal, 4),
+            "edge_pp": round(edge_pp, 2),
             "result": "PUSH" if push else ("WIN" if won else "LOSS"),
-            "units": _settle(self.decimal_odds, won, push),
+            "units": _settle(settle_decimal, won, push),
         }]
 
     @staticmethod
@@ -539,6 +605,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument("--no-calibration", action="store_true")
     parser.add_argument(
+        "--vig", type=float, default=0.05,
+        help="Book vig on top of fair odds (default 0.05 = 5%%).",
+    )
+    parser.add_argument(
+        "--edge-floor-pp", type=float, default=5.0,
+        help="Edge floor in percentage points for the play-only summary "
+             "(default 5pp).",
+    )
+    parser.add_argument(
         "--output", type=Path, default=None,
         help="Optional path to write the full summary JSON.",
     )
@@ -553,20 +628,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     engine = PropsBacktestEngine(
         rows=rows,
         apply_calibration=not args.no_calibration,
+        vig=args.vig,
+        default_edge_floor_pp=args.edge_floor_pp,
     )
     result = engine.run()
 
     print()
-    print("=== ALL bets ===")
-    print(f"{'market':<14}  {'bets':>6}  {'hit%':>5}  {'ROI%':>7}  {'Brier':>7}")
+    print(f"vig={args.vig:.0%}  edge_floor={args.edge_floor_pp:.1f}pp  "
+          f"calibration={'on' if not args.no_calibration else 'off'}")
+    print()
+    print("=== ALL bets (every projected line) ===")
+    print(f"{'market':<14}  {'bets':>7}  {'hit%':>5}  {'ROI%':>7}  {'Brier':>7}")
     for r in sorted(result["summary_by_bet_type"], key=lambda r: -r["roi_pct"]):
         print(
-            f"{r['bet_type']:<14}  {r['bets']:>6}  {r['hit_rate']:>5.1f}  "
+            f"{r['bet_type']:<14}  {r['bets']:>7}  {r['hit_rate']:>5.1f}  "
             f"{r['roi_pct']:>+7.2f}  {r['brier']!s:>7}"
         )
     print()
-    print("=== PLAY-only (above edge floor) ===")
-    print(f"{'market':<14}  {'bets':>6}  {'hit%':>5}  {'ROI%':>7}  {'Brier':>7}  Gate")
+    print(f"=== PLAY-only (edge >= {args.edge_floor_pp:.1f}pp vs fair market) ===")
+    print(f"{'market':<14}  {'bets':>7}  {'hit%':>5}  {'ROI%':>7}  {'Brier':>7}  Gate")
     for r in sorted(
         result["summary_by_bet_type_play_only"], key=lambda r: -r["roi_pct"],
     ):
@@ -577,7 +657,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
         flag = "PASS" if passed else "fail"
         print(
-            f"{r['bet_type']:<14}  {r['bets']:>6}  {r['hit_rate']:>5.1f}  "
+            f"{r['bet_type']:<14}  {r['bets']:>7}  {r['hit_rate']:>5.1f}  "
             f"{r['roi_pct']:>+7.2f}  {bri!s:>7}  {flag}"
         )
 
