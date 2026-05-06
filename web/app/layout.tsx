@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Caveat } from "next/font/google";
 import { Navigation } from "../components/Navigation";
 import { Footer } from "../components/Footer";
@@ -16,18 +16,51 @@ const caveat = Caveat({
   display: "swap",
 });
 
+
+// Site URL anchor — Open Graph + Twitter Card crawlers fetch
+// images relative to this base. Vercel sets `NEXT_PUBLIC_SITE_URL`
+// in production; preview builds fall back to the canonical
+// edgeequation.com so a tweet of a preview link still resolves.
+const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL
+  || "https://edgeequation.com"
+).replace(/\/+$/, "");
+
+
 export const metadata: Metadata = {
-  title: "Edge Equation — Facts. Not Feelings.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Edge Equation — Facts. Not Feelings.",
+    template: "%s · Edge Equation",
+  },
   description:
     "Transparent, high-signal sports analytics. Honest modeling, rigorous testing, and public learning. We track Brier, ROI, and CLV — and we publish empty cards when the math says pass.",
+  applicationName: "Edge Equation",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "Edge Equation — Facts. Not Feelings.",
     description:
-      "Transparent, high-signal sports analytics. Honest modeling, rigorous testing, and public learning.",
+      "Transparent, high-signal sports analytics across MLB, WNBA, NFL, NCAAF. Daily card by 11 AM CDT. CLV-tracked. No hype.",
     type: "website",
+    siteName: "Edge Equation",
+    url: SITE_URL,
+    locale: "en_US",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Edge Equation — Facts. Not Feelings.",
+    description:
+      "Transparent sports analytics across MLB, WNBA, NFL, NCAAF. Daily card by 11 AM CDT. CLV-tracked.",
+  },
+};
+
+
+export const viewport: Viewport = {
   themeColor: "#0a1421",
 };
+
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

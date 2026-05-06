@@ -38,6 +38,24 @@ import { EngineHistoryTable } from "../../../../components/EngineHistoryTable";
 export const dynamic = "force-dynamic";
 
 
+export async function generateMetadata({
+  params,
+}: { params: Promise<{ sport: string; id: string }> }) {
+  const { sport: sportRaw, id } = await params;
+  const sport = sportRaw.toLowerCase() as SportKey;
+  if (!(SPORTS as readonly string[]).includes(sport)) return {};
+  const label = SPORT_LABEL[sport];
+  const profile = await resolvePlayerProfile(sport, id);
+  const display = profile?.display ?? id.replace(/-/g, " ");
+  return {
+    title: `${display} · ${label} player profile`,
+    description:
+      `Engine record on ${display} — every CLV-tracked pick, edge `
+      + `trend, hit rate, ROI, and CLV. Today's slate context inline.`,
+  };
+}
+
+
 interface RouteParams {
   params: Promise<{ sport: string; id: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

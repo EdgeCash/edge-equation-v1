@@ -42,6 +42,22 @@ import { parseSelection, slugify } from "../../../lib/search-index";
 export const dynamic = "force-dynamic";
 
 
+export async function generateMetadata({
+  params,
+}: { params: Promise<{ sport: string }> }) {
+  const { sport: sportRaw } = await params;
+  const sport = sportRaw.toLowerCase() as SportKey;
+  if (!(SPORTS as readonly string[]).includes(sport)) return {};
+  const label = SPORT_LABEL[sport];
+  return {
+    title: `${label} · daily hub`,
+    description:
+      `Today's full ${label} card — picks, parlays, backtest snapshot. `
+      + `Picks shown only for games not yet started. Updated by 11 AM CDT.`,
+  };
+}
+
+
 interface RouteParams {
   params: Promise<{ sport: string }>;
 }
