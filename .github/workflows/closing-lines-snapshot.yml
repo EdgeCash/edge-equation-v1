@@ -1,0 +1,129 @@
+name: Closing-line snapshot
+
+# Snaps current Odds API prices across all 4 sports and appends flat
+# rows to data/closing_lines/<sport>/<season>.jsonl. Runs on a polite
+# schedule + manual dispatch.
+#
+# Cost calculus: each /odds call is 1 credit per (region * market).
+# regions=us + markets=h2h,spreads,totals = 3 credits per call per
+# sport. Default schedule fires 4 times/day across 4 sports = 48
+# credits/day = ~1500 credits/month -- well inside the basic Odds API
+# plan (20K credits/mo). Heavier cadence (every 30 min in prime
+# windows) is enabled by uncommenting the dense-cron block.
+
+on:
+  schedule:
+    # 4x/day at typical pre-game windows (UTC). Tightenable later.
+    - cron: "0 17 * * *"   # 12 PM CT
+    - cron: "0 21 * * *"   # 4 PM CT
+    - cron: "0 23 * * *"   # 6 PM CT
+    - cron: "0 2 * * *"    # 9 PM CT
+    # Dense cadence (every 30 min during evening peak); leave commented
+    # until the operator confirms credit headroom:
+    # - cron: "*/30 22-23 * * *"
+    # - cron: "*/30 0-3 * * *"
+  workflow_dispatch:
+    inputs:
+      sports:
+        description: "Space-separated subset (default 'mlb wnba nba nhl')."
+        required: false
+        default: "mlb wnba nba nhl"
+      dry_run:
+        description: "Print what would be written without appending."
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: closing-lines-snapshot-${{ github.ref }}
+      cancel-in-progress: false   # let an in-flight snapshot finish
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install runtime dep
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Configure git author
+        run: |
+          git config user.name  "edge-equation-bot"
+          git config user.email "bot@edge-equation.local"
+
+      - name: Resolve sport list
+        id: resolve
+        run: |
+          set -euo pipefail
+          INPUT="${{ github.event.inputs.sports }}"
+          if [ -z "$INPUT" ]; then
+            INPUT="mlb wnba nba nhl"
+          fi
+          echo "sports=$INPUT" >> "$GITHUB_OUTPUT"
+
+      - name: Snap closing lines
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          ARGS=( --sports ${{ steps.resolve.outputs.sports }} )
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS+=( --dry-run )
+          fi
+          echo "Running: python -m edge_equation.exporters.closing_lines ${ARGS[@]}"
+          python -m edge_equation.exporters.closing_lines "${ARGS[@]}"
+
+      - name: Show what changed
+        run: |
+          for f in data/closing_lines/*/*.jsonl; do
+            [ -f "$f" ] || continue
+            echo "  $f: $(wc -l < "$f") lines, $(du -h "$f" | cut -f1)"
+          done
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: closing-lines-${{ github.run_id }}
+          path: data/closing_lines/**/*.jsonl
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit and push (resume-safe)
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          set -euo pipefail
+          git add data/closing_lines/ || true
+          if git diff --staged --quiet; then
+            echo "No new rows to commit."
+            exit 0
+          fi
+          git pull --rebase origin "${{ github.ref_name }}" || true
+          git commit -m "closing-lines: snapshot $(date -u +%Y-%m-%dT%H:%M:%SZ) (run ${{ github.run_id }})"
+          for attempt in 1 2 3 4; do
+            if git push origin "HEAD:${{ github.ref_name }}"; then
+              echo "Push OK on attempt $attempt"
+              exit 0
+            fi
+            echo "Push failed -- rebase + retry ($attempt)"
+            git pull --rebase origin "${{ github.ref_name }}" || true
+            sleep $((2 ** attempt))
+          done
+          echo "::error::Failed to push after 4 attempts"
+          exit 1
