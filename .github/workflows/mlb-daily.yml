@@ -1,14 +1,18 @@
 name: MLB Daily Spreadsheet
 
-# Builds today's MLB spreadsheet (slate + projections + Kelly + backtest +
-# market gate) and commits the new files to main, which triggers an
-# automatic Vercel redeploy. Ported from edge-equation-scrapers'
-# mlb-daily.yml; kept FEATURE-FLAGGED OFF via the MLB_PIPELINE_ENABLED
-# variable until Phase 4 cutover passes.
+# Builds today's full MLB card (NRFI/YRFI, full-game, props, both
+# parlay engines) and the daily spreadsheet, then commits the new
+# files to main, which triggers an automatic Vercel redeploy.
+#
+# Cutoff: site must be live by 11:00 AM CDT (16:00 UTC during DST).
+# First pitch is typically 12:10 PM CDT, so a 9:00 AM CDT (14:00 UTC)
+# trigger leaves a 2-hour buffer for the workflow run + Vercel build.
+# The cron pair below covers CDT (Mar–Nov) and CST (Nov–Mar) so the
+# 11:00 AM CT cutoff is preserved year-round.
 on:
   schedule:
-    # 15:00 UTC = 11:00 AM ET during DST.
-    - cron: "0 15 * * *"
+    - cron: "0 14 * * *"   # 09:00 CDT (Mar–Nov) — finishes ≈ 09:30 CDT
+    - cron: "0 15 * * *"   # 09:00 CST (Nov–Mar) — finishes ≈ 09:30 CST
   workflow_dispatch:
     inputs:
       date:
@@ -68,6 +72,20 @@ jobs:
           fi
           python -m edge_equation.exporters.mlb.daily_spreadsheet $ARGS
 
+      # Unified MLB card — NRFI/YRFI, full-game, props, both parlay
+      # engines — plus the website daily-feed exporter that surfaces
+      # all of the above on EdgeEquation.com. One command per the
+      # operator's --all contract.
+      - name: Build unified MLB card + daily feed
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          ARGS="--all"
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS="$ARGS --date ${{ github.event.inputs.date }}"
+          fi
+          python run_daily_mlb.py $ARGS
+
       # Dry-run-friendly: list what was produced. Always runs so dry-run
       # invocations leave a clear record in the Actions log of which files
       # the orchestrator emitted, even when the commit step is skipped.
@@ -98,13 +116,13 @@ jobs:
       - name: Commit and push outputs
         if: ${{ github.event.inputs.dry_run != 'true' }}
         run: |
-          git add website/public/data/mlb/ || true
+          git add website/public/data/mlb/ website/public/data/daily/ || true
           if git diff --staged --quiet; then
             echo "No data changes to commit."
             exit 0
           fi
           DATE_TAG=$(date -u +"%Y-%m-%d")
-          git commit -m "Daily MLB spreadsheet — $DATE_TAG"
+          git commit -m "Daily MLB card — $DATE_TAG (unified card + parlays)"
           git push
 
       - name: Dry-run notice

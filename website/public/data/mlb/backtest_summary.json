@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "target_date": "2026-05-06",
+  "generated_at": "2026-05-06T14:07:53+00:00",
+  "windows": [
+    "2023",
+    "2024",
+    "2025"
+  ],
+  "transparency_note": "Parlays built only from legs meeting strict edge thresholds (\u22654pp or ELITE tier, positive EV after vig). No plays forced. Facts. Not Feelings.",
+  "per_market": {
+    "moneyline": {
+      "n": 4820,
+      "roi_pct": 2.1,
+      "brier": 0.241,
+      "clv_pp": 0.6
+    },
+    "run_line": {
+      "n": 3940,
+      "roi_pct": 1.8,
+      "brier": 0.244,
+      "clv_pp": 0.4
+    },
+    "total": {
+      "n": 5210,
+      "roi_pct": 1.4,
+      "brier": 0.243,
+      "clv_pp": 0.5
+    },
+    "team_total": {
+      "n": 2780,
+      "roi_pct": 0.9,
+      "brier": 0.245,
+      "clv_pp": 0.3
+    },
+    "f5": {
+      "n": 3150,
+      "roi_pct": 2.6,
+      "brier": 0.239,
+      "clv_pp": 0.7
+    },
+    "nrfi_yrfi": {
+      "n": 4460,
+      "roi_pct": 3.3,
+      "brier": 0.234,
+      "clv_pp": 0.9
+    },
+    "player_props": {
+      "n": 11820,
+      "roi_pct": 1.7,
+      "brier": 0.236,
+      "clv_pp": 0.4
+    }
+  },
+  "parlays": {
+    "game_results": {
+      "label": "AGGREGATE (3 windows, 480 slates)",
+      "n_slates": 480,
+      "n_tickets": 480,
+      "units_pl": 14.7,
+      "roi_pct": 6.1,
+      "brier": 0.214,
+      "avg_joint_prob": 0.205,
+      "no_qualified_pct": 18.4,
+      "avg_clv_pp": 0.74,
+      "hit_rate_pct": 22.3,
+      "avg_legs": 3.6
+    },
+    "player_props": {
+      "label": "AGGREGATE (3 windows, 480 slates)",
+      "n_slates": 480,
+      "n_tickets": 480,
+      "units_pl": 11.3,
+      "roi_pct": 4.8,
+      "brier": 0.221,
+      "avg_joint_prob": 0.198,
+      "no_qualified_pct": 22.1,
+      "avg_clv_pp": 0.61,
+      "hit_rate_pct": 21.0,
+      "avg_legs": 3.4
+    }
+  }
+}

@@ -91,21 +91,157 @@ class FeedPick:
 
 
 @dataclass
+class FeedParlayLeg:
+    """One leg of a strict-policy parlay surfaced on EdgeEquation.com."""
+
+    market_type: str
+    selection: str
+    line_odds: float
+    side_probability: str        # 0..1, formatted to 4dp
+    tier: str
+
+    def to_dict(self) -> dict:
+        return {
+            "market_type": self.market_type,
+            "selection": self.selection,
+            "line_odds": self.line_odds,
+            "side_probability": self.side_probability,
+            "tier": self.tier,
+        }
+
+
+@dataclass
+class FeedParlay:
+    """A strict-policy parlay ticket surfaced on EdgeEquation.com.
+
+    Mirrors the JSON shape the daily-edge page already reads for
+    single-leg picks, plus the parlay-specific math (joint prob, fair
+    odds, EV) so the public ledger can render the same transparency
+    bullets as the engines do internally.
+    """
+
+    id: str
+    universe: str                  # 'game_results' | 'player_props'
+    n_legs: int
+    combined_decimal_odds: float
+    combined_american_odds: float
+    fair_decimal_odds: float
+    joint_prob_corr: str           # 0..1, formatted to 4dp
+    joint_prob_independent: str
+    implied_prob: str
+    edge_pp: str                   # signed pp (corr-adjusted vs implied)
+    ev_units: str                  # signed unit EV at default stake
+    stake_units: float
+    note: str
+    legs: list[FeedParlayLeg] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "universe": self.universe,
+            "n_legs": self.n_legs,
+            "combined_decimal_odds": self.combined_decimal_odds,
+            "combined_american_odds": self.combined_american_odds,
+            "fair_decimal_odds": self.fair_decimal_odds,
+            "joint_prob_corr": self.joint_prob_corr,
+            "joint_prob_independent": self.joint_prob_independent,
+            "implied_prob": self.implied_prob,
+            "edge_pp": self.edge_pp,
+            "ev_units": self.ev_units,
+            "stake_units": self.stake_units,
+            "note": self.note,
+            "legs": [l.to_dict() for l in self.legs],
+        }
+
+
+@dataclass
 class FeedBundle:
     date: str
     generated_at: str
     notes: str = ""
     picks: list[FeedPick] = field(default_factory=list)
+    game_results_parlays: list[FeedParlay] = field(default_factory=list)
+    player_props_parlays: list[FeedParlay] = field(default_factory=list)
+    no_qualified_parlay: dict[str, str] = field(default_factory=dict)
+    # Per-market data-availability flags. Keys: 'nrfi' / 'fullgame' /
+    # 'props' / 'game_results_parlay' / 'player_props_parlay'. Each
+    # value is one of "OK" / "Pending" / "Limited Data" so the
+    # website can render an inline badge next to a section that
+    # didn't have a full data feed at publish time.
+    market_status: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
             "version": 1,
             "generated_at": self.generated_at,
+            "footer": _build_footer(self.generated_at),
             "date": self.date,
             "source": "run_daily.py",
             "notes": self.notes,
             "picks": [p.to_dict() for p in self.picks],
+            "parlays": {
+                # Audit-locked transparency note for both parlay
+                # universes — surfaces verbatim in the daily card and
+                # the website's parlay section.
+                "transparency_note": PARLAY_TRANSPARENCY_NOTE,
+                "game_results": [
+                    p.to_dict() for p in self.game_results_parlays
+                ],
+                "player_props": [
+                    p.to_dict() for p in self.player_props_parlays
+                ],
+                "no_qualified_message": self.no_qualified_parlay,
+            },
+            "market_status": self.market_status,
         }
+
+
+# Audit-locked transparency note that accompanies every parlay
+# section on EdgeEquation.com. Imported from the parlay engine's
+# thresholds module so the website renders the same string the
+# engine prints in its daily card.
+try:
+    from edge_equation.engines.mlb.thresholds import (
+        PARLAY_TRANSPARENCY_NOTE,
+    )
+except Exception:  # pragma: no cover — defensive fallback
+    PARLAY_TRANSPARENCY_NOTE = (
+        "Parlays built only from legs meeting strict edge thresholds "
+        "(≥4pp or ELITE tier, positive EV after vig). "
+        "No plays forced. Facts. Not Feelings."
+    )
+
+
+def _build_footer(generated_at_iso: str) -> str:
+    """Build the operator-facing freshness footer.
+
+    Format::
+
+        Updated: 2026-05-06 09:32 CDT | Data as of 14:32 UTC
+
+    The website renders this verbatim under every section. Time is
+    expressed in CDT (the operator's timezone) plus the raw UTC
+    timestamp the JSON was written, so anyone forwarding the JSON
+    (or reading it on a non-DST machine) can reconcile the two.
+    """
+    try:
+        from datetime import datetime
+        try:
+            from zoneinfo import ZoneInfo
+            ct = ZoneInfo("America/Chicago")
+            ts_utc = datetime.fromisoformat(
+                generated_at_iso.replace("Z", "+00:00"),
+            )
+            ts_local = ts_utc.astimezone(ct)
+            tz_label = ts_local.strftime("%Z") or "CT"
+            return (
+                f"Updated: {ts_local.strftime('%Y-%m-%d %H:%M')} {tz_label} | "
+                f"Data as of {ts_utc.strftime('%H:%M')} UTC"
+            )
+        except Exception:
+            return f"Updated: {generated_at_iso} | Data as of {generated_at_iso}"
+    except Exception:
+        return f"Updated: {generated_at_iso} | Data as of {generated_at_iso}"
 
 
 # ---------------------------------------------------------------------------
@@ -598,24 +734,260 @@ def _fullgame_selection(market_type: str, market_label: str, side: str,
 # ---------------------------------------------------------------------------
 
 
+def _build_parlay_feed(
+    *, target_date: str, fullgame_store, props_store, store,
+) -> tuple[list["FeedParlay"], list["FeedParlay"], dict[str, str]]:
+    """Run today's two strict-parlay engines and surface their tickets.
+
+    Reads back today's full-game / props / NRFI predictions from each
+    engine's DuckDB, hands them to the two MLB parlay engines, and
+    builds the wire-format ``FeedParlay`` rows for the website. The
+    parlay engines themselves enforce every audit-locked rule (3–6
+    legs, ≥4pp edge OR ELITE, EV>0 after vig, no forced parlays); the
+    exporter only adapts the engine's output shape.
+
+    When an engine produces no qualified parlay, that universe's slot
+    in ``no_qualified_message`` carries the audit's "No qualified
+    parlay today …" string so the website can show the same line the
+    daily card shows.
+    """
+    from edge_equation.engines.mlb.thresholds import (
+        MLB_PARLAY_RULES, NO_QUALIFIED_PARLAY_MESSAGE, PARLAY_CARD_NOTE,
+    )
+    from edge_equation.engines.mlb.game_results_parlay import (
+        MLBGameResultsParlayEngine,
+    )
+    from edge_equation.engines.mlb.player_props_parlay import (
+        MLBPlayerPropsParlayEngine,
+    )
+
+    full_game_outputs = _load_fullgame_outputs_for_parlay(
+        fullgame_store, target_date,
+    )
+    prop_outputs = _load_prop_outputs_for_parlay(
+        props_store, target_date,
+    )
+    nrfi_rows = _load_nrfi_rows_for_parlay(store, target_date)
+
+    game_card = MLBGameResultsParlayEngine().run(
+        full_game_outputs=full_game_outputs,
+        nrfi_rows=nrfi_rows,
+        target_date=target_date,
+    )
+    props_card = MLBPlayerPropsParlayEngine().run(
+        prop_outputs=prop_outputs,
+        target_date=target_date,
+    )
+
+    game_feeds = [
+        _candidate_to_feed(c, universe="game_results", idx=i,
+                            target_date=target_date,
+                            note=PARLAY_CARD_NOTE)
+        for i, c in enumerate(game_card.candidates, 1)
+    ]
+    props_feeds = [
+        _candidate_to_feed(c, universe="player_props", idx=i,
+                            target_date=target_date,
+                            note=PARLAY_CARD_NOTE)
+        for i, c in enumerate(props_card.candidates, 1)
+    ]
+    no_qualified: dict[str, str] = {}
+    if not game_feeds:
+        no_qualified["game_results"] = NO_QUALIFIED_PARLAY_MESSAGE
+    if not props_feeds:
+        no_qualified["player_props"] = NO_QUALIFIED_PARLAY_MESSAGE
+    return game_feeds, props_feeds, no_qualified
+
+
+def _candidate_to_feed(
+    cand, *, universe: str, idx: int, target_date: str, note: str,
+) -> "FeedParlay":
+    """Convert a `ParlayCandidate` into the wire ``FeedParlay`` row."""
+    legs = [
+        FeedParlayLeg(
+            market_type=str(leg.market_type),
+            selection=str(leg.label or f"{leg.market_type} {leg.side}"),
+            line_odds=float(leg.american_odds),
+            side_probability=f"{float(leg.side_probability):.4f}",
+            tier=str(leg.tier.value),
+        )
+        for leg in cand.legs
+    ]
+    return FeedParlay(
+        id=f"{target_date}-{universe}-parlay-{idx}",
+        universe=universe,
+        n_legs=int(cand.n_legs),
+        combined_decimal_odds=float(cand.combined_decimal_odds),
+        combined_american_odds=float(cand.combined_american_odds),
+        fair_decimal_odds=(
+            float(cand.fair_decimal_odds)
+            if cand.fair_decimal_odds != float("inf")
+            else 0.0
+        ),
+        joint_prob_corr=f"{float(cand.joint_prob_corr):.4f}",
+        joint_prob_independent=f"{float(cand.joint_prob_independent):.4f}",
+        implied_prob=f"{float(cand.implied_prob):.4f}",
+        edge_pp=f"{float(cand.edge_pp):.4f}",
+        ev_units=f"{float(cand.ev_units):.4f}",
+        stake_units=float(cand.stake_units),
+        note=note,
+        legs=legs,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Parlay-engine input loaders (DuckDB → engine input shape)
+# ---------------------------------------------------------------------------
+
+
+def _load_fullgame_outputs_for_parlay(store, target_date: str) -> list:
+    """Build per-row objects matching the FullGameOutput attribute
+    shape the parlay engine consumes (only named attrs are read)."""
+    if store is None or not _table_exists(store, "fullgame_predictions"):
+        return []
+    df = store.query_df(_TODAY_FULLGAME_QUERY, (target_date,))
+    if df is None or len(df) == 0:
+        return []
+    rows: list = []
+    for _, r in df.iterrows():
+        rows.append(_DuckRow(
+            market_type=str(r.get("market_type") or ""),
+            side=str(r.get("side") or ""),
+            team_tricode=str(r.get("team_tricode") or ""),
+            line_value=_safe_float(r.get("line_value")),
+            model_prob=_safe_float(r.get("model_prob")),
+            edge_pp=_safe_float(r.get("edge_pp")),
+            american_odds=(_safe_float(r.get("american_odds")) or -110.0),
+            confidence=_safe_float(r.get("confidence")),
+            tier=str(r.get("tier") or "NO_PLAY"),
+            event_id=str(int(r.get("game_pk") or 0)),
+            clv_pp=0.0,
+        ))
+    return rows
+
+
+def _load_prop_outputs_for_parlay(store, target_date: str) -> list:
+    """Build per-row objects matching the PropOutput attribute shape."""
+    if store is None or not _table_exists(store, "prop_predictions"):
+        return []
+    df = store.query_df(_TODAY_PROPS_QUERY, (target_date,))
+    if df is None or len(df) == 0:
+        return []
+    rows: list = []
+    for _, r in df.iterrows():
+        rows.append(_DuckRow(
+            market_type=str(r.get("market_type") or ""),
+            market_label=_market_label(str(r.get("market_type") or "")),
+            player_name=str(r.get("player_name") or ""),
+            line_value=_safe_float(r.get("line_value")),
+            side=str(r.get("side") or "Over"),
+            model_prob=_safe_float(r.get("model_prob")),
+            edge_pp=_safe_float(r.get("edge_pp")),
+            american_odds=(_safe_float(r.get("american_odds")) or -110.0),
+            confidence=_safe_float(r.get("confidence")),
+            tier=str(r.get("tier") or "NO_PLAY"),
+            game_id=str(int(r.get("game_pk") or 0)),
+            clv_pp=0.0,
+        ))
+    return rows
+
+
+def _load_nrfi_rows_for_parlay(store, target_date: str) -> list[dict]:
+    """Pull NRFI predictions in the dict shape the parlay adapter wants."""
+    if store is None:
+        return []
+    if not (_table_exists(store, "predictions") and _table_exists(store, "games")):
+        return []
+    df = store.query_df(_TODAY_NRFI_QUERY, (target_date,))
+    if df is None or len(df) == 0:
+        return []
+    out: list[dict] = []
+    for _, r in df.iterrows():
+        prob = _safe_float(r.get("nrfi_prob"))
+        out.append({
+            "game_pk": int(r.get("game_pk") or 0),
+            "nrfi_prob": prob,
+            "market_prob": (
+                _safe_float(r.get("market_prob")) or None
+                if (r.get("market_prob") is not None
+                    and r.get("market_prob") == r.get("market_prob"))
+                else None
+            ),
+            "away_team": str(r.get("away_team") or ""),
+            "home_team": str(r.get("home_team") or ""),
+            "color_band": str(r.get("color_band") or ""),
+            "market_type": "NRFI" if prob >= 0.5 else "YRFI",
+        })
+    return out
+
+
+class _DuckRow:
+    """Tiny attr-bag used as a stand-in for FullGameOutput / PropOutput.
+
+    The parlay engines only read named attributes (``market_type``,
+    ``side``, ``model_prob``, etc.); no `isinstance` checks are made.
+    Using a thin attr bag keeps the website exporter free of a
+    dependency on the per-engine output dataclasses.
+    """
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
 def build_bundle(
     store, target_date: str,
     props_store=None,
     fullgame_store=None,
 ) -> FeedBundle:
-    """Aggregate today's picks across engines.
+    """Aggregate today's picks across engines, including parlays.
 
     ``store`` is the NRFI DuckDB; ``props_store`` is the props DuckDB
     (optional); ``fullgame_store`` is the full-game DuckDB (optional).
     Missing engines are silently skipped — the bundle still renders.
+
+    Parlay surfaces (game-results + player-props) are populated when
+    today's per-engine predictions are available; when no qualified
+    combination exists, the bundle's ``no_qualified_parlay`` slot
+    carries the audit's "No qualified parlay today …" string.
     """
-    picks = _load_nrfi_picks(store, target_date)
-    picks.extend(_load_props_picks(props_store, target_date))
-    picks.extend(_load_fullgame_picks(fullgame_store, target_date))
+    nrfi_picks = _load_nrfi_picks(store, target_date)
+    props_picks = _load_props_picks(props_store, target_date)
+    fullgame_picks = _load_fullgame_picks(fullgame_store, target_date)
+    picks = list(nrfi_picks) + list(props_picks) + list(fullgame_picks)
+
+    game_results_parlays: list[FeedParlay] = []
+    player_props_parlays: list[FeedParlay] = []
+    no_qualified: dict[str, str] = {}
+    try:
+        game_results_parlays, player_props_parlays, no_qualified = (
+            _build_parlay_feed(
+                target_date=target_date,
+                fullgame_store=fullgame_store,
+                props_store=props_store,
+                store=store,
+            )
+        )
+    except Exception:
+        # Best-effort. The single-leg picks must always render even if
+        # the parlay layer hits a snag — never block the public feed.
+        game_results_parlays = []
+        player_props_parlays = []
+        no_qualified = {}
+
+    market_status = _build_market_status(
+        nrfi_picks=nrfi_picks,
+        props_picks=props_picks,
+        fullgame_picks=fullgame_picks,
+        game_results_parlays=game_results_parlays,
+        player_props_parlays=player_props_parlays,
+        no_qualified=no_qualified,
+    )
+
     notes = (
         "Public-testing release. Manual operator trigger. Lineups + "
         "weather + umpires confirmed at publish time."
-        if picks else
+        if picks or game_results_parlays or player_props_parlays else
         "No picks for this slate yet — run_daily may not have been "
         "triggered, or there were no qualifying games today."
     )
@@ -624,7 +996,53 @@ def build_bundle(
         generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
         notes=notes,
         picks=picks,
+        game_results_parlays=game_results_parlays,
+        player_props_parlays=player_props_parlays,
+        no_qualified_parlay=no_qualified,
+        market_status=market_status,
     )
+
+
+def _build_market_status(
+    *, nrfi_picks, props_picks, fullgame_picks,
+    game_results_parlays, player_props_parlays, no_qualified,
+) -> dict[str, str]:
+    """Compute the per-market availability flags for the website.
+
+    Each section gets one of three statuses:
+    * ``OK``           — section has data and rendered normally.
+    * ``Pending``      — engine ran but produced 0 picks (e.g. lineups
+                          not yet posted or no qualified parlay today).
+    * ``Limited Data`` — engine couldn't run (DuckDB missing, no
+                          predictions for the date, etc.) so the
+                          section is empty for an upstream reason.
+
+    Operators see the same labels in the daily card; the website
+    surfaces them as inline badges so a cold-traffic visitor knows
+    whether an empty section is "no plays today" vs "still loading".
+    """
+    def _flag(picks_list, present_when_list_empty: str = "Pending") -> str:
+        if picks_list:
+            return "OK"
+        return present_when_list_empty
+
+    return {
+        "nrfi": _flag(nrfi_picks),
+        "fullgame": _flag(fullgame_picks),
+        "props": _flag(props_picks),
+        "game_results_parlay": (
+            "OK" if game_results_parlays else (
+                "Pending" if "game_results" in no_qualified
+                else "Limited Data"
+            )
+        ),
+        "player_props_parlay": (
+            "OK" if player_props_parlays else (
+                "Pending" if "player_props" in no_qualified
+                else "Limited Data"
+            )
+        ),
+    }
 
 
 def write_bundle(bundle: FeedBundle, out_path: str | Path) -> None:
