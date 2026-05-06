@@ -1,0 +1,113 @@
+name: WNBA Daily
+
+# Builds today's WNBA picks JSON (slate + projections + Kelly +
+# backtest + market gate) and commits the new files to main, which
+# triggers an automatic Vercel redeploy. Mirror of mlb-daily.yml
+# but JSON-only — no xlsx, no per-tab CSVs.
+#
+# Outputs land in website/public/data/wnba/ (inside the Vercel Root
+# Directory so the live site can read them).
+#
+# FEATURE-FLAGGED OFF via the WNBA_PIPELINE_ENABLED variable until
+# Friday's season-opening cutover passes.
+on:
+  schedule:
+    # 17:00 UTC = 1:00 PM ET during DST. WNBA games typically start
+    # 7-10pm ET, so a 1pm ET publish gives lineups + late odds time
+    # to settle while still landing well before tip-off.
+    - cron: "0 17 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Target date (YYYY-MM-DD). Defaults to today (UTC)."
+        required: false
+        default: ""
+      skip_odds:
+        description: "Skip the Odds API fetch (Kelly falls back to -110)."
+        type: boolean
+        default: false
+      dry_run:
+        description: "Dry run — build outputs and upload as artifact, but do NOT commit/push to main."
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    if: ${{ vars.WNBA_PIPELINE_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+
+      - name: Configure git
+        run: |
+          git config user.name  "edge-equation-bot"
+          git config user.email "bot@edge-equation.local"
+
+      - name: Build daily WNBA picks
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          EDGE_FEATURE_WNBA_PIPELINE: "on"
+        run: |
+          ARGS=""
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS="$ARGS --date ${{ github.event.inputs.date }}"
+          fi
+          if [ "${{ github.event.inputs.skip_odds }}" = "true" ]; then
+            ARGS="$ARGS --no-odds"
+          fi
+          python -m edge_equation.exporters.wnba.daily $ARGS
+
+      - name: List outputs
+        run: |
+          if [ -d website/public/data/wnba ]; then
+            echo "Files in website/public/data/wnba/:"
+            ls -la website/public/data/wnba/ || true
+            echo
+            echo "File sizes:"
+            du -h website/public/data/wnba/* 2>/dev/null || true
+          else
+            echo "website/public/data/wnba/ not found — orchestrator produced no outputs."
+          fi
+
+      - name: Upload outputs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wnba-daily-${{ github.run_id }}
+          path: website/public/data/wnba/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Commit and push outputs
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git add website/public/data/wnba/ || true
+          if git diff --staged --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          DATE_TAG=$(date -u +"%Y-%m-%d")
+          git commit -m "Daily WNBA picks — $DATE_TAG"
+          git push
+
+      - name: Dry-run notice
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          echo "::notice::DRY RUN — outputs uploaded as artifact 'wnba-daily-${{ github.run_id }}'. No commit/push to main."
