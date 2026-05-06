@@ -17,6 +17,30 @@ import pytest
 pytest.importorskip("pandas")
 
 
+@pytest.fixture
+def disable_upcoming_only_filter(monkeypatch):
+    """Make the upcoming-only failsafe a no-op for tests that exercise
+    the cross-engine aggregation logic.
+
+    The fakes below set fixed game times (e.g. ``"2026-05-01"``) and
+    omit ``event_time`` on FullGame / Props rows. The shipped failsafe
+    correctly drops picks with no parseable start time + a stale
+    target_date, so any test that just wants to verify
+    ``build_bundle()`` aggregates picks across engines would otherwise
+    see every pick stripped on every CI run after the fixture date.
+
+    Patching the bundle-side helper to identity isolates that
+    workaround to test infrastructure — the failsafe semantics tested
+    in ``tests/test_upcoming_only.py`` are unaffected.
+    """
+    import edge_equation.engines.website.build_daily_feed as feed_mod
+
+    def _identity(picks, *, label):
+        return list(picks or []), set()
+
+    monkeypatch.setattr(feed_mod, "_drop_started_picks", _identity)
+
+
 # ---------------------------------------------------------------------------
 # Fake store
 # ---------------------------------------------------------------------------
@@ -137,7 +161,9 @@ def test_load_nrfi_picks_handles_nan_market_prob():
 # ---------------------------------------------------------------------------
 
 
-def test_write_bundle_produces_v1_schema_json(tmp_path: Path):
+def test_write_bundle_produces_v1_schema_json(
+    tmp_path: Path, disable_upcoming_only_filter,
+):
     from edge_equation.engines.website.build_daily_feed import (
         build_bundle, write_bundle,
     )
@@ -389,7 +415,7 @@ def test_props_returns_empty_when_store_is_none():
     assert _load_props_picks(None, "2026-05-01") == []
 
 
-def test_build_bundle_combines_nrfi_and_props():
+def test_build_bundle_combines_nrfi_and_props(disable_upcoming_only_filter):
     from edge_equation.engines.website.build_daily_feed import build_bundle
     nrfi_store = _FakeStore([_row()])
     props_store = _FakePropsStore([_prop_row()])
@@ -543,7 +569,7 @@ def test_fullgame_returns_empty_when_store_is_none():
     assert _load_fullgame_picks(None, "2026-05-01") == []
 
 
-def test_build_bundle_combines_nrfi_props_fullgame():
+def test_build_bundle_combines_nrfi_props_fullgame(disable_upcoming_only_filter):
     from edge_equation.engines.website.build_daily_feed import build_bundle
     nrfi_store = _FakeStore([_row()])
     props_store = _FakePropsStore([_prop_row()])
