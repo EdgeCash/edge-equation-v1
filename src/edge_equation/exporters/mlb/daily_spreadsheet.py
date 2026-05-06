@@ -1031,6 +1031,7 @@ class DailySpreadsheet:
 
             proj_rows.append({
                 "date": p["date"],
+                "game_time": p.get("game_time"),
                 "away": p["away_team"],
                 "home": p["home_team"],
                 **_sp_fields(p),
@@ -1108,6 +1109,7 @@ class DailySpreadsheet:
 
             proj_rows.append({
                 "date": p["date"],
+                "game_time": p.get("game_time"),
                 "away": p["away_team"],
                 "home": p["home_team"],
                 **_sp_fields(p),
@@ -1171,6 +1173,7 @@ class DailySpreadsheet:
         for p in projections:
             row = {
                 "date": p["date"],
+                "game_time": p.get("game_time"),
                 "away": p["away_team"],
                 "home": p["home_team"],
                 **_sp_fields(p),
@@ -1260,6 +1263,7 @@ class DailySpreadsheet:
                       "kelly_pct": 0.0, "kelly_advice": "PASS"}
             proj_rows.append({
                 "date": p["date"],
+                "game_time": p.get("game_time"),
                 "away": p["away_team"],
                 "home": p["home_team"],
                 **_sp_fields(p),
@@ -1312,6 +1316,7 @@ class DailySpreadsheet:
             adv = kelly_advice(pick_prob)
             proj_rows.append({
                 "date": p["date"],
+                "game_time": p.get("game_time"),
                 "away": p["away_team"],
                 "home": p["home_team"],
                 **_sp_fields(p),
@@ -1369,6 +1374,7 @@ class DailySpreadsheet:
             ):
                 row = {
                     "date": p["date"],
+                    "game_time": p.get("game_time"),
                     "team": team,
                     "opponent": opp,
                     "side": side,

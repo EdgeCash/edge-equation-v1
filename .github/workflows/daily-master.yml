@@ -85,6 +85,7 @@ jobs:
       - name: Build legacy MLB spreadsheet (populates DuckDB caches)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          THE_ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           EDGE_FEATURE_SPREADSHEET_PIPELINE: "on"
         run: |
           ARGS="--include-backfill"
@@ -100,6 +101,7 @@ jobs:
       - name: Run all engines (unified card + parlays)
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          THE_ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           EDGE_FEATURE_SPREADSHEET_PIPELINE: "on"
           EDGE_FEATURE_WNBA_PARLAYS: "on"
           EDGE_FEATURE_NFL_PARLAYS: "on"
