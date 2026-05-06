@@ -1,24 +1,17 @@
 name: WNBA Daily
 
 # Builds today's WNBA picks JSON (per-row outputs + both strict
-# parlay engines) and commits the new files to main, which triggers
-# an automatic Vercel redeploy. Mirror of mlb-daily.yml.
+# parlay engines) and commits the new files to main.
 #
-# Cutoff: site live by 11:00 AM CDT (16:00 UTC during DST). WNBA
-# tip-off is typically 7–10 PM ET, so the 09:00 CT trigger leaves
-# plenty of buffer for lineups + odds to settle. Same CDT/CST cron
-# pair as mlb-daily.yml so the cutoff is preserved year-round.
+# CRON SCHEDULE REMOVED — `daily-master.yml` is the canonical
+# scheduler for every sport. This workflow stays available for
+# ad-hoc operator runs via "Run workflow" when a WNBA-only
+# rebuild is needed.
 #
-# Outputs land in website/public/data/wnba/ (inside the Vercel Root
-# Directory so the live site can read them).
-#
-# FEATURE-FLAGGED OFF via the WNBA_PIPELINE_ENABLED variable until
-# the opening-weekend cutover passes. The strict parlay engines have
-# their own EDGE_FEATURE_WNBA_PARLAYS env-var flag layered on top.
+# Strict parlay engines remain feature-flagged via
+# EDGE_FEATURE_WNBA_PARLAYS; manual dispatch sets it on inside
+# the workflow only.
 on:
-  schedule:
-    - cron: "0 14 * * *"   # 09:00 CDT (Mar–Nov) — finishes ≈ 09:30 CDT
-    - cron: "0 15 * * *"   # 09:00 CST (Nov–Mar) — finishes ≈ 09:30 CST
   workflow_dispatch:
     inputs:
       date:

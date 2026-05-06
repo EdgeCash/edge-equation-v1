@@ -1,0 +1,157 @@
+name: Daily Master
+
+# Master daily workflow.
+#
+# Runs every sport's engine in one pass via `run_daily_all.py` —
+# the canonical scheduler for the whole site. Per-sport workflows
+# keep their `workflow_dispatch` triggers for ad-hoc operator runs
+# but no longer run on cron; this file is the only place that
+# fires daily.
+#
+# Adding a new sport = adding ONE entry to `ENGINE_CATALOG` in
+# `run_daily_all.py`. The catalog also drives the env vars set in
+# the "Configure feature flags" step + the directories committed
+# in the "Commit and push outputs" step, so a new sport doesn't
+# require any workflow edits.
+#
+# Cutoff: site live by 11:00 AM CDT (16:00 UTC during DST). Same
+# CDT/CST cron pair the per-sport workflows used to carry; runs
+# at 09:00 CT every day so a worst-case 30-minute slate build +
+# Vercel rebuild still lands well before the cutoff.
+on:
+  schedule:
+    - cron: "0 14 * * *"   # 09:00 CDT (Mar–Nov)
+    - cron: "0 15 * * *"   # 09:00 CST (Nov–Mar)
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Target date (YYYY-MM-DD). Defaults to today (UTC)."
+        required: false
+        default: ""
+      only:
+        description: "Comma-separated sport keys to include (e.g. mlb,wnba). Default: every sport."
+        required: false
+        default: ""
+      skip:
+        description: "Comma-separated sport keys to exclude."
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run — build outputs and upload as artifact, but do NOT commit/push to main."
+        type: boolean
+        default: false
+
+# Don't let a manual trigger and a cron trigger fight for the same
+# branch on the commit step.
+concurrency:
+  group: daily-master
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: ${{ vars.DAILY_MASTER_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -e .
+
+      - name: Configure git
+        run: |
+          git config user.name  "edge-equation-bot"
+          git config user.email "bot@edge-equation.local"
+
+      # Every per-sport feature flag the catalog declares lands in
+      # the env for this step. The script enables each sport's
+      # parlay engines + unified runner only inside the workflow.
+      - name: Run all engines
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          EDGE_FEATURE_SPREADSHEET_PIPELINE: "on"
+          EDGE_FEATURE_WNBA_PARLAYS: "on"
+          EDGE_FEATURE_NFL_PARLAYS: "on"
+          EDGE_FEATURE_NCAAF_PARLAYS: "on"
+        run: |
+          ARGS="--all"
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            ARGS="$ARGS --date ${{ github.event.inputs.date }}"
+          fi
+          if [ -n "${{ github.event.inputs.only }}" ]; then
+            ARGS="$ARGS --only ${{ github.event.inputs.only }}"
+          fi
+          if [ -n "${{ github.event.inputs.skip }}" ]; then
+            ARGS="$ARGS --skip ${{ github.event.inputs.skip }}"
+          fi
+          python run_daily_all.py $ARGS
+
+      # The script prints the directories the workflow should
+      # commit, one per line. Read them once and use the same list
+      # for both the artifact upload and the commit step so adding
+      # a sport (one line in run_daily_all.py) auto-flows through
+      # without a workflow edit.
+      - name: Resolve output paths
+        id: paths
+        run: |
+          paths=$(python run_daily_all.py --list-output-paths)
+          echo "paths<<PATHS_EOF"     >> "$GITHUB_OUTPUT"
+          echo "$paths"                >> "$GITHUB_OUTPUT"
+          echo "PATHS_EOF"             >> "$GITHUB_OUTPUT"
+          echo "Output paths to commit:"
+          echo "$paths"
+
+      - name: Upload outputs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-master-${{ github.run_id }}
+          path: |
+            website/public/data/mlb/
+            website/public/data/wnba/
+            website/public/data/nfl/
+            website/public/data/ncaaf/
+            website/public/data/daily/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Commit and push outputs
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          # Add every output dir the catalog declared. xargs handles
+          # the multi-line list cleanly.
+          echo "${{ steps.paths.outputs.paths }}" | xargs -r git add || true
+          if git diff --staged --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          DATE_TAG=$(date -u +"%Y-%m-%d")
+          git commit -m "Daily master — $DATE_TAG (every engine + unified feed)"
+          # Pull --rebase before push so a manual workflow_dispatch
+          # mid-cron doesn't fail with non-fast-forward.
+          for attempt in 1 2 3; do
+            if git push; then
+              break
+            fi
+            echo "Push attempt $attempt failed — pulling --rebase and retrying."
+            git pull --rebase origin main
+            sleep $((attempt * 2))
+          done
+
+      - name: Dry-run notice
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          echo "::notice::DRY RUN — outputs uploaded as artifact 'daily-master-${{ github.run_id }}'. No commit/push to main."

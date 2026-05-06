@@ -4,15 +4,11 @@ name: MLB Daily Spreadsheet
 # parlay engines) and the daily spreadsheet, then commits the new
 # files to main, which triggers an automatic Vercel redeploy.
 #
-# Cutoff: site must be live by 11:00 AM CDT (16:00 UTC during DST).
-# First pitch is typically 12:10 PM CDT, so a 9:00 AM CDT (14:00 UTC)
-# trigger leaves a 2-hour buffer for the workflow run + Vercel build.
-# The cron pair below covers CDT (Mar–Nov) and CST (Nov–Mar) so the
-# 11:00 AM CT cutoff is preserved year-round.
+# CRON SCHEDULE REMOVED — `daily-master.yml` is the canonical
+# scheduler for every sport. This workflow stays available for
+# ad-hoc operator runs via the GitHub Actions UI's "Run workflow"
+# button when a single-sport rebuild is needed.
 on:
-  schedule:
-    - cron: "0 14 * * *"   # 09:00 CDT (Mar–Nov) — finishes ≈ 09:30 CDT
-    - cron: "0 15 * * *"   # 09:00 CST (Nov–Mar) — finishes ≈ 09:30 CST
   workflow_dispatch:
     inputs:
       date:
