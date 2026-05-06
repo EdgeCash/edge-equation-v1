@@ -8,29 +8,43 @@ unified MLB runner imports the optional Odds API client). Calling
 single missing extra doesn't take the whole registry down.
 
 Register every engine the system can run here. Each value is a
-zero-arg factory that returns an engine instance. The MLB scope
-covers:
+zero-arg factory that returns an engine instance. Coverage:
 
-* ``mlb_nrfi``                — NRFI / YRFI engine (existing).
-* ``mlb_props``               — Player props (PrizePicks / standard
-                                 books, existing).
+MLB:
+* ``mlb_nrfi``                — NRFI / YRFI engine.
+* ``mlb_props``               — Player props (PrizePicks / books).
 * ``mlb_fullgame``            — Full-game ML / RL / Total / Team
-                                 Total / F5 (existing).
-* ``mlb_game_results_parlay`` — Strict 3–6 leg game-results parlay
-                                 (NEW).
-* ``mlb_player_props_parlay`` — Strict 3–6 leg player-props parlay
-                                 (NEW).
-* ``mlb_daily``               — Unified MLB daily runner that produces
-                                 the full card (all markets + both
-                                 parlay types) in a single pass (NEW).
+                                 Total / F5.
+* ``mlb_game_results_parlay`` — Strict 3–6 leg game-results parlay.
+* ``mlb_player_props_parlay`` — Strict 3–6 leg player-props parlay.
+* ``mlb_daily``               — Unified MLB daily runner.
 
-Non-MLB sports stay registered for parity with the rest of the
-codebase but are out of scope for the current MLB-finalize work.
+WNBA (feature-flagged off by default until opening-weekend testing
+clears — set ``EDGE_FEATURE_WNBA_PARLAYS=on`` to enable the parlay
+keys; the per-row ``wnba`` engine is always available):
+* ``wnba``                     — Per-row WNBA engine (game + props).
+* ``wnba_game_results_parlay`` — Strict 3–6 leg WNBA game parlay.
+* ``wnba_player_props_parlay`` — Strict 3–6 leg WNBA props parlay.
+* ``wnba_daily``               — Unified WNBA daily runner.
 """
 
 from __future__ import annotations
 
+import os
 from typing import Any, Callable, Optional
+
+
+# Feature-flag env var for the WNBA strict-parlay engines. Per the
+# audit's "feature flag WNBA so it doesn't affect MLB" instruction:
+# the parlay-only keys are gated, the per-row engine is always live.
+ENV_WNBA_PARLAYS_ENABLED = "EDGE_FEATURE_WNBA_PARLAYS"
+
+
+def _wnba_parlays_enabled() -> bool:
+    return (
+        os.environ.get(ENV_WNBA_PARLAYS_ENABLED, "").strip().lower()
+        in {"1", "true", "on", "yes"}
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +94,43 @@ def _factory_wnba() -> Any:
     return WNBARunner
 
 
+def _factory_wnba_game_results_parlay() -> Any:
+    if not _wnba_parlays_enabled():
+        # Feature flag off — registry behaves as if the key didn't
+        # exist. The unified WNBA runner can still be invoked
+        # directly during testing.
+        raise ImportError(
+            f"WNBA parlays are feature-flagged off "
+            f"(set {ENV_WNBA_PARLAYS_ENABLED}=on to enable)."
+        )
+    from edge_equation.engines.wnba.game_results_parlay import (
+        WNBAGameResultsParlayEngine,
+    )
+    return WNBAGameResultsParlayEngine()
+
+
+def _factory_wnba_player_props_parlay() -> Any:
+    if not _wnba_parlays_enabled():
+        raise ImportError(
+            f"WNBA parlays are feature-flagged off "
+            f"(set {ENV_WNBA_PARLAYS_ENABLED}=on to enable)."
+        )
+    from edge_equation.engines.wnba.player_props_parlay import (
+        WNBAPlayerPropsParlayEngine,
+    )
+    return WNBAPlayerPropsParlayEngine()
+
+
+def _factory_wnba_daily() -> Any:
+    if not _wnba_parlays_enabled():
+        raise ImportError(
+            f"WNBA daily unified runner is feature-flagged off "
+            f"(set {ENV_WNBA_PARLAYS_ENABLED}=on to enable)."
+        )
+    from edge_equation.engines.wnba.parlay_runner import WNBADailyRunner
+    return WNBADailyRunner()
+
+
 # ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
@@ -93,8 +144,12 @@ ENGINE_REGISTRY: dict[str, Callable[[], Any]] = {
     "mlb_game_results_parlay": _factory_mlb_game_results_parlay,
     "mlb_player_props_parlay": _factory_mlb_player_props_parlay,
     "mlb_daily": _factory_mlb_daily,
-    # Non-MLB (out of scope for the current work)
+    # WNBA — per-row engine always live; parlay engines + unified
+    # runner are gated on EDGE_FEATURE_WNBA_PARLAYS.
     "wnba": _factory_wnba,
+    "wnba_game_results_parlay": _factory_wnba_game_results_parlay,
+    "wnba_player_props_parlay": _factory_wnba_player_props_parlay,
+    "wnba_daily": _factory_wnba_daily,
 }
 
 
@@ -102,8 +157,8 @@ def get_engine(engine_key: str) -> Optional[Any]:
     """Return the engine for ``engine_key`` or ``None`` when unregistered.
 
     Catches ``ImportError`` (and friends) so a missing optional
-    dependency reads as a missing engine rather than crashing the
-    whole runner.
+    dependency — or a feature-flagged-off engine — reads as a missing
+    engine rather than crashing the whole runner.
     """
     factory = ENGINE_REGISTRY.get(engine_key)
     if factory is None:
