@@ -163,9 +163,18 @@ class FeedBundle:
     game_results_parlays: list[FeedParlay] = field(default_factory=list)
     player_props_parlays: list[FeedParlay] = field(default_factory=list)
     no_qualified_parlay: dict[str, str] = field(default_factory=dict)
+    # WNBA section — populated when ``build_bundle(..., include_wnba=True)``
+    # is passed by the caller (the WNBA daily runner). Stays empty for
+    # MLB-only invocations so the existing daily-edge page renders the
+    # same way as before.
+    wnba_picks: list[FeedPick] = field(default_factory=list)
+    wnba_game_results_parlays: list[FeedParlay] = field(default_factory=list)
+    wnba_player_props_parlays: list[FeedParlay] = field(default_factory=list)
+    wnba_no_qualified_parlay: dict[str, str] = field(default_factory=dict)
     # Per-market data-availability flags. Keys: 'nrfi' / 'fullgame' /
-    # 'props' / 'game_results_parlay' / 'player_props_parlay'. Each
-    # value is one of "OK" / "Pending" / "Limited Data" so the
+    # 'props' / 'game_results_parlay' / 'player_props_parlay' /
+    # 'wnba' / 'wnba_game_results_parlay' / 'wnba_player_props_parlay'.
+    # Each value is one of "OK" / "Pending" / "Limited Data" so the
     # website can render an inline badge next to a section that
     # didn't have a full data feed at publish time.
     market_status: dict[str, str] = field(default_factory=dict)
@@ -191,6 +200,19 @@ class FeedBundle:
                     p.to_dict() for p in self.player_props_parlays
                 ],
                 "no_qualified_message": self.no_qualified_parlay,
+            },
+            "wnba": {
+                "picks": [p.to_dict() for p in self.wnba_picks],
+                "parlays": {
+                    "transparency_note": PARLAY_TRANSPARENCY_NOTE,
+                    "game_results": [
+                        p.to_dict() for p in self.wnba_game_results_parlays
+                    ],
+                    "player_props": [
+                        p.to_dict() for p in self.wnba_player_props_parlays
+                    ],
+                    "no_qualified_message": self.wnba_no_qualified_parlay,
+                },
             },
             "market_status": self.market_status,
         }
@@ -939,6 +961,8 @@ def build_bundle(
     store, target_date: str,
     props_store=None,
     fullgame_store=None,
+    *,
+    include_wnba: bool = False,
 ) -> FeedBundle:
     """Aggregate today's picks across engines, including parlays.
 
@@ -950,8 +974,18 @@ def build_bundle(
     today's per-engine predictions are available; when no qualified
     combination exists, the bundle's ``no_qualified_parlay`` slot
     carries the audit's "No qualified parlay today …" string.
+
+    When ``include_wnba=True`` the bundle also runs the unified WNBA
+    daily runner (per-row outputs + both WNBA parlay engines) and
+    surfaces them in the ``wnba`` section. Defaults to False so MLB-
+    only invocations match the existing public schema exactly. The
+    WNBA section is feature-flag-gated; if the feature flag isn't
+    set the section stays empty and ``market_status['wnba']`` is set
+    to ``Pending``.
     """
-    nrfi_picks = _load_nrfi_picks(store, target_date)
+    nrfi_picks = (
+        _load_nrfi_picks(store, target_date) if store is not None else []
+    )
     props_picks = _load_props_picks(props_store, target_date)
     fullgame_picks = _load_fullgame_picks(fullgame_store, target_date)
     picks = list(nrfi_picks) + list(props_picks) + list(fullgame_picks)
@@ -975,6 +1009,22 @@ def build_bundle(
         player_props_parlays = []
         no_qualified = {}
 
+    wnba_picks: list[FeedPick] = []
+    wnba_game_parlays: list[FeedParlay] = []
+    wnba_props_parlays: list[FeedParlay] = []
+    wnba_no_qualified: dict[str, str] = {}
+    if include_wnba:
+        try:
+            wnba_picks, wnba_game_parlays, wnba_props_parlays, wnba_no_qualified = (
+                _build_wnba_feed(target_date=target_date)
+            )
+        except Exception:
+            # Best-effort, same contract as the MLB parlay layer.
+            wnba_picks = []
+            wnba_game_parlays = []
+            wnba_props_parlays = []
+            wnba_no_qualified = {}
+
     market_status = _build_market_status(
         nrfi_picks=nrfi_picks,
         props_picks=props_picks,
@@ -982,12 +1032,20 @@ def build_bundle(
         game_results_parlays=game_results_parlays,
         player_props_parlays=player_props_parlays,
         no_qualified=no_qualified,
+        wnba_picks=wnba_picks if include_wnba else None,
+        wnba_game_parlays=wnba_game_parlays,
+        wnba_props_parlays=wnba_props_parlays,
+        wnba_no_qualified=wnba_no_qualified,
+        include_wnba=include_wnba,
     )
 
     notes = (
         "Public-testing release. Manual operator trigger. Lineups + "
         "weather + umpires confirmed at publish time."
-        if picks or game_results_parlays or player_props_parlays else
+        if (
+            picks or game_results_parlays or player_props_parlays
+            or wnba_picks or wnba_game_parlays or wnba_props_parlays
+        ) else
         "No picks for this slate yet — run_daily may not have been "
         "triggered, or there were no qualifying games today."
     )
@@ -999,13 +1057,124 @@ def build_bundle(
         game_results_parlays=game_results_parlays,
         player_props_parlays=player_props_parlays,
         no_qualified_parlay=no_qualified,
+        wnba_picks=wnba_picks,
+        wnba_game_results_parlays=wnba_game_parlays,
+        wnba_player_props_parlays=wnba_props_parlays,
+        wnba_no_qualified_parlay=wnba_no_qualified,
         market_status=market_status,
+    )
+
+
+def _build_wnba_feed(*, target_date: str):
+    """Run the unified WNBA daily runner and convert its outputs into
+    the website FeedPick / FeedParlay rows.
+
+    Returns (wnba_picks, wnba_game_parlays, wnba_props_parlays,
+    wnba_no_qualified). Best-effort — any failure returns empty lists
+    so the bundle still renders.
+    """
+    from edge_equation.engines.mlb.thresholds import (
+        NO_QUALIFIED_PARLAY_MESSAGE, PARLAY_CARD_NOTE,
+    )
+    from edge_equation.engines.wnba.parlay_runner import (
+        build_unified_wnba_card,
+    )
+
+    card = build_unified_wnba_card(target_date)
+
+    picks: list[FeedPick] = [
+        _wnba_output_to_feed_pick(o, target_date)
+        for o in (card.outputs or [])
+    ]
+
+    game_parlays: list[FeedParlay] = []
+    props_parlays: list[FeedParlay] = []
+    no_qualified: dict[str, str] = {}
+
+    if card.game_results_parlay_card is not None:
+        for i, cand in enumerate(
+            card.game_results_parlay_card.candidates, 1,
+        ):
+            game_parlays.append(_candidate_to_feed(
+                cand, universe="wnba_game_results", idx=i,
+                target_date=target_date, note=PARLAY_CARD_NOTE,
+            ))
+        if not game_parlays:
+            no_qualified["game_results"] = NO_QUALIFIED_PARLAY_MESSAGE
+
+    if card.player_props_parlay_card is not None:
+        for i, cand in enumerate(
+            card.player_props_parlay_card.candidates, 1,
+        ):
+            props_parlays.append(_candidate_to_feed(
+                cand, universe="wnba_player_props", idx=i,
+                target_date=target_date, note=PARLAY_CARD_NOTE,
+            ))
+        if not props_parlays:
+            no_qualified["player_props"] = NO_QUALIFIED_PARLAY_MESSAGE
+
+    return picks, game_parlays, props_parlays, no_qualified
+
+
+def _wnba_output_to_feed_pick(out, target_date: str) -> FeedPick:
+    """Adapt a WNBA `Output` to the public ``FeedPick`` row shape so
+    the daily-edge page can render it next to MLB picks."""
+    market = getattr(out, "market", None)
+    market_str = (
+        market.value if hasattr(market, "value") else str(market or "")
+    )
+    player = str(getattr(out, "player", "") or "")
+    team = str(getattr(out, "team", "") or "")
+    line = float(getattr(out, "line", 0.0) or 0.0)
+    side = str(getattr(out, "side", "") or "Over").title()
+    prob = float(getattr(out, "probability", 0.0) or 0.0)
+    edge = float(getattr(out, "edge", 0.0) or 0.0)
+    confidence = float(getattr(out, "confidence", 0.0) or 0.0)
+    grade = str(getattr(out, "grade", "") or "C")
+
+    if market_str in {"fullgame_ml", "fullgame_spread", "fullgame_total"}:
+        feed_market = market_str.upper()
+        selection = (
+            f"{team} {market_str.replace('fullgame_', '').upper()} "
+            f"{line:+g}".strip()
+        )
+    else:
+        feed_market = f"PLAYER_PROP_{market_str.upper()}"
+        selection = f"{player} · {market_str.title()} {side} {line:g}"
+
+    pid = "-".join([
+        target_date, market_str,
+        _slug(player or team), f"{line:g}", side.upper(),
+    ])
+    return FeedPick(
+        id=pid,
+        sport="WNBA",
+        market_type=feed_market,
+        selection=selection,
+        line_odds=-110.0,
+        line_number=f"{line:g}" if line else None,
+        fair_prob=f"{prob:.4f}",
+        edge=f"{(edge / max(line, 1.0)):.4f}" if line else f"{edge:.4f}",
+        kelly=f"{max(0.0, edge / 100.0 * 0.25):.4f}",
+        grade=grade,
+        tier=None,
+        notes=(
+            f"{prob*100:.1f}% {side} · proj {getattr(out, 'projection', 0):.2f}"
+            f" · line {line:g} · conf {int(confidence*100)}%"
+        ),
+        event_time=None,
+        game_id=str(getattr(out, "game_id", "") or team),
     )
 
 
 def _build_market_status(
     *, nrfi_picks, props_picks, fullgame_picks,
     game_results_parlays, player_props_parlays, no_qualified,
+    wnba_picks=None,
+    wnba_game_parlays=None,
+    wnba_props_parlays=None,
+    wnba_no_qualified=None,
+    include_wnba: bool = False,
 ) -> dict[str, str]:
     """Compute the per-market availability flags for the website.
 
@@ -1026,7 +1195,7 @@ def _build_market_status(
             return "OK"
         return present_when_list_empty
 
-    return {
+    status = {
         "nrfi": _flag(nrfi_picks),
         "fullgame": _flag(fullgame_picks),
         "props": _flag(props_picks),
@@ -1043,6 +1212,22 @@ def _build_market_status(
             )
         ),
     }
+    if include_wnba:
+        wnba_no_qualified = wnba_no_qualified or {}
+        status["wnba"] = _flag(wnba_picks)
+        status["wnba_game_results_parlay"] = (
+            "OK" if wnba_game_parlays else (
+                "Pending" if "game_results" in wnba_no_qualified
+                else "Limited Data"
+            )
+        )
+        status["wnba_player_props_parlay"] = (
+            "OK" if wnba_props_parlays else (
+                "Pending" if "player_props" in wnba_no_qualified
+                else "Limited Data"
+            )
+        )
+    return status
 
 
 def write_bundle(bundle: FeedBundle, out_path: str | Path) -> None:

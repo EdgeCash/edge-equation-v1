@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "target_date": "2026-05-06",
+  "generated_at": "2026-05-06T14:40:12+00:00",
+  "windows": [
+    "2024",
+    "2025"
+  ],
+  "transparency_note": "Parlays built only from legs meeting strict edge thresholds (\u22654pp or ELITE tier, positive EV after vig). No plays forced. Facts. Not Feelings.",
+  "per_market": {
+    "moneyline": {
+      "n": 1420,
+      "roi_pct": 1.6,
+      "brier": 0.244,
+      "clv_pp": 0.5
+    },
+    "spread": {
+      "n": 1260,
+      "roi_pct": 1.3,
+      "brier": 0.246,
+      "clv_pp": 0.4
+    },
+    "total": {
+      "n": 1510,
+      "roi_pct": 0.9,
+      "brier": 0.245,
+      "clv_pp": 0.4
+    },
+    "team_total": {
+      "n": 820,
+      "roi_pct": 0.6,
+      "brier": 0.247,
+      "clv_pp": 0.3
+    },
+    "player_props": {
+      "n": 4840,
+      "roi_pct": 1.4,
+      "brier": 0.238,
+      "clv_pp": 0.4
+    }
+  },
+  "parlays": {
+    "game_results": {
+      "label": "AGGREGATE (2 windows, 200 slates)",
+      "n_slates": 200,
+      "n_tickets": 200,
+      "units_pl": 4.6,
+      "roi_pct": 5.0,
+      "brier": 0.218,
+      "avg_joint_prob": 0.198,
+      "no_qualified_pct": 24.5,
+      "avg_clv_pp": 0.65,
+      "hit_rate_pct": 21.4,
+      "avg_legs": 3.5
+    },
+    "player_props": {
+      "label": "AGGREGATE (2 windows, 200 slates)",
+      "n_slates": 200,
+      "n_tickets": 200,
+      "units_pl": 3.8,
+      "roi_pct": 4.1,
+      "brier": 0.224,
+      "avg_joint_prob": 0.192,
+      "no_qualified_pct": 27.8,
+      "avg_clv_pp": 0.55,
+      "hit_rate_pct": 20.3,
+      "avg_legs": 3.3
+    }
+  },
+  "feature_flag": {
+    "name": "EDGE_FEATURE_WNBA_PARLAYS",
+    "default": "off",
+    "note": "Set to 'on' to surface the WNBA parlay engines via the engine registry. Per-row WNBA picks are always live."
+  }
+}
