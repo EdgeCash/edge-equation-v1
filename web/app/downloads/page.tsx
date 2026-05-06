@@ -96,6 +96,26 @@ const FILE_METADATA: Record<string, { description: string; tier: Tier }> = {
       "Current market odds across books for today's slate. Source: The Odds API, fetched every morning before the build.",
     tier: "free",
   },
+  "wnba/backtest_summary.json": {
+    description:
+      "WNBA walk-forward backtest summary (per-market ROI / Brier / CLV + both parlay engines). Headline numbers reflect audit-calibrated production targets.",
+    tier: "free",
+  },
+  "nfl/backtest_summary.json": {
+    description:
+      "NFL walk-forward backtest summary across the 2022–2024 seasons.",
+    tier: "free",
+  },
+  "ncaaf/backtest_summary.json": {
+    description:
+      "NCAAF walk-forward backtest summary across the 2022–2024 seasons.",
+    tier: "free",
+  },
+  "daily/latest.json": {
+    description:
+      "Unified daily feed — every sport's picks + both parlay engines + market_status flags + the audit transparency note. Source for the Daily Card / Sport Hub / Parlay Viewer pages.",
+    tier: "free",
+  },
 };
 
 interface GroupLayout {
@@ -140,17 +160,32 @@ const GROUP_LAYOUT: GroupLayout[] = [
     description: "Today's market state at the time of this morning's build.",
     files: ["lines.json"],
   },
+  {
+    title: "Cross-sport feeds",
+    description:
+      "The unified daily feed + per-sport backtest summaries. Same JSON the website's hub + parlay-viewer pages render from — diff against your own model output to audit our numbers.",
+    files: [
+      "daily/latest.json",
+      "wnba/backtest_summary.json",
+      "nfl/backtest_summary.json",
+      "ncaaf/backtest_summary.json",
+    ],
+  },
 ];
 
 function getDataFiles(): { title: string; description: string; files: DataFile[] }[] {
-  const dataDir = path.join(process.cwd(), "public", "data", "mlb");
+  const baseDir = path.join(process.cwd(), "public", "data");
 
   return GROUP_LAYOUT.map((group) => ({
     title: group.title,
     description: group.description,
     files: group.files
       .map((filename): DataFile | null => {
-        const fullPath = path.join(dataDir, filename);
+        // Filenames may be either a bare name (lives under data/mlb/)
+        // or `<sport>/...` for the cross-sport feeds. Resolve both.
+        const fullPath = filename.includes("/")
+          ? path.join(baseDir, filename)
+          : path.join(baseDir, "mlb", filename);
         const meta = FILE_METADATA[filename] ?? {
           description: "",
           tier: "free" as Tier,
@@ -262,7 +297,11 @@ export default function DataPage() {
                       >
                         <td className="px-4 py-3 align-top">
                           <a
-                            href={`/data/mlb/${file.filename}`}
+                            href={
+                              file.filename.includes("/")
+                                ? `/data/${file.filename}`
+                                : `/data/mlb/${file.filename}`
+                            }
                             download
                             className="font-mono text-elite hover:underline whitespace-nowrap"
                           >
