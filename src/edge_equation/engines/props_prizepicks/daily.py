@@ -479,6 +479,10 @@ def _persist_predictions(
             "lam": o.lam, "blend_n": o.blend_n,
             "confidence": o.confidence,
         }),
+        # ISO 8601 from the Odds API event payload. Threaded into
+        # FeedPick.event_time downstream so the upcoming-only failsafe
+        # has a real first-pitch timestamp to gate on.
+        "commence_time": str(getattr(o, "commence_time", "") or ""),
     } for o in outputs]
     # Clear any rows from a prior orchestrator run for this same
     # date before inserting. ``upsert`` only replaces matching primary

@@ -346,6 +346,10 @@ def _persist_predictions(
             "blend_n_away": o.blend_n_away,
             "confidence": o.confidence,
         }),
+        # ISO 8601 from the Odds API event payload. Threaded into
+        # FeedPick.event_time downstream so the upcoming-only failsafe
+        # has a real first-pitch timestamp.
+        "commence_time": str(getattr(o, "commence_time", "") or ""),
     } for o in outputs]
     # Same staleness fix as the props side: clear today's rows
     # before inserting, so a re-run under tightened thresholds

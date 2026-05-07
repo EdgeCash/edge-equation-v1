@@ -91,6 +91,7 @@ _SCHEMA: tuple[str, ...] = (
         confidence     DOUBLE,
         tier           VARCHAR,
         feature_blob   VARCHAR,
+        commence_time  VARCHAR,
         created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (event_date, market_type, player_name, line_value, side)
     )
@@ -116,6 +117,21 @@ _SCHEMA: tuple[str, ...] = (
         loaded_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (event_date, player_name, role)
     )
+    """,
+)
+
+
+# Idempotent column migrations for tables created before a column was
+# added. Each entry runs through ``ALTER TABLE ... ADD COLUMN IF NOT
+# EXISTS`` so a fresh database (already has the column from the CREATE
+# above) and an old database (needs the new column) both end up with
+# the same schema.
+_MIGRATIONS: tuple[str, ...] = (
+    # 2026-05-07 (PR for first-pitch event_time persistence): commence_time
+    # threaded from the Odds API event-list down through the props
+    # ledger so the daily-feed loader can stamp FeedPick.event_time.
+    """
+    ALTER TABLE prop_predictions ADD COLUMN IF NOT EXISTS commence_time VARCHAR
     """,
 )
 
@@ -149,6 +165,20 @@ class PropsStore:
     def _init_schema(self) -> None:
         for stmt in _SCHEMA:
             self._conn.execute(stmt)
+        # Idempotent migrations for columns added after the original
+        # CREATE statement was deployed. ``ADD COLUMN IF NOT EXISTS``
+        # is a DuckDB no-op when the column is already present, so
+        # re-running on a fresh database that already has the column
+        # via the CREATE TABLE above is fine.
+        for migration in _MIGRATIONS:
+            try:
+                self._conn.execute(migration)
+            except Exception:
+                # Some DuckDB releases reject ADD COLUMN IF NOT EXISTS
+                # on tables where the column already exists. Probe the
+                # information_schema to keep the bootstrap silent in
+                # both cases.
+                pass
 
     @contextlib.contextmanager
     def cursor(self) -> Iterator[Any]:

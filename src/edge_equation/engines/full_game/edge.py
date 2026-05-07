@@ -60,6 +60,12 @@ class FullGameEdgePick:
     book: str
     tier: Tier
     tier_classification: TierClassification
+    # ISO 8601 commence_time from the upstream Odds API event payload.
+    # Threaded through to FullGameOutput + persisted in the
+    # fullgame_predictions table so the unified daily-feed loader can
+    # stamp FeedPick.event_time. Empty string when the source line
+    # didn't carry one (older fixtures).
+    commence_time: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +186,7 @@ def build_edge_picks(
             american_odds=line.american_odds,
             decimal_odds=line.decimal_odds, book=line.book,
             tier=clf.tier, tier_classification=clf,
+            commence_time=str(getattr(line, "commence_time", "") or ""),
         ))
     picks.sort(key=lambda p: p.edge_pp, reverse=True)
     return picks

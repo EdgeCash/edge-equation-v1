@@ -71,6 +71,12 @@ class PropEdgePick:
     # output, model_prob is the post-shrink prob the gate evaluated.
     # Lets the dashboard show "we projected X, calibrated to Y."
     raw_model_prob: float = 0.0
+    # ISO 8601 commence_time from the upstream Odds API event payload.
+    # Threaded through to PropOutput + persisted in prop_predictions so
+    # the unified daily-feed loader can stamp FeedPick.event_time and
+    # the upcoming-only failsafe sees a real first-pitch timestamp.
+    # Empty string when the line didn't carry one (older fixtures).
+    commence_time: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -239,6 +245,7 @@ def build_edge_picks(
             tier=clf.tier,
             tier_classification=clf,
             raw_model_prob=raw_prob,
+            commence_time=str(line.commence_time or ""),
         ))
     picks.sort(key=lambda p: p.edge_pp, reverse=True)
     return picks
