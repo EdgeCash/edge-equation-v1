@@ -16,36 +16,17 @@ is doing its job and the siblings carry useful diversity.
 
 from __future__ import annotations
 
-from edge_equation.engines.parlay.builder import (
-    ParlayCandidate,
-    ParlayLeg,
-    build_parlay_candidates,
-)
+from edge_equation.engines.parlay.builder import ParlayCandidate, ParlayLeg
 from edge_equation.engines.parlay.config import ParlayConfig
+from edge_equation.engines.parlay.strategies import (
+    _dedup_key, _single_leg_ev, build_deduped,
+)
 
 from ..base import ParlayEngine
 
 
-def _single_leg_ev(leg: ParlayLeg) -> float:
-    """Expected return per 1u risked = decimal_odds * p - 1.
-
-    The de-dup tiebreak: when two legs sit in the same correlation
-    group, keep the one with the higher single-leg EV.
-    """
-    return leg.decimal_odds * leg.side_probability - 1.0
-
-
-def _dedup_key(leg: ParlayLeg) -> str:
-    """Group identifier: player_id when present, else game_id.
-
-    Returns an empty string for legs with neither set; those bypass
-    de-dup (each treated as its own group).
-    """
-    if leg.player_id:
-        return f"player:{leg.player_id}"
-    if leg.game_id:
-        return f"game:{leg.game_id}"
-    return ""
+# Re-exported for tests that introspect the dedup keys directly.
+__all__ = ["SameGameDedupedEngine", "_dedup_key", "_single_leg_ev"]
 
 
 class SameGameDedupedEngine(ParlayEngine):
@@ -62,16 +43,4 @@ class SameGameDedupedEngine(ParlayEngine):
         legs: list[ParlayLeg],
         config: ParlayConfig,
     ) -> list[ParlayCandidate]:
-        # Bucket and reduce.
-        best_by_key: dict[str, ParlayLeg] = {}
-        ungrouped: list[ParlayLeg] = []
-        for leg in legs:
-            key = _dedup_key(leg)
-            if not key:
-                ungrouped.append(leg)
-                continue
-            current = best_by_key.get(key)
-            if current is None or _single_leg_ev(leg) > _single_leg_ev(current):
-                best_by_key[key] = leg
-        deduped = list(best_by_key.values()) + ungrouped
-        return build_parlay_candidates(deduped, config=config)
+        return build_deduped(legs, config)

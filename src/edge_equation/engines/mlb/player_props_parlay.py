@@ -233,7 +233,15 @@ def build_player_props_parlay(
             max_abs_correlation=rules.max_abs_correlation,
         )
         plain_legs = [e.leg for e in qualifying]
-        all_candidates = build_parlay_candidates(plain_legs, config=pcfg)
+        # Strategy-pluggable via env vars (see strategy_resolver). Default
+        # is the baseline itertools+copula enumeration; flip
+        # MLB_PROPS_PARLAY_STRATEGY=deduped (or =ilp / =baseline) to swap
+        # in a different construction algorithm without redeploying code.
+        from edge_equation.engines.parlay.strategy_resolver import (
+            resolve_strategy,
+        )
+        strategy = resolve_strategy("player_props")
+        all_candidates = strategy(plain_legs, pcfg)
         candidates = [
             c for c in all_candidates if c.n_legs >= rules.min_legs
         ]

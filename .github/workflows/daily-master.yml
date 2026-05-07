@@ -81,7 +81,11 @@ jobs:
           # confidence floor of 0.31 strips them, and the site shows
           # zero props every day. Mirrors mlb-daily.yml + nrfi-daily-
           # odds-snapshot.yml which install the same extra.
-          pip install -e ".[nrfi]"
+          pip install -e ".[nrfi,parlay-lab]"
+          # `[parlay-lab]` brings in PuLP/CBC for the ILP parlay strategy
+          # promoted to production for game-results parlays (see PR
+          # adding strategy_resolver). Without it the strategy logs a
+          # warning and falls back to the baseline enumeration.
           # openpyxl is only used by the legacy MLB spreadsheet's xlsx
           # writer; it's not in `[nrfi]` because the engines themselves
           # don't depend on it.
@@ -122,6 +126,14 @@ jobs:
           EDGE_FEATURE_WNBA_PARLAYS: "on"
           EDGE_FEATURE_NFL_PARLAYS: "on"
           EDGE_FEATURE_NCAAF_PARLAYS: "on"
+          # Parlay-construction strategy per engine kind. Tuned via the
+          # parlay_lab shootout (PRs #186-#188): on a 60-day MLB
+          # game-results backfill, ILP beat baseline by 22pp ROI; on
+          # an 11-day prop backfill, deduped beat baseline by 10pp.
+          # Different problem structures favor different algorithms.
+          # Roll back to baseline by setting the value to "baseline".
+          MLB_GAME_PARLAY_STRATEGY: "ilp"
+          MLB_PROPS_PARLAY_STRATEGY: "deduped"
         run: |
           ARGS="--all"
           if [ -n "${{ github.event.inputs.date }}" ]; then

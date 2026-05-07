@@ -7,12 +7,9 @@ new engine should match or improve on its leaderboard numbers.
 
 from __future__ import annotations
 
-from edge_equation.engines.parlay.builder import (
-    ParlayCandidate,
-    ParlayLeg,
-    build_parlay_candidates,
-)
+from edge_equation.engines.parlay.builder import ParlayCandidate, ParlayLeg
 from edge_equation.engines.parlay.config import ParlayConfig
+from edge_equation.engines.parlay.strategies import build_baseline
 
 from ..base import ParlayEngine
 
@@ -29,4 +26,4 @@ class BaselineEngine(ParlayEngine):
         legs: list[ParlayLeg],
         config: ParlayConfig,
     ) -> list[ParlayCandidate]:
-        return build_parlay_candidates(legs, config=config)
+        return build_baseline(legs, config)
