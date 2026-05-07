@@ -1,0 +1,113 @@
+{
+  "mlb_projection": {
+    "date": "2026-05-07",
+    "hook": "Engine highlight: a high-leverage pitching matchup with a sharp split between starter and bullpen projections.",
+    "why": [
+      "The home starter has posted a 28% CSW over his last five starts, well above his season baseline of 24%.",
+      "The visiting lineup is sitting at a 27% strikeout rate over its last 14 games against right-handed pitching.",
+      "Park factors at this venue suppress run scoring by roughly 6% versus league average in May conditions.",
+      "Forecast wind is 7 mph in from center field, modestly compressing the home-run environment.",
+      "The visiting bullpen has logged 14.1 innings over the previous three days, increasing reliance on lower-leverage arms in the middle frames."
+    ],
+    "game": {
+      "away": "Cleveland Guardians",
+      "home": "Seattle Mariners",
+      "away_proj": 3.42,
+      "home_proj": 3.86,
+      "total_proj": 7.28,
+      "market_total": 7.5,
+      "first_pitch_local": "9:40 PM ET",
+      "park": "T-Mobile Park"
+    },
+    "prop": {
+      "player": "Logan Gilbert",
+      "team": "SEA",
+      "market": "Strikeouts",
+      "line": 6.5,
+      "projection": 7.42,
+      "edge_pct": null
+    },
+    "closing": "Primary driver: starter swing-and-miss profile against a lineup running an elevated whiff rate vs RHP.",
+    "chart": {
+      "kind": "bar",
+      "title": "Logan Gilbert — Strikeouts, Last 10 Starts",
+      "x_label": "Start (most recent right)",
+      "y_label": "Strikeouts",
+      "x_values": ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10"],
+      "y_values": [6, 8, 5, 9, 7, 7, 10, 6, 8, 9],
+      "line_value": 7.42,
+      "subject_label": "Strikeouts"
+    }
+  },
+  "review": {
+    "date": "2026-05-07",
+    "review_date": "2026-05-06",
+    "mlb": [
+      {"label": "BAL @ NYY total runs", "projection": 8.14, "actual": 7.0},
+      {"label": "Corbin Burnes Ks", "projection": 6.91, "actual": 8.0},
+      {"label": "TEX team runs", "projection": 4.62, "actual": 5.0}
+    ],
+    "wnba": [
+      {"label": "NYL @ CON total points", "projection": 158.4, "actual": 161.0},
+      {"label": "Sabrina Ionescu PRA", "projection": 36.2, "actual": 31.0}
+    ],
+    "deep_dives": [
+      {
+        "title": "Corbin Burnes strikeouts",
+        "accurate": false,
+        "narrative": "The engine over-weighted a two-start sample of reduced velocity from April; the most recent bullpen session indicated a return to baseline that the model had not yet ingested. A faster decay weight on velocity-derived inputs is being added for the next refresh.",
+        "chart": {
+          "title": "Burnes Ks — Projection vs Actual, Last 5 Starts",
+          "categories": ["S-5", "S-4", "S-3", "S-2", "S-1"],
+          "projections": [7.1, 6.8, 6.6, 6.7, 6.91],
+          "actuals": [6, 7, 5, 9, 8]
+        }
+      },
+      {
+        "title": "Sabrina Ionescu PRA",
+        "accurate": false,
+        "narrative": "The engine gave heavy weight to recent usage trends; the matchup-side defensive switch onto the primary creator reduced touches in the second half. Defensive matchup tagging will be promoted from a secondary to a primary feature for guard PRA projections."
+      }
+    ],
+    "adjustment_note": "Two adjustments are queued for tonight's run: faster velocity-decay weighting for starter K projections, and elevated weight on opponent defensive matchup tags for WNBA guard PRA."
+  },
+  "wnba_projection": {
+    "date": "2026-05-07",
+    "hook": "Engine highlight: a pace-up matchup with a clear usage concentration on the away side.",
+    "why": [
+      "The away team is averaging 84.2 possessions per 40 minutes over its last six games, the highest in the league.",
+      "The home defense is allowing 1.06 points per possession in the half-court over the last 10 games.",
+      "Primary creator usage has trended up to 31.4% over the last four games following a backcourt rotation change.",
+      "Rest advantage favors the away side by one full day off; the home side is on the back end of a back-to-back."
+    ],
+    "game": {
+      "away": "New York Liberty",
+      "home": "Connecticut Sun",
+      "away_proj": 84.6,
+      "home_proj": 79.1,
+      "total_proj": 163.7,
+      "market_total": 161.5,
+      "tipoff_local": "7:00 PM ET",
+      "venue": "Mohegan Sun Arena"
+    },
+    "prop": {
+      "player": "Sabrina Ionescu",
+      "team": "NYL",
+      "market": "Points + Rebounds + Assists",
+      "line": 33.5,
+      "projection": 35.8,
+      "edge_pct": null
+    },
+    "closing": "Primary driver: pace and usage concentration on a rest-advantaged back-to-back spot for the home defense.",
+    "chart": {
+      "kind": "line",
+      "title": "Sabrina Ionescu — PRA, Last 10 Games",
+      "x_label": "Game (most recent right)",
+      "y_label": "PRA",
+      "x_values": ["G1","G2","G3","G4","G5","G6","G7","G8","G9","G10"],
+      "y_values": [29, 32, 36, 28, 34, 31, 38, 33, 36, 35],
+      "line_value": 35.8,
+      "subject_label": "PRA"
+    }
+  }
+}
