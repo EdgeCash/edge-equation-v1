@@ -419,6 +419,26 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         f"{', '.join(e.sport for e in chosen)}",
     )
 
+    # Surface the parlay-strategy choice (ILP / deduped / baseline /
+    # ...) as a GitHub Actions ``::notice::`` summary BEFORE any engine
+    # runs. Without this banner the operator can't tell from the log
+    # alone whether the env-var-driven strategy actually fired or
+    # silently fell back to ``baseline`` because the workflow forgot to
+    # set ``MLB_GAME_PARLAY_STRATEGY`` / ``MLB_PROPS_PARLAY_STRATEGY``.
+    try:
+        from edge_equation.engines.parlay.strategy_resolver import (
+            log_strategy_summary,
+        )
+        log_strategy_summary()
+    except Exception as e:
+        # Defensive: we never want a missing import to crash the whole
+        # daily run. If strategy_resolver fails to load the engines
+        # will still pick up ``baseline`` via their direct import path.
+        print(
+            f"[run_daily_all] strategy summary skipped ({type(e).__name__}: {e})",
+            file=sys.stderr,
+        )
+
     successful: list[EngineEntry] = []
     for entry in chosen:
         sport, ok = run_one_engine(entry, target)

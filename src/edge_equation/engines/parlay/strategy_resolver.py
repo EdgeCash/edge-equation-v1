@@ -81,4 +81,53 @@ def resolve_strategy(
         "parlay strategy: engine=%s strategy=%r (source=%s)",
         engine_kind, raw_name, source,
     )
+    # Also surface as a GitHub Actions ``::notice::`` so the choice
+    # appears in the Daily Master workflow UI alongside the engine
+    # logs. Without this the operator can't tell from the log alone
+    # whether ILP / deduped actually fired or whether a missing env
+    # var silently fell back to baseline.
+    print(
+        f"::notice::parlay strategy: engine={engine_kind} "
+        f"strategy={raw_name!r} (source={source})",
+        flush=True,
+    )
     return get_strategy(raw_name)
+
+
+def log_strategy_summary(env: Optional[dict[str, str]] = None) -> None:
+    """Pre-flight banner the orchestrator prints once at startup.
+
+    Lists every engine_kind with the strategy it will resolve to + the
+    source (per-engine env / global env / default). Same information as
+    the per-call ``::notice::`` above but emitted once before the
+    parlay engines run, so the operator can see config drift in the
+    very first lines of the Daily Master log.
+    """
+    env_dict = env if env is not None else os.environ
+    print("::group::Parlay strategy summary", flush=True)
+    for engine_kind in ENV_PER_ENGINE:
+        per_engine_var = ENV_PER_ENGINE[engine_kind]
+        if per_engine_var and env_dict.get(per_engine_var, "").strip():
+            name = env_dict[per_engine_var].strip()
+            source = per_engine_var
+        elif env_dict.get(ENV_GLOBAL, "").strip():
+            name = env_dict[ENV_GLOBAL].strip()
+            source = ENV_GLOBAL
+        else:
+            name = _DEFAULT_PER_ENGINE.get(engine_kind, "baseline")
+            source = f"default[{engine_kind}]"
+        # Warn loudly when we silently fall back to the default --- the
+        # operator usually wants to know they didn't set the env var.
+        if source.startswith("default["):
+            print(
+                f"::warning::parlay strategy: engine={engine_kind} "
+                f"strategy={name!r} -- using built-in default. Set "
+                f"{per_engine_var} in the workflow to override.",
+                flush=True,
+            )
+        else:
+            print(
+                f"  engine={engine_kind} strategy={name!r} (source={source})",
+                flush=True,
+            )
+    print("::endgroup::", flush=True)
