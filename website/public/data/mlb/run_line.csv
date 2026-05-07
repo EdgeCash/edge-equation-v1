@@ -1,14 +1,14 @@
 section,date,away,home,status,conviction_pct,away_sp_name,home_sp_name,away_sp_factor,home_sp_factor,away_bp_factor,home_bp_factor,rl_fav,rl_margin_proj,rl_cover_prob,rl_fav_covers_1_5,model_prob,fair_odds_dec,market_odds_dec,market_odds_american,book,edge_pct,kelly_pct,kelly_advice,status_reason,away_score,home_score,margin,favorite,fav_covers_1_5
-projection,2026-05-07,TEX,NYY,PASS,56.6,,,,,,,NYY,0.72,0.57,NO,0.5665,1.754,,,,,4.85,2u,No market price available,,,,,
-projection,2026-05-07,MIN,WSH,PASS,57.2,,,,,,,WSH,0.64,0.576,NO,0.5722,1.736,1.2,-500,fanduel,-31.34,0.0,PASS,Edge -31.34% below +3.00% threshold,,,,,
-projection,2026-05-07,CLE,KC,PASS,59.0,,,,,,,KC,0.43,0.595,NO,0.5902,1.681,,,,,5.0,2u,No market price available,,,,,
-projection,2026-05-07,CIN,CHC,PASS,55.3,,,,,,,CHC,0.87,0.556,NO,0.5532,1.799,,,,,3.38,2u,No market price available,,,,,
-projection,2026-05-07,NYM,COL,PASS,60.3,,,,,,,NYM,0.28,0.608,NO,0.6026,1.645,1.6579,-152,fanduel,-0.09,0.61,0.5u,Edge -0.09% below +3.00% threshold,,,,,
-projection,2026-05-07,PIT,AZ,PASS,58.5,,,,,,,PIT,0.49,0.589,NO,0.5846,1.698,1.5155,-194,fanduel,-11.41,0.0,PASS,Edge -11.41% below +3.00% threshold,,,,,
-projection,2026-05-07,ATH,PHI,PASS,58.9,,,,,,,PHI,0.44,0.594,NO,0.5893,1.684,1.5435,-184,fanduel,-9.04,0.0,PASS,Edge -9.04% below +3.00% threshold,,,,,
+projection,2026-05-07,TEX,NYY,PASS,56.0,,,,,,,NYY,0.79,0.563,NO,0.5598,1.776,,,,,4.11,2u,No market price available,,,,,
+projection,2026-05-07,MIN,WSH,PLAY,57.1,,,,,,,WSH,0.66,0.575,NO,0.5712,1.739,6.2,520,fanduel,254.17,5.0,2u,,,,,,
+projection,2026-05-07,CLE,KC,PASS,59.3,,,,,,,KC,0.39,0.598,NO,0.5931,1.672,,,,,5.0,2u,No market price available,,,,,
+projection,2026-05-07,CIN,CHC,PASS,55.1,,,,,,,CHC,0.89,0.554,NO,0.5513,1.805,,,,,3.17,2u,No market price available,,,,,
+projection,2026-05-07,NYM,COL,PASS,59.4,,,,,,,NYM,0.38,0.599,NO,0.594,1.669,,,,,5.0,2u,No market price available,,,,,
+projection,2026-05-07,PIT,AZ,PASS,57.8,,,,,,,PIT,0.58,0.582,NO,0.5779,1.718,,,,,5.0,2u,No market price available,,,,,
+projection,2026-05-07,ATH,PHI,PASS,58.9,,,,,,,PHI,0.44,0.594,NO,0.5893,1.684,1.5495,-182,fanduel,-8.69,0.0,PASS,Edge -8.69% below +3.00% threshold,,,,,
 projection,2026-05-07,BAL,MIA,PASS,58.6,,,,,,,MIA,0.49,0.59,NO,0.5855,1.695,1.5208,-192,fanduel,-10.96,0.0,PASS,Edge -10.96% below +3.00% threshold,,,,,
 projection,2026-05-07,TB,BOS,PASS,62.2,,,,,,,BOS,0.04,0.628,NO,0.6216,1.592,,,,,5.0,2u,No market price available,,,,,
-projection,2026-05-07,STL,SD,PASS,60.0,,,,,,,SD,0.32,0.605,NO,0.5998,1.653,1.6849,-146,fanduel,1.05,1.41,0.5u,Edge +1.05% below +3.00% threshold,,,,,
+projection,2026-05-07,STL,SD,PASS,59.9,,,,,,,SD,0.32,0.604,NO,0.5988,1.656,1.6667,-150,fanduel,-0.2,0.5,0.5u,Edge -0.20% below +3.00% threshold,,,,,
 backfill,2026-05-06,TOR,TB,,,,,,,,,,,,,,,,,,,,,,0,3,3,TB,YES
 backfill,2026-05-06,MIL,STL,,,,,,,,,,,,,,,,,,,,,,6,2,4,MIL,YES
 backfill,2026-05-06,LAD,HOU,,,,,,,,,,,,,,,,,,,,,,12,2,10,LAD,YES

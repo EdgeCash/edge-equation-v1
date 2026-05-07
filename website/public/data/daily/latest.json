@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "generated_at": "2026-05-07T19:31:15+00:00",
-  "footer": "Picks shown only for games not yet started \u00b7 Updated: 2026-05-07 14:31 CDT | Data as of 19:31 UTC",
+  "generated_at": "2026-05-07T20:12:53+00:00",
+  "footer": "Picks shown only for games not yet started \u00b7 Updated: 2026-05-07 15:12 CDT | Data as of 20:12 UTC",
   "date": "2026-05-07",
   "source": "run_daily.py",
   "notes": "Public-testing release. Manual operator trigger. Lineups + weather + umpires confirmed at publish time.",
@@ -13,14 +13,14 @@
       "selection": "Griffin Jax \u00b7 Strikeouts Over 3.5",
       "line": {
         "number": "3.5",
-        "odds": -103.0
+        "odds": -107.0
       },
-      "fair_prob": "0.6735",
-      "edge": "0.1952",
-      "kelly": "0.0488",
+      "fair_prob": "0.6758",
+      "edge": "0.1883",
+      "kelly": "0.0471",
       "grade": "A+",
       "tier": "ELITE",
-      "notes": "67.3% Over \u00b7 \u03bb=5.03 \u00b7 edge +19.5pp \u00b7 conf 41%",
+      "notes": "67.6% Over \u00b7 \u03bb=5.03 \u00b7 edge +18.8pp \u00b7 conf 41%",
       "event_time": "2026-05-07T23:11:00Z",
       "game_id": "0"
     }
@@ -28,10 +28,124 @@
   "parlays": {
     "transparency_note": "Parlays built only from legs meeting strict edge thresholds (\u22654pp or ELITE tier, positive EV after vig). No plays forced. Facts. Not Feelings.",
     "game_results": [],
-    "player_props": [],
+    "player_props": [
+      {
+        "id": "2026-05-07-player_props-parlay-1",
+        "universe": "player_props",
+        "n_legs": 3,
+        "combined_decimal_odds": 33.915,
+        "combined_american_odds": 3291.5,
+        "fair_decimal_odds": 4.8732943469785575,
+        "joint_prob_corr": "0.2052",
+        "joint_prob_independent": "0.2122",
+        "implied_prob": "0.0295",
+        "edge_pp": "17.5715",
+        "ev_units": "2.9797",
+        "stake_units": 0.5,
+        "note": "3\u20136 legs only \u2014 built from proven edges only.",
+        "legs": [
+          {
+            "market_type": "Hits",
+            "selection": "JJ Bleday Hits Over 0.5",
+            "line_odds": 325.0,
+            "side_probability": "0.5450",
+            "tier": "STRONG"
+          },
+          {
+            "market_type": "Hits",
+            "selection": "Ian Happ Hits Over 0.5",
+            "line_odds": 280.0,
+            "side_probability": "0.4943",
+            "tier": "STRONG"
+          },
+          {
+            "market_type": "Total_Bases",
+            "selection": "Brandon Lowe Total Bases Under 4.5",
+            "line_odds": 110.0,
+            "side_probability": "0.7875",
+            "tier": "ELITE"
+          }
+        ]
+      },
+      {
+        "id": "2026-05-07-player_props-parlay-2",
+        "universe": "player_props",
+        "n_legs": 3,
+        "combined_decimal_odds": 34.8075,
+        "combined_american_odds": 3380.7499999999995,
+        "fair_decimal_odds": 5.094243504839532,
+        "joint_prob_corr": "0.1963",
+        "joint_prob_independent": "0.2036",
+        "implied_prob": "0.0287",
+        "edge_pp": "16.7571",
+        "ev_units": "2.9164",
+        "stake_units": 0.5,
+        "note": "3\u20136 legs only \u2014 built from proven edges only.",
+        "legs": [
+          {
+            "market_type": "Hits",
+            "selection": "JJ Bleday Hits Over 0.5",
+            "line_odds": 325.0,
+            "side_probability": "0.5450",
+            "tier": "STRONG"
+          },
+          {
+            "market_type": "Hits",
+            "selection": "Dansby Swanson Hits Over 0.5",
+            "line_odds": 290.0,
+            "side_probability": "0.4745",
+            "tier": "STRONG"
+          },
+          {
+            "market_type": "Total_Bases",
+            "selection": "Brandon Lowe Total Bases Under 4.5",
+            "line_odds": 110.0,
+            "side_probability": "0.7875",
+            "tier": "ELITE"
+          }
+        ]
+      },
+      {
+        "id": "2026-05-07-player_props-parlay-3",
+        "universe": "player_props",
+        "n_legs": 3,
+        "combined_decimal_odds": 29.452499999999997,
+        "combined_american_odds": 2845.2499999999995,
+        "fair_decimal_odds": 4.49842555105713,
+        "joint_prob_corr": "0.2223",
+        "joint_prob_independent": "0.2306",
+        "implied_prob": "0.0340",
+        "edge_pp": "18.8347",
+        "ev_units": "2.7736",
+        "stake_units": 0.5,
+        "note": "3\u20136 legs only \u2014 built from proven edges only.",
+        "legs": [
+          {
+            "market_type": "Hits",
+            "selection": "JJ Bleday Hits Over 0.5",
+            "line_odds": 325.0,
+            "side_probability": "0.5450",
+            "tier": "STRONG"
+          },
+          {
+            "market_type": "Hits",
+            "selection": "Alex Bregman Hits Over 0.5",
+            "line_odds": 230.0,
+            "side_probability": "0.5372",
+            "tier": "STRONG"
+          },
+          {
+            "market_type": "Total_Bases",
+            "selection": "Brandon Lowe Total Bases Under 4.5",
+            "line_odds": 110.0,
+            "side_probability": "0.7875",
+            "tier": "ELITE"
+          }
+        ]
+      }
+    ],
     "no_qualified_message": {
-      "game_results": "No qualified parlay today \u2014 data does not support a high-confidence combination.",
-      "player_props": "No qualified parlay today \u2014 data does not support a high-confidence combination."
+      "game_results": "No qualified parlay today \u2014 data does not support a high-confidence combination."
     }
   },
   "wnba": {
@@ -75,7 +189,7 @@
     "fullgame": "Pending",
     "props": "OK",
     "game_results_parlay": "Pending",
-    "player_props_parlay": "Pending",
+    "player_props_parlay": "OK",
     "wnba": "Pending",
     "wnba_game_results_parlay": "Pending",
     "wnba_player_props_parlay": "Pending",

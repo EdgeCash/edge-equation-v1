@@ -1,45 +1,7 @@
 {
   "source": "the-odds-api",
-  "fetched_at": "2026-05-07T19:21:51+00:00",
+  "fetched_at": "2026-05-07T20:07:48+00:00",
   "games": [
-    {
-      "game_id": "1c3063ee80bf14181773650f89724edd",
-      "commence_time": "2026-05-07T16:36:00Z",
-      "home_team": "NYY",
-      "away_team": "TEX",
-      "moneyline": {},
-      "run_line": [
-        {
-          "team": "home",
-          "point": -6.5,
-          "decimal": 3.5,
-          "american": 250,
-          "book": "fanduel"
-        },
-        {
-          "team": "away",
-          "point": 6.5,
-          "decimal": 1.2778,
-          "american": -360,
-          "book": "fanduel"
-        }
-      ],
-      "totals": [
-        {
-          "point": 10.5,
-          "over": {
-            "decimal": 2.02,
-            "american": 102,
-            "book": "fanduel"
-          },
-          "under": {
-            "decimal": 1.7353,
-            "american": -136,
-            "book": "fanduel"
-          }
-        }
-      ]
-    },
     {
       "game_id": "ba055e6ad1137117eef850d15d9c8c97",
       "commence_time": "2026-05-07T17:06:00Z",
@@ -47,13 +9,13 @@
       "away_team": "MIN",
       "moneyline": {
         "away": {
-          "decimal": 1.9009,
-          "american": -111,
+          "decimal": 19.0,
+          "american": 1800,
           "book": "fanduel"
         },
         "home": {
-          "decimal": 1.8696,
-          "american": -115,
+          "decimal": 1.01,
+          "american": -10000,
           "book": "fanduel"
         }
       },
@@ -61,15 +23,15 @@
         {
           "team": "away",
           "point": 1.5,
-          "decimal": 1.2,
-          "american": -500,
+          "decimal": 6.2,
+          "american": 520,
           "book": "fanduel"
         },
         {
           "team": "home",
           "point": -1.5,
-          "decimal": 4.2,
-          "american": 320,
+          "decimal": 1.1,
+          "american": -1000,
           "book": "fanduel"
         }
       ],
@@ -77,13 +39,13 @@
         {
           "point": 12.5,
           "over": {
-            "decimal": 1.5376,
-            "american": -186,
+            "decimal": 5.9,
+            "american": 490,
             "book": "fanduel"
           },
           "under": {
-            "decimal": 2.38,
-            "american": 138,
+            "decimal": 1.1111,
+            "american": -900,
             "book": "fanduel"
           }
         }
@@ -109,30 +71,30 @@
       "run_line": [
         {
           "team": "away",
-          "point": -3.5,
-          "decimal": 1.8772,
-          "american": -114,
+          "point": -2.5,
+          "decimal": 1.6944,
+          "american": -144,
           "book": "fanduel"
         },
         {
           "team": "home",
-          "point": 3.5,
-          "decimal": 1.8772,
-          "american": -114,
+          "point": 2.5,
+          "decimal": 2.08,
+          "american": 108,
           "book": "fanduel"
         }
       ],
       "totals": [
         {
-          "point": 9.5,
+          "point": 10.5,
           "over": {
-            "decimal": 1.8475,
-            "american": -118,
+            "decimal": 1.8772,
+            "american": -114,
             "book": "fanduel"
           },
           "under": {
-            "decimal": 1.8929,
-            "american": -112,
+            "decimal": 1.8772,
+            "american": -114,
             "book": "fanduel"
           }
         }
@@ -143,45 +105,34 @@
       "commence_time": "2026-05-07T18:21:00Z",
       "home_team": "CHC",
       "away_team": "CIN",
-      "moneyline": {
-        "home": {
-          "decimal": 1.1299,
-          "american": -770,
-          "book": "fanduel"
-        },
-        "away": {
-          "decimal": 5.8,
-          "american": 480,
-          "book": "fanduel"
-        }
-      },
+      "moneyline": {},
       "run_line": [
         {
           "team": "home",
-          "point": -2.5,
-          "decimal": 1.6944,
-          "american": -144,
+          "point": -6.5,
+          "decimal": 1.6173,
+          "american": -162,
           "book": "fanduel"
         },
         {
           "team": "away",
-          "point": 2.5,
-          "decimal": 2.08,
-          "american": 108,
+          "point": 6.5,
+          "decimal": 2.22,
+          "american": 122,
           "book": "fanduel"
         }
       ],
       "totals": [
         {
-          "point": 7.5,
+          "point": 12.5,
           "over": {
-            "decimal": 2.04,
-            "american": 104,
+            "decimal": 1.7576,
+            "american": -132,
             "book": "fanduel"
           },
           "under": {
-            "decimal": 1.7246,
-            "american": -138,
+            "decimal": 2.0,
+            "american": 100,
             "book": "fanduel"
           }
         }
@@ -194,43 +145,43 @@
       "away_team": "NYM",
       "moneyline": {
         "home": {
-          "decimal": 2.16,
-          "american": 116,
+          "decimal": 3.5,
+          "american": 250,
           "book": "fanduel"
         },
         "away": {
-          "decimal": 1.6757,
-          "american": -148,
+          "decimal": 1.303,
+          "american": -330,
           "book": "fanduel"
         }
       },
       "run_line": [
         {
           "team": "home",
-          "point": 1.5,
-          "decimal": 1.6579,
-          "american": -152,
+          "point": 2.5,
+          "decimal": 1.7246,
+          "american": -138,
           "book": "fanduel"
         },
         {
           "team": "away",
-          "point": -1.5,
-          "decimal": 2.14,
-          "american": 114,
+          "point": -2.5,
+          "decimal": 2.04,
+          "american": 104,
           "book": "fanduel"
         }
       ],
       "totals": [
         {
-          "point": 9.5,
+          "point": 8.5,
           "over": {
-            "decimal": 1.9259,
-            "american": -108,
+            "decimal": 1.9804,
+            "american": -102,
             "book": "fanduel"
           },
           "under": {
-            "decimal": 1.8197,
-            "american": -122,
+            "decimal": 1.7692,
+            "american": -130,
             "book": "fanduel"
           }
         }
@@ -243,29 +194,29 @@
       "away_team": "PIT",
       "moneyline": {
         "home": {
-          "decimal": 1.8929,
-          "american": -112,
+          "decimal": 1.7042,
+          "american": -142,
           "book": "fanduel"
         },
         "away": {
-          "decimal": 1.9615,
-          "american": -104,
+          "decimal": 2.12,
+          "american": 112,
           "book": "fanduel"
         }
       },
       "run_line": [
         {
           "team": "home",
-          "point": 1.5,
-          "decimal": 1.5155,
-          "american": -194,
+          "point": -1.5,
+          "decimal": 2.64,
+          "american": 164,
           "book": "fanduel"
         },
         {
           "team": "away",
-          "point": -1.5,
-          "decimal": 2.62,
-          "american": 162,
+          "point": 1.5,
+          "decimal": 1.4444,
+          "american": -225,
           "book": "fanduel"
         }
       ],
@@ -273,13 +224,13 @@
         {
           "point": 8.5,
           "over": {
-            "decimal": 1.8333,
-            "american": -120,
+            "decimal": 1.6944,
+            "american": -144,
             "book": "fanduel"
           },
           "under": {
-            "decimal": 1.9804,
-            "american": -102,
+            "decimal": 2.08,
+            "american": 108,
             "book": "fanduel"
           }
         }
@@ -306,15 +257,15 @@
         {
           "team": "away",
           "point": 1.5,
-          "decimal": 1.5435,
-          "american": -184,
+          "decimal": 1.5495,
+          "american": -182,
           "book": "fanduel"
         },
         {
           "team": "home",
           "point": -1.5,
-          "decimal": 2.52,
-          "american": 152,
+          "decimal": 2.5,
+          "american": 150,
           "book": "fanduel"
         }
       ],
@@ -341,13 +292,13 @@
       "away_team": "BAL",
       "moneyline": {
         "away": {
-          "decimal": 2.1,
-          "american": 110,
+          "decimal": 2.08,
+          "american": 108,
           "book": "fanduel"
         },
         "home": {
-          "decimal": 1.7692,
-          "american": -130,
+          "decimal": 1.7937,
+          "american": -126,
           "book": "fanduel"
         }
       },
@@ -369,15 +320,15 @@
       ],
       "totals": [
         {
-          "point": 8.5,
+          "point": 8.0,
           "over": {
-            "decimal": 1.9804,
-            "american": -102,
+            "decimal": 1.8475,
+            "american": -118,
             "book": "fanduel"
           },
           "under": {
-            "decimal": 1.8333,
-            "american": -120,
+            "decimal": 1.9615,
+            "american": -104,
             "book": "fanduel"
           }
         }
@@ -404,15 +355,15 @@
         {
           "team": "home",
           "point": 1.5,
-          "decimal": 1.5208,
-          "american": -192,
+          "decimal": 1.5155,
+          "american": -194,
           "book": "fanduel"
         },
         {
           "team": "away",
           "point": -1.5,
-          "decimal": 2.58,
-          "american": 158,
+          "decimal": 2.6,
+          "american": 160,
           "book": "fanduel"
         }
       ],
@@ -420,13 +371,13 @@
         {
           "point": 8.5,
           "over": {
-            "decimal": 1.8475,
-            "american": -118,
+            "decimal": 1.8333,
+            "american": -120,
             "book": "fanduel"
           },
           "under": {
-            "decimal": 1.9615,
-            "american": -104,
+            "decimal": 1.9804,
+            "american": -102,
             "book": "fanduel"
           }
         }
@@ -439,13 +390,13 @@
       "away_team": "STL",
       "moneyline": {
         "home": {
-          "decimal": 1.5814,
-          "american": -172,
+          "decimal": 1.5952,
+          "american": -168,
           "book": "fanduel"
         },
         "away": {
-          "decimal": 2.44,
-          "american": 144,
+          "decimal": 2.42,
+          "american": 142,
           "book": "fanduel"
         }
       },
@@ -453,15 +404,15 @@
         {
           "team": "home",
           "point": -1.5,
-          "decimal": 2.22,
-          "american": 122,
+          "decimal": 2.25,
+          "american": 125,
           "book": "fanduel"
         },
         {
           "team": "away",
           "point": 1.5,
-          "decimal": 1.6849,
-          "american": -146,
+          "decimal": 1.6667,
+          "american": -150,
           "book": "fanduel"
         }
       ],
