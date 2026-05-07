@@ -439,7 +439,14 @@ SELECT
     confidence,
     tier,
     feature_blob,
-    event_date
+    event_date,
+    -- ``commence_time`` is the upstream Odds-API event start (ISO
+    -- 8601). Threaded into FeedPick.event_time so the upcoming-only
+    -- failsafe drops only games that actually started. Older rows
+    -- written before the migration return NULL --- the loader treats
+    -- that as "no scheduled time" and the failsafe falls back to its
+    -- existing safe behaviour.
+    COALESCE(commence_time, '') AS commence_time
 FROM prop_predictions
 WHERE event_date = ?
   AND tier IN ('ELITE', 'STRONG', 'MODERATE', 'LEAN')
@@ -574,7 +581,7 @@ def _load_props_picks(store, target_date: str) -> list[FeedPick]:
             grade=_grade_from_tier(tier_str),
             tier=tier_str,
             notes=notes,
-            event_time=None,           # commence_time not persisted yet
+            event_time=_event_time_or_none(r.get("commence_time")),
             game_id=str(game_pk),
         )
         # Sort key: tier rank desc, then edge desc, then prob desc
@@ -653,7 +660,10 @@ SELECT
     confidence,
     tier,
     feature_blob,
-    event_date
+    event_date,
+    -- See _TODAY_PROPS_QUERY for the rationale on commence_time. Older
+    -- rows return NULL; the loader handles both transparently.
+    COALESCE(commence_time, '') AS commence_time
 FROM fullgame_predictions
 WHERE event_date = ?
   AND tier IN ('ELITE', 'STRONG', 'MODERATE', 'LEAN')
@@ -764,7 +774,7 @@ def _load_fullgame_picks(store, target_date: str) -> list[FeedPick]:
             grade=_grade_from_tier(tier_str),
             tier=tier_str,
             notes=notes,
-            event_time=None,
+            event_time=_event_time_or_none(r.get("commence_time")),
             game_id=str(game_pk),
         ))
     return picks
@@ -1843,6 +1853,23 @@ def _iso(v) -> Optional[str]:
         return v.isoformat()
     except Exception:
         return None
+
+
+def _event_time_or_none(v) -> Optional[str]:
+    """Coerce a DuckDB ``commence_time`` cell to an ISO string or None.
+
+    The column is a VARCHAR (we store ``commence_time`` as the upstream
+    Odds-API string verbatim) so the type is usually str, but DuckDB
+    will return ``None`` when the row predates the migration. Empty
+    strings collapse to None so the upcoming-only failsafe doesn't try
+    to parse ``""`` and emit confusing warnings.
+    """
+    if v is None:
+        return None
+    s = str(v).strip()
+    if not s:
+        return None
+    return s
 
 
 def _grade_from_probability(p: float) -> str:

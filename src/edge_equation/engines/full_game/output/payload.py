@@ -120,6 +120,11 @@ class FullGameOutput:
     engine: str = "fullgame_baseline"
     model_version: str = "fullgame_v1"
 
+    # Upstream Odds-API ``commence_time`` (ISO 8601). Persisted in
+    # fullgame_predictions and threaded into the daily-feed loader so
+    # FeedPick.event_time is non-null for the upcoming-only failsafe.
+    commence_time: str = ""
+
     def matchup(self) -> str:
         """`AWY @ HOM` short form for the email row."""
         if self.away_tricode and self.home_tricode:
@@ -219,6 +224,7 @@ def build_full_game_output(
         decimal_odds=float(pick.decimal_odds), book=str(pick.book),
         tier=tier_obj.value,
         grade=grade, engine=engine, model_version=model_version,
+        commence_time=str(getattr(pick, "commence_time", "") or ""),
     )
 
 

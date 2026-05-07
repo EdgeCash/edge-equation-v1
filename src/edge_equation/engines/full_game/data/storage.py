@@ -77,6 +77,7 @@ _SCHEMA: tuple[str, ...] = (
         confidence     DOUBLE,
         tier           VARCHAR,
         feature_blob   VARCHAR,
+        commence_time  VARCHAR,
         created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (event_date, market_type, side, line_value)
     )
@@ -115,6 +116,11 @@ _SCHEMA: tuple[str, ...] = (
 _MIGRATIONS: tuple[str, ...] = (
     "ALTER TABLE fullgame_actuals ADD COLUMN home_team VARCHAR",
     "ALTER TABLE fullgame_actuals ADD COLUMN away_team VARCHAR",
+    # 2026-05-07: thread Odds-API commence_time through to FeedPick
+    # so the upcoming-only failsafe sees a real first-pitch timestamp
+    # on full-game picks (was hard-coded to None, getting every prop
+    # / fullgame pick stripped from today's card).
+    "ALTER TABLE fullgame_predictions ADD COLUMN commence_time VARCHAR",
 )
 
 

@@ -114,6 +114,12 @@ class PropOutput:
     engine: str = "props_baseline"
     model_version: str = "props_v1"
 
+    # Upstream Odds-API ``commence_time`` for this event (ISO 8601).
+    # Persisted to the props DuckDB and threaded through the daily-feed
+    # loader so the upcoming-only failsafe can drop already-started
+    # games. Empty string when the source line didn't carry one.
+    commence_time: str = ""
+
     def headline(self) -> str:
         """One-liner: ``78.4% Over · Aaron Judge HR 0.5``."""
         return (
@@ -204,6 +210,7 @@ def build_prop_output(
         grade=grade,
         engine=engine,
         model_version=model_version,
+        commence_time=str(getattr(pick, "commence_time", "") or ""),
     )
 
 
