@@ -84,3 +84,51 @@ def test_resolver_used_by_player_props_engine_at_runtime(monkeypatch):
     from edge_equation.engines.parlay.strategy_resolver import resolve_strategy
     from edge_equation.engines.parlay.strategies import build_deduped
     assert resolve_strategy("player_props") is build_deduped
+
+
+def test_resolve_strategy_emits_github_actions_notice(capsys):
+    """The resolver prints a ``::notice::`` line so the chosen strategy
+    surfaces in the Daily Master GitHub Actions UI alongside the engine
+    logs. Operator visibility for verifying ILP / deduped fired."""
+    from edge_equation.engines.parlay.strategy_resolver import resolve_strategy
+    resolve_strategy(
+        "game_results", env={"MLB_GAME_PARLAY_STRATEGY": "ilp"},
+    )
+    out = capsys.readouterr().out
+    assert "::notice::" in out
+    assert "engine=game_results" in out
+    assert "'ilp'" in out
+
+
+def test_log_strategy_summary_emits_grouped_block(capsys):
+    """Startup banner emits a GitHub-Actions-grouped block listing every
+    engine_kind so the operator can scan the first lines of the workflow
+    log to confirm strategy."""
+    from edge_equation.engines.parlay.strategy_resolver import (
+        log_strategy_summary,
+    )
+    log_strategy_summary(env={
+        "MLB_GAME_PARLAY_STRATEGY": "ilp",
+        "MLB_PROPS_PARLAY_STRATEGY": "deduped",
+    })
+    out = capsys.readouterr().out
+    assert "::group::Parlay strategy summary" in out
+    assert "::endgroup::" in out
+    assert "engine=game_results" in out
+    assert "engine=player_props" in out
+    assert "'ilp'" in out
+    assert "'deduped'" in out
+
+
+def test_log_strategy_summary_warns_on_default_fallback(capsys):
+    """When no env var is set, the banner emits a ``::warning::`` so the
+    silent fallback to ``baseline`` is loud. The failure mode we burned
+    a day chasing yesterday."""
+    from edge_equation.engines.parlay.strategy_resolver import (
+        log_strategy_summary,
+    )
+    log_strategy_summary(env={})  # no env vars set
+    out = capsys.readouterr().out
+    assert "::warning::" in out
+    assert "MLB_GAME_PARLAY_STRATEGY" in out
+    assert "MLB_PROPS_PARLAY_STRATEGY" in out
