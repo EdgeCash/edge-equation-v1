@@ -1,50 +1,46 @@
 game,market,side,american,decimal,book,vig_free_pct
-CWS @ LAA,run_line,CWS +5.5,+320,4.2,fanduel,
-CWS @ LAA,run_line,LAA -5.5,-490,1.2041,fanduel,
-CWS @ LAA,totals,OVER 10.5,+320,4.2,fanduel,22.3%
-CWS @ LAA,totals,UNDER 10.5,-490,1.2041,fanduel,77.7%
-ATH @ PHI,moneyline,ATH,+132,2.32,fanduel,40.6%
-ATH @ PHI,moneyline,PHI,-170,1.5882,fanduel,59.4%
-ATH @ PHI,run_line,ATH +1.5,-174,1.5747,fanduel,
-ATH @ PHI,run_line,PHI -1.5,+130,2.3,fanduel,
-ATH @ PHI,totals,OVER 7.5,+102,2.02,fanduel,46.2%
-ATH @ PHI,totals,UNDER 7.5,-136,1.7353,fanduel,53.8%
+ATH @ PHI,moneyline,ATH,-160,1.625,fanduel,58.0%
+ATH @ PHI,moneyline,PHI,+124,2.24,fanduel,42.0%
+ATH @ PHI,run_line,ATH -1.5,+152,2.52,fanduel,
+ATH @ PHI,run_line,PHI +1.5,-205,1.4878,fanduel,
+ATH @ PHI,totals,OVER 6.5,-154,1.6494,fanduel,56.7%
+ATH @ PHI,totals,UNDER 6.5,+116,2.16,fanduel,43.3%
 BAL @ MIA,moneyline,BAL,-400,1.25,fanduel,75.5%
 BAL @ MIA,moneyline,MIA,+285,3.85,fanduel,24.5%
-BAL @ MIA,run_line,BAL -2.5,-132,1.7576,fanduel,
-BAL @ MIA,run_line,MIA +2.5,+100,2.0,fanduel,
-BAL @ MIA,totals,OVER 10.5,-130,1.7692,fanduel,52.8%
-BAL @ MIA,totals,UNDER 10.5,-102,1.9804,fanduel,47.2%
-BOS @ DET,moneyline,BOS,-104,1.9615,fanduel,48.1%
-BOS @ DET,moneyline,DET,-122,1.8197,fanduel,51.9%
-BOS @ DET,run_line,BOS +1.5,-230,1.4348,fanduel,
-BOS @ DET,run_line,DET -1.5,+168,2.68,fanduel,
-BOS @ DET,totals,OVER 7.5,+102,2.02,fanduel,46.2%
-BOS @ DET,totals,UNDER 7.5,-136,1.7353,fanduel,53.8%
-MIN @ WSH,moneyline,MIN,-102,1.9804,fanduel,47.6%
-MIN @ WSH,moneyline,WSH,-125,1.8,fanduel,52.4%
-MIN @ WSH,run_line,MIN +1.5,-235,1.4255,fanduel,
-MIN @ WSH,run_line,WSH -1.5,+172,2.72,fanduel,
-MIN @ WSH,totals,OVER 8.5,-138,1.7246,fanduel,54.2%
-MIN @ WSH,totals,UNDER 8.5,+104,2.04,fanduel,45.8%
-TEX @ NYY,moneyline,TEX,+146,2.46,fanduel,39.0%
-TEX @ NYY,moneyline,NYY,-174,1.5747,fanduel,61.0%
-TEX @ NYY,run_line,NYY -1.5,+115,2.15,fanduel,
-TEX @ NYY,run_line,TEX +1.5,-138,1.7246,fanduel,
-TEX @ NYY,totals,OVER 8.5,-112,1.8929,fanduel,50.4%
-TEX @ NYY,totals,UNDER 8.5,-108,1.9259,fanduel,49.6%
-CIN @ CHC,moneyline,CIN,+142,2.42,fanduel,39.7%
-CIN @ CHC,moneyline,CHC,-168,1.5952,fanduel,60.3%
-CIN @ CHC,run_line,CHC -1.5,+126,2.26,fanduel,
-CIN @ CHC,run_line,CIN +1.5,-152,1.6579,fanduel,
-CIN @ CHC,totals,OVER 8.0,-115,1.8696,fanduel,51.1%
-CIN @ CHC,totals,UNDER 8.0,-105,1.9524,fanduel,48.9%
-CLE @ KC,moneyline,CLE,+116,2.16,fanduel,44.7%
-CLE @ KC,moneyline,KC,-134,1.7463,fanduel,55.3%
-CLE @ KC,run_line,CLE +1.5,-192,1.5208,fanduel,
-CLE @ KC,run_line,KC -1.5,+158,2.58,fanduel,
-CLE @ KC,totals,OVER 7.5,-104,1.9615,fanduel,48.5%
-CLE @ KC,totals,UNDER 7.5,-118,1.8475,fanduel,51.5%
+BAL @ MIA,run_line,BAL -2.5,+126,2.26,fanduel,
+BAL @ MIA,run_line,MIA +2.5,-168,1.5952,fanduel,
+BAL @ MIA,totals,OVER 12.5,-108,1.9259,fanduel,48.6%
+BAL @ MIA,totals,UNDER 12.5,-122,1.8197,fanduel,51.4%
+BOS @ DET,moneyline,BOS,-1200,1.0833,fanduel,87.1%
+BOS @ DET,moneyline,DET,+630,7.3,fanduel,12.9%
+BOS @ DET,run_line,BOS -3.5,-158,1.6329,fanduel,
+BOS @ DET,run_line,DET +3.5,+116,2.16,fanduel,
+BOS @ DET,totals,OVER 8.5,-136,1.7353,fanduel,53.8%
+BOS @ DET,totals,UNDER 8.5,+102,2.02,fanduel,46.2%
+MIN @ WSH,moneyline,MIN,-140,1.7143,fanduel,55.1%
+MIN @ WSH,moneyline,WSH,+110,2.1,fanduel,44.9%
+MIN @ WSH,run_line,MIN -1.5,+148,2.48,fanduel,
+MIN @ WSH,run_line,WSH +1.5,-200,1.5,fanduel,
+MIN @ WSH,totals,OVER 7.5,-138,1.7246,fanduel,54.2%
+MIN @ WSH,totals,UNDER 7.5,+104,2.04,fanduel,45.8%
+TEX @ NYY,moneyline,TEX,-500,1.2,fanduel,78.6%
+TEX @ NYY,moneyline,NYY,+340,4.4,fanduel,21.4%
+TEX @ NYY,run_line,NYY +2.5,+118,2.18,fanduel,
+TEX @ NYY,run_line,TEX -2.5,-158,1.6329,fanduel,
+TEX @ NYY,totals,OVER 9.5,-128,1.7812,fanduel,52.4%
+TEX @ NYY,totals,UNDER 9.5,-104,1.9615,fanduel,47.6%
+CIN @ CHC,moneyline,CIN,+200,3.0,fanduel,31.5%
+CIN @ CHC,moneyline,CHC,-265,1.3774,fanduel,68.5%
+CIN @ CHC,run_line,CHC -1.5,-112,1.8929,fanduel,
+CIN @ CHC,run_line,CIN +1.5,-118,1.8475,fanduel,
+CIN @ CHC,totals,OVER 10.5,-102,1.9804,fanduel,47.2%
+CIN @ CHC,totals,UNDER 10.5,-130,1.7692,fanduel,52.8%
+CLE @ KC,moneyline,CLE,+116,2.16,fanduel,43.7%
+CLE @ KC,moneyline,KC,-148,1.6757,fanduel,56.3%
+CLE @ KC,run_line,CLE +1.5,-225,1.4444,fanduel,
+CLE @ KC,run_line,KC -1.5,+164,2.64,fanduel,
+CLE @ KC,totals,OVER 6.5,-114,1.8772,fanduel,50.0%
+CLE @ KC,totals,UNDER 6.5,-114,1.8772,fanduel,50.0%
 NYM @ COL,moneyline,NYM,-158,1.6329,fanduel,58.9%
 NYM @ COL,moneyline,COL,+134,2.34,fanduel,41.1%
 NYM @ COL,run_line,COL +1.5,-118,1.8475,fanduel,
@@ -55,12 +51,12 @@ PIT @ AZ,moneyline,PIT,-132,1.7576,fanduel,54.7%
 PIT @ AZ,moneyline,AZ,+112,2.12,fanduel,45.3%
 PIT @ AZ,run_line,AZ +1.5,-156,1.641,fanduel,
 PIT @ AZ,run_line,PIT -1.5,+130,2.3,fanduel,
-PIT @ AZ,totals,OVER 7.5,-120,1.8333,fanduel,51.9%
-PIT @ AZ,totals,UNDER 7.5,-102,1.9804,fanduel,48.1%
+PIT @ AZ,totals,OVER 7.5,-114,1.8772,fanduel,50.9%
+PIT @ AZ,totals,UNDER 7.5,-106,1.9434,fanduel,49.1%
 TEX @ NYY,moneyline,TEX,+158,2.58,fanduel,37.3%
 TEX @ NYY,moneyline,NYY,-188,1.5319,fanduel,62.7%
-TEX @ NYY,run_line,NYY -1.5,+116,2.16,fanduel,
-TEX @ NYY,run_line,TEX +1.5,-140,1.7143,fanduel,
+TEX @ NYY,run_line,NYY -1.5,+108,2.08,fanduel,
+TEX @ NYY,run_line,TEX +1.5,-128,1.7812,fanduel,
 TEX @ NYY,totals,OVER 8.0,-110,1.9091,fanduel,50.0%
 TEX @ NYY,totals,UNDER 8.0,-110,1.9091,fanduel,50.0%
 MIN @ WSH,moneyline,MIN,-112,1.8929,fanduel,50.9%
@@ -71,8 +67,8 @@ MIN @ WSH,totals,OVER 9.0,-105,1.9524,fanduel,48.9%
 MIN @ WSH,totals,UNDER 9.0,-115,1.8696,fanduel,51.1%
 CLE @ KC,moneyline,CLE,+124,2.24,fanduel,42.9%
 CLE @ KC,moneyline,KC,-146,1.6849,fanduel,57.1%
-CLE @ KC,run_line,CLE +1.5,-164,1.6098,fanduel,
-CLE @ KC,run_line,KC -1.5,+136,2.36,fanduel,
+CLE @ KC,run_line,CLE +1.5,-160,1.625,fanduel,
+CLE @ KC,run_line,KC -1.5,+132,2.32,fanduel,
 CLE @ KC,totals,OVER 9.0,-115,1.8696,fanduel,51.1%
 CLE @ KC,totals,UNDER 9.0,-105,1.9524,fanduel,48.9%
 CIN @ CHC,moneyline,CIN,+172,2.72,fanduel,35.4%
@@ -83,8 +79,8 @@ CIN @ CHC,totals,OVER 8.5,-122,1.8197,fanduel,52.4%
 CIN @ CHC,totals,UNDER 8.5,+100,2.0,fanduel,47.6%
 NYM @ COL,moneyline,NYM,-144,1.6944,fanduel,56.7%
 NYM @ COL,moneyline,COL,+122,2.22,fanduel,43.3%
-NYM @ COL,run_line,COL +1.5,-132,1.7576,fanduel,
-NYM @ COL,run_line,NYM -1.5,+110,2.1,fanduel,
+NYM @ COL,run_line,COL +1.5,-130,1.7692,fanduel,
+NYM @ COL,run_line,NYM -1.5,+108,2.08,fanduel,
 NYM @ COL,totals,OVER 11.0,+100,2.0,fanduel,47.6%
 NYM @ COL,totals,UNDER 11.0,-122,1.8197,fanduel,52.4%
 PIT @ AZ,moneyline,PIT,-112,1.8929,fanduel,50.9%
@@ -113,7 +109,7 @@ TB @ BOS,totals,OVER 8.5,-105,1.9524,fanduel,48.9%
 TB @ BOS,totals,UNDER 8.5,-115,1.8696,fanduel,51.1%
 STL @ SD,moneyline,STL,+150,2.5,fanduel,38.5%
 STL @ SD,moneyline,SD,-178,1.5618,fanduel,61.5%
-STL @ SD,run_line,SD -1.5,+118,2.18,fanduel,
-STL @ SD,run_line,STL +1.5,-142,1.7042,fanduel,
+STL @ SD,run_line,SD -1.5,+122,2.22,fanduel,
+STL @ SD,run_line,STL +1.5,-146,1.6849,fanduel,
 STL @ SD,totals,OVER 8.0,-105,1.9524,fanduel,48.9%
 STL @ SD,totals,UNDER 8.0,-115,1.8696,fanduel,51.1%

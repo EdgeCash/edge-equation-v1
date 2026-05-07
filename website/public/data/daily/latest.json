@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "generated_at": "2026-05-06T22:59:06+00:00",
-  "footer": "Picks shown only for games not yet started \u00b7 Updated: 2026-05-06 17:59 CDT | Data as of 22:59 UTC",
-  "date": "2026-05-06",
+  "generated_at": "2026-05-07T00:01:25+00:00",
+  "footer": "Picks shown only for games not yet started \u00b7 Updated: 2026-05-06 19:01 CDT | Data as of 00:01 UTC",
+  "date": "2026-05-07",
   "source": "run_daily.py",
   "notes": "No picks for this slate yet \u2014 run_daily may not have been triggered, or there were no qualifying games today.",
   "picks": [],
