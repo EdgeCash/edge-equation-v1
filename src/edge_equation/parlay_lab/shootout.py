@@ -30,6 +30,7 @@ from edge_equation.engines.parlay.config import ParlayConfig
 from edge_equation.engines.tiering import Tier
 
 from .backfill import iter_slates, load_backfill
+from .backfill_props import PropSyntheticConfig, load_props_backfill
 from .engines import ENGINES, all_engines, resolve
 from .metrics import EngineScore, score_engine
 from .report import ShootoutReport, write_report
@@ -39,6 +40,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_BACKFILL = (
     _REPO_ROOT / "website" / "public" / "data" / "mlb" / "backtest.json"
 )
+_DEFAULT_PROPS_DIR = _REPO_ROOT / "data" / "prizepicks" / "snapshots"
 _DEFAULT_REPORT_DIR = _REPO_ROOT / "src" / "edge_equation" / "parlay_lab" / "reports"
 
 
@@ -84,8 +86,20 @@ def _resolve_window(
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Parlay-engine shootout.")
     parser.add_argument(
+        "--source", default="mlb", choices=("mlb", "props"),
+        help="Backfill source. ``mlb`` reads MLB game-results from "
+              "backtest.json (real outcomes). ``props`` reads PrizePicks "
+              "snapshots + synthesizes outcomes via the parametric model "
+              "in backfill_props.py.",
+    )
+    parser.add_argument(
         "--bets-path", default=str(_DEFAULT_BACKFILL),
-        help="Path to backtest.json. Default: MLB engine output.",
+        help="Path to backtest.json (--source mlb). Default: MLB engine output.",
+    )
+    parser.add_argument(
+        "--snapshots-dir", default=str(_DEFAULT_PROPS_DIR),
+        help="Directory of PrizePicks snapshots (--source props). Default: "
+              "data/prizepicks/snapshots/.",
     )
     parser.add_argument(
         "--engines", default=None,
@@ -128,10 +142,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="ParlayConfig.max_pool_size override. Default 20.",
     )
     parser.add_argument(
-        "--min-joint-prob", type=float, default=0.40,
-        help="ParlayConfig.min_joint_prob override. Default 0.40 for the "
-              "shootout (production is 0.68); we want enough parlays "
-              "passing each engine to compare meaningfully.",
+        "--min-joint-prob", type=float, default=None,
+        help="ParlayConfig.min_joint_prob override. Default 0.40 for "
+              "--source mlb and 0.20 for --source props (props legs price "
+              "at higher decimal odds per the bucket fair-odds model, "
+              "which makes joint probs structurally lower; production "
+              "is 0.68).",
     )
     parser.add_argument(
         "--min-ev-units", type=float, default=0.05,
@@ -144,20 +160,31 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    bets_path = Path(args.bets_path)
-    if not bets_path.exists():
-        print(f"backfill not found: {bets_path}", file=sys.stderr)
-        return 1
-
     engines = _parse_engines(args.engines)
     bet_types = _parse_bet_types(args.bet_types)
     min_tier = Tier(args.min_tier)
 
     # Pre-load the backfill once, then re-iterate for each engine.
-    print(f"Loading backfill from {bets_path}...")
-    source, slates = load_backfill(
-        bets_path, bet_types=bet_types, min_tier=min_tier,
-    )
+    if args.source == "props":
+        snapshots_dir = Path(args.snapshots_dir)
+        if not snapshots_dir.exists():
+            print(f"snapshots dir not found: {snapshots_dir}", file=sys.stderr)
+            return 1
+        print(f"Loading PROPS backfill from {snapshots_dir}...")
+        source, slates = load_props_backfill(
+            snapshots_dir,
+            min_tier=min_tier,
+            config=PropSyntheticConfig(),
+        )
+    else:
+        bets_path = Path(args.bets_path)
+        if not bets_path.exists():
+            print(f"backfill not found: {bets_path}", file=sys.stderr)
+            return 1
+        print(f"Loading MLB backfill from {bets_path}...")
+        source, slates = load_backfill(
+            bets_path, bet_types=bet_types, min_tier=min_tier,
+        )
     after, before = _resolve_window(
         args.after, args.before, args.window_days,
         source.first_date, source.last_date,
@@ -181,12 +208,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         f"{source.n_rows} qualifying legs total",
     )
 
+    # Source-aware default: props legs are fair-priced at higher decimal
+    # odds than the -110 MLB game-results, so joint-prob floors that work
+    # for MLB are too tight for props. Operator can override via the CLI.
+    min_joint_prob = args.min_joint_prob
+    if min_joint_prob is None:
+        min_joint_prob = 0.20 if args.source == "props" else 0.40
+
     config = ParlayConfig(
         min_tier=min_tier,
         max_legs=args.max_legs,
         mc_trials=args.mc_trials,
         max_pool_size=args.max_pool_size,
-        min_joint_prob=args.min_joint_prob,
+        min_joint_prob=min_joint_prob,
         min_ev_units=args.min_ev_units,
     )
 
