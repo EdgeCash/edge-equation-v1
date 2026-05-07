@@ -5,6 +5,7 @@ import { AnalyticsHub } from "../components/AnalyticsHub";
 import { ChalkboardBackground } from "../components/ChalkboardBackground";
 import { EmailSignup } from "../components/EmailSignup";
 import { TierBadge } from "../components/TierBadge";
+import { TopEdgesHero } from "../components/TopEdgesHero";
 import { TransparencyNote } from "../components/TransparencyNote";
 import { loadAlertReport } from "../lib/alerts";
 import {
@@ -13,6 +14,8 @@ import {
   SportKey,
   getBacktestSummary,
   getDailyFeed,
+  topPicksAcrossSports,
+  topParlaysAcrossSports,
 } from "../lib/feed";
 
 
@@ -27,10 +30,19 @@ export default async function HomePage() {
     snapshots[sport] = await getBacktestSummary(sport);
   }
 
+  const topPicks = topPicksAcrossSports(feed, { max: 8 });
+  const topParlays = topParlaysAcrossSports(feed, { max: 3 });
+  const generatedAt = feed?.generated_at ?? "";
+
   return (
     <>
       <AlertBanner report={alerts} />
       <Hero />
+      <TopEdgesHero
+        picks={topPicks}
+        parlays={topParlays}
+        generatedAt={generatedAt}
+      />
       <AnalyticsHub feed={feed} snapshots={snapshots} />
       <TierExplainer />
       <Pillars />

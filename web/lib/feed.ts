@@ -218,3 +218,73 @@ export const SPORT_ACCENT: Record<SportKey, string> = {
   nfl: "text-moderate",
   ncaaf: "text-lean",
 };
+
+
+// ---------------------------------------------------------------------------
+// Cross-sport ranking
+// ---------------------------------------------------------------------------
+
+
+// Conviction-tier ordering for the home-page top-edges hero. ELITE outranks
+// STRONG outranks MODERATE outranks LEAN; ties broken by numeric edge desc.
+// NO_PLAY rows are excluded. Mirrors the public "3-8 high-conviction plays"
+// promise on the home page.
+const TIER_RANK: Record<string, number> = {
+  ELITE: 4,
+  STRONG: 3,
+  MODERATE: 2,
+  LEAN: 1,
+  NO_PLAY: 0,
+};
+
+
+/** Pick the home-page top edges across every sport.
+ *
+ * Ranks all LEAN+ picks by (tier rank, then edge desc) and returns at most
+ * ``max`` entries. ``min`` is informational — the caller decides what to
+ * render when fewer than ``min`` picks qualify (typically a "no plays
+ * today" empty state).
+ */
+export function topPicksAcrossSports(
+  feed: DailyFeed | null,
+  { max = 8 }: { max?: number } = {},
+): FeedPick[] {
+  if (!feed) return [];
+  const all: FeedPick[] = [];
+  for (const sport of SPORTS) all.push(...picksForSport(feed, sport));
+  const ranked = all
+    .filter((p) => (TIER_RANK[p.tier ?? "NO_PLAY"] ?? 0) > 0)
+    .map((p) => ({
+      p,
+      tier: TIER_RANK[p.tier ?? "NO_PLAY"] ?? 0,
+      edge: Number(p.edge ?? 0),
+    }))
+    .sort((a, b) => (b.tier - a.tier) || (b.edge - a.edge));
+  return ranked.slice(0, max).map((r) => r.p);
+}
+
+
+/** Pick the top N parlay tickets across game-results + player-props for the
+ * home-page "Tonight's parlays" strip. Sorted by combined edge_pp desc so the
+ * most overpriced ticket leads. */
+export function topParlaysAcrossSports(
+  feed: DailyFeed | null,
+  { max = 3 }: { max?: number } = {},
+): Array<{ universe: "game_results" | "player_props"; sport: SportKey; parlay: FeedParlay }> {
+  if (!feed) return [];
+  const out: Array<{
+    universe: "game_results" | "player_props";
+    sport: SportKey;
+    parlay: FeedParlay;
+  }> = [];
+  for (const sport of SPORTS) {
+    for (const p of gameParlaysForSport(feed, sport)) {
+      out.push({ universe: "game_results", sport, parlay: p });
+    }
+    for (const p of propParlaysForSport(feed, sport)) {
+      out.push({ universe: "player_props", sport, parlay: p });
+    }
+  }
+  out.sort((a, b) => Number(b.parlay.edge_pp ?? 0) - Number(a.parlay.edge_pp ?? 0));
+  return out.slice(0, max);
+}
