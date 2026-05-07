@@ -37,6 +37,7 @@ when the legs are correlated.
 from __future__ import annotations
 
 import itertools
+import logging
 import math
 from dataclasses import dataclass, field
 from typing import Iterable, Optional, Sequence
@@ -47,6 +48,9 @@ from edge_equation.engines.tiering import Tier
 from edge_equation.utils.kelly import american_to_decimal
 
 from .config import ParlayConfig
+
+
+log = logging.getLogger(__name__)
 from .correlations import (
     ParlayLegContext, are_mutually_exclusive, correlation_for_pair,
 )
@@ -326,9 +330,33 @@ def build_parlay_candidates(
     Sorted by EV descending so the daily report shows the strongest
     Special Drop first. Returns an empty list when no combo qualifies
     — typical for the audit-strict thresholds + a normal-day slate.
+
+    When the qualifying pool exceeds ``config.max_pool_size``, the top
+    legs by single-leg EV are kept and the rest dropped before
+    enumeration. This caps the combinatorial sweep at C(max_pool_size,
+    max_legs) and keeps Daily Master inside its workflow timeout on
+    high-volume slates (props produced 62 LEAN+ legs on 2026-05-07,
+    which made C(62, 2..6) ~= 68M combos × 10k MC trials = trillions
+    of ops, hanging the workflow).
     """
     cfg = config or ParlayConfig()
     pool = [l for l in legs if _passes_min_tier(l, cfg.min_tier)]
+    if len(pool) > cfg.max_pool_size:
+        n_before = len(pool)
+        # Sort by single-leg EV per unit risked = decimal_odds * p - 1
+        # so the legs the builder enumerates over are the strongest
+        # bets in the pool. Tier breakers are already implicit in
+        # side_probability (higher prob -> better leg).
+        pool.sort(
+            key=lambda l: l.decimal_odds * l.side_probability,
+            reverse=True,
+        )
+        pool = pool[: cfg.max_pool_size]
+        log.info(
+            "parlay builder: pool capped %d -> %d (top by single-leg EV) "
+            "to keep enumeration tractable.",
+            n_before, cfg.max_pool_size,
+        )
     candidates: list[ParlayCandidate] = []
 
     for n in range(2, cfg.max_legs + 1):

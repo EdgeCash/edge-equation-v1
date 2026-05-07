@@ -32,6 +32,7 @@ ENV_MIN_JOINT_PROB   = "PARLAY_MIN_JOINT_PROB"
 ENV_MIN_EV_UNITS     = "PARLAY_MIN_EV_UNITS"
 ENV_MC_TRIALS        = "PARLAY_MC_TRIALS"
 ENV_MC_SEED          = "PARLAY_MC_SEED"
+ENV_MAX_POOL_SIZE    = "PARLAY_MAX_POOL_SIZE"
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,19 @@ class ParlayConfig:
     # filtered upstream; this is a numerical-safety guardrail.
     max_abs_correlation: float = 0.85
 
+    # Cap on the number of legs the builder enumerates combinations
+    # over. With ``max_legs=6`` the combinatorial search is C(N, 2..6).
+    # 15 legs -> ~10k combos -> a few minutes with the default 10k MC
+    # trials. 20 legs -> ~60k combos -> ~30 min, tight against the
+    # workflow timeout when the parlay engine runs twice (once in
+    # build_unified_mlb_card, once in _build_parlay_feed). 60+ legs
+    # -> ~68M combos -> trillions of MC ops, hangs the workflow.
+    # When the qualifying pool exceeds this cap, the top legs by
+    # single-leg EV are kept and the rest dropped before enumeration.
+    # Tunable via ``PARLAY_MAX_POOL_SIZE`` so an operator can dial up
+    # if a specific slate has unusually high-quality picks.
+    max_pool_size: int = 15
+
 
 def load_from_env() -> ParlayConfig:
     """Build a ParlayConfig with env-var overrides applied."""
@@ -69,6 +83,7 @@ def load_from_env() -> ParlayConfig:
         mc_trials=_int_from_env(ENV_MC_TRIALS, base.mc_trials),
         mc_seed=_int_from_env(ENV_MC_SEED, base.mc_seed),
         max_abs_correlation=base.max_abs_correlation,
+        max_pool_size=_int_from_env(ENV_MAX_POOL_SIZE, base.max_pool_size),
     )
 
 
