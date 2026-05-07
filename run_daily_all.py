@@ -236,6 +236,13 @@ def export_unified_feed(
     ``build_bundle`` based on whether it ran successfully — sports
     skipped via ``--only`` or ``--skip`` are excluded from the merged
     bundle so the website doesn't surface stale data.
+
+    Opens the per-engine DuckDB caches that the unified MLB runner
+    just populated and threads them through to ``build_bundle`` so
+    the feed actually surfaces today's NRFI / props / full-game
+    picks. Each store opens are best-effort: a missing file (engine
+    skipped, dep import failure, etc.) falls through to ``None`` and
+    the corresponding loader returns an empty list.
     """
     try:
         from edge_equation.engines.website.build_daily_feed import (
@@ -253,13 +260,61 @@ def export_unified_feed(
         if entry.bundle_kwarg:
             kwargs[entry.bundle_kwarg] = True
 
+    nrfi_store = _open_store_safe("nrfi")
+    props_store = _open_store_safe("props")
+    fullgame_store = _open_store_safe("fullgame")
+
     bundle = build_bundle(
-        store=None, target_date=target_date,
-        props_store=None, fullgame_store=None,
+        store=nrfi_store, target_date=target_date,
+        props_store=props_store, fullgame_store=fullgame_store,
         **kwargs,
     )
     write_bundle(bundle, DEFAULT_FEED_OUT)
     return DEFAULT_FEED_OUT
+
+
+def _open_store_safe(kind: str):
+    """Open one of the engine DuckDB caches at its canonical path.
+
+    Returns ``None`` if the file isn't on disk (engine skipped or
+    deps missing), if the engine module can't be imported, or if
+    DuckDB itself isn't installed. The bundle loaders treat ``None``
+    as "no rows from this engine," so the public feed degrades
+    gracefully.
+    """
+    try:
+        if kind == "nrfi":
+            from edge_equation.engines.nrfi.data.storage import NRFIStore
+            from edge_equation.engines.nrfi.config import (
+                get_default_config as nrfi_default,
+            )
+            path = nrfi_default().duckdb_path
+            return NRFIStore(path) if path.exists() else None
+        if kind == "props":
+            from edge_equation.engines.props_prizepicks.data.storage import (
+                PropsStore,
+            )
+            from edge_equation.engines.props_prizepicks.config import (
+                get_default_config as props_default,
+            )
+            path = props_default().duckdb_path
+            return PropsStore(path) if path.exists() else None
+        if kind == "fullgame":
+            from edge_equation.engines.full_game.data.storage import (
+                FullGameStore,
+            )
+            from edge_equation.engines.full_game.config import (
+                get_default_config as fg_default,
+            )
+            path = fg_default().duckdb_path
+            return FullGameStore(path) if path.exists() else None
+    except Exception as e:
+        print(
+            f"[run_daily_all] {kind} store unavailable "
+            f"({type(e).__name__}: {e}) — feed will skip {kind} picks.",
+            file=sys.stderr,
+        )
+    return None
 
 
 # ---------------------------------------------------------------------------
