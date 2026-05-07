@@ -1,19 +1,29 @@
 section,date,away,home,status,conviction_pct,away_sp_name,home_sp_name,f1_total_proj,nrfi_prob,yrfi_prob,nrfi_pick,model_prob,fair_odds_dec,kelly_pct,kelly_advice,status_reason,f1_away,f1_home,f1_total,nrfi_yrfi
-projection,2026-05-06,TOR,TB,PASS,54.3,,,1.02,0.551,0.449,NRFI,0.5433,1.815,2.85,1u,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,MIL,STL,PASS,51.4,,,1.14,0.517,0.483,NRFI,0.5144,1.934,0.0,PASS,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,LAD,HOU,PASS,52.5,,,1.24,0.47,0.53,YRFI,0.5255,1.887,0.65,0.5u,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,SD,SF,PASS,54.0,,,1.01,0.547,0.453,NRFI,0.54,1.828,2.43,1u,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,CWS,LAA,PASS,51.9,,,1.15,0.478,0.522,YRFI,0.5187,1.916,0.0,PASS,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,ATL,SEA,PASS,52.0,,,1.17,0.477,0.523,YRFI,0.5196,1.912,0.0,PASS,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,BOS,DET,PASS,52.2,,,1.1,0.526,0.474,NRFI,0.5221,1.901,0.23,PASS,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,ATH,PHI,PASS,52.0,,,1.26,0.477,0.523,YRFI,0.5196,1.912,0.0,PASS,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,BAL,MIA,PASS,53.0,,,1.09,0.535,0.465,NRFI,0.5298,1.869,1.17,0.5u,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,MIN,WSH,PASS,52.0,,,1.03,0.523,0.477,NRFI,0.5196,1.912,0.0,PASS,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,TEX,NYY,PASS,53.5,,,1.16,0.459,0.541,YRFI,0.5349,1.848,1.8,1u,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,CIN,CHC,PASS,53.0,,,1.16,0.535,0.465,NRFI,0.5298,1.869,1.17,0.5u,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,CLE,KC,PASS,53.2,,,1.05,0.538,0.462,NRFI,0.5323,1.859,1.49,0.5u,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,NYM,COL,PASS,50.8,,,1.14,0.509,0.491,NRFI,0.5077,1.965,0.0,PASS,Market gated off (ROI -2.16%),,,,
-projection,2026-05-06,PIT,AZ,PASS,51.4,,,1.13,0.517,0.483,NRFI,0.5144,1.934,0.0,PASS,Market gated off (ROI -2.16%),,,,
+projection,2026-05-07,TEX,NYY,PASS,54.4,,,1.17,0.448,0.552,YRFI,0.5442,1.812,2.96,1u,Market gated off (ROI -2.16%),,,,
+projection,2026-05-07,MIN,WSH,PASS,52.7,,,1.01,0.532,0.468,NRFI,0.5272,1.88,0.86,0.5u,Market gated off (ROI -2.16%),,,,
+projection,2026-05-07,CLE,KC,PASS,54.0,,,1.02,0.547,0.453,NRFI,0.54,1.828,2.43,1u,Market gated off (ROI -2.16%),,,,
+projection,2026-05-07,CIN,CHC,PASS,50.3,,,1.19,0.504,0.496,NRFI,0.5034,1.984,0.0,PASS,Market gated off (ROI -2.16%),,,,
+projection,2026-05-07,NYM,COL,PASS,50.4,,,1.15,0.495,0.505,YRFI,0.5042,1.98,0.0,PASS,Market gated off (ROI -2.16%),,,,
+projection,2026-05-07,PIT,AZ,PASS,50.8,,,1.12,0.509,0.491,NRFI,0.5077,1.965,0.0,PASS,Market gated off (ROI -2.16%),,,,
+projection,2026-05-07,ATH,PHI,PASS,50.3,,,1.19,0.503,0.497,NRFI,0.5026,1.988,0.0,PASS,Market gated off (ROI -2.16%),,,,
+projection,2026-05-07,BAL,MIA,PASS,50.4,,,1.27,0.495,0.505,YRFI,0.5042,1.98,0.0,PASS,Market gated off (ROI -2.16%),,,,
+projection,2026-05-07,TB,BOS,PASS,56.5,,,0.95,0.576,0.424,NRFI,0.5646,1.736,5.0,2u,Market gated off (ROI -2.16%),,,,
+projection,2026-05-07,STL,SD,PASS,55.3,,,1.01,0.562,0.438,NRFI,0.5527,1.779,4.01,2u,Market gated off (ROI -2.16%),,,,
+backfill,2026-05-06,TOR,TB,,,,,,,,,,,,,,0,0,0,NRFI
+backfill,2026-05-06,MIL,STL,,,,,,,,,,,,,,4,0,4,YRFI
+backfill,2026-05-06,LAD,HOU,,,,,,,,,,,,,,0,1,1,YRFI
+backfill,2026-05-06,SD,SF,,,,,,,,,,,,,,0,0,0,NRFI
+backfill,2026-05-06,CWS,LAA,,,,,,,,,,,,,,0,0,0,NRFI
+backfill,2026-05-06,ATL,SEA,,,,,,,,,,,,,,0,0,0,NRFI
+backfill,2026-05-06,BOS,DET,,,,,,,,,,,,,,0,0,0,NRFI
+backfill,2026-05-06,ATH,PHI,,,,,,,,,,,,,,0,0,0,NRFI
+backfill,2026-05-06,BAL,MIA,,,,,,,,,,,,,,3,3,6,YRFI
+backfill,2026-05-06,MIN,WSH,,,,,,,,,,,,,,0,0,0,NRFI
+backfill,2026-05-06,TEX,NYY,,,,,,,,,,,,,,1,0,1,YRFI
+backfill,2026-05-06,CIN,CHC,,,,,,,,,,,,,,1,2,3,YRFI
+backfill,2026-05-06,CLE,KC,,,,,,,,,,,,,,0,0,0,NRFI
+backfill,2026-05-06,NYM,COL,,,,,,,,,,,,,,1,0,1,YRFI
+backfill,2026-05-06,PIT,AZ,,,,,,,,,,,,,,1,0,1,YRFI
 backfill,2026-05-05,BOS,DET,,,,,,,,,,,,,,3,2,5,YRFI
 backfill,2026-05-05,TOR,TB,,,,,,,,,,,,,,1,0,1,YRFI
 backfill,2026-05-05,ATH,PHI,,,,,,,,,,,,,,0,0,0,NRFI

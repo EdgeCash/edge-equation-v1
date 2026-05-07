@@ -1,19 +1,29 @@
 section,date,away,home,status,conviction_pct,away_sp_name,home_sp_name,away_sp_factor,home_sp_factor,f5_away_proj,f5_home_proj,f5_total_proj,f5_pick,f5_win_prob,model_prob,fair_odds_dec,kelly_pct,kelly_advice,status_reason,f5_away,f5_home,f5_total,f5_winner
-projection,2026-05-06,TOR,TB,PASS,53.1,,,,,1.84,2.2,4.03,TB,0.543,0.531,1.842,2.01,1u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,MIL,STL,PASS,52.4,,,,,2.52,2.8,5.32,STL,0.533,0.5238,1.876,0.96,0.5u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,LAD,HOU,PASS,54.7,,,,,2.95,2.4,5.34,LAD,0.565,0.5468,1.77,4.32,2u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,SD,SF,PASS,56.3,,,,,2.53,1.78,4.31,SD,0.588,0.5634,1.701,5.0,2u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,CWS,LAA,PASS,50.4,,,,,2.37,2.41,4.79,LAA,0.505,0.5036,1.98,0.0,PASS,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,ATL,SEA,PASS,52.6,,,,,2.55,2.24,4.79,ATL,0.536,0.5259,1.866,1.28,0.5u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,BOS,DET,PASS,52.2,,,,,2.6,2.34,4.94,BOS,0.531,0.5223,1.883,0.75,0.5u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,ATH,PHI,PASS,50.5,,,,,2.31,2.37,4.67,PHI,0.507,0.505,1.972,0.0,PASS,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,BAL,MIA,PASS,51.4,,,,,2.31,2.47,4.78,MIA,0.519,0.5137,1.927,0.0,PASS,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,MIN,WSH,PASS,55.7,,,,,3.25,2.57,5.82,MIN,0.579,0.5569,1.727,5.0,2u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,TEX,NYY,PASS,55.3,,,,,2.01,2.64,4.64,NYY,0.574,0.5533,1.742,5.0,2u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,CIN,CHC,PASS,57.1,,,,,2.25,3.1,5.35,CHC,0.599,0.5713,1.669,5.0,2u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,CLE,KC,PASS,51.4,,,,,2.52,2.35,4.87,CLE,0.52,0.5144,1.923,0.0,PASS,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,NYM,COL,PASS,50.7,,,,,2.72,2.63,5.34,NYM,0.51,0.5072,1.961,0.0,PASS,Market gated off (Brier 0.2472),,,,
-projection,2026-05-06,PIT,AZ,PASS,55.0,,,,,2.67,2.08,4.75,PIT,0.569,0.5497,1.757,4.74,2u,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,TEX,NYY,PASS,53.6,,,,,2.08,2.5,4.59,NYY,0.55,0.536,1.818,2.75,1u,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,MIN,WSH,PASS,50.6,,,,,2.76,2.82,5.58,WSH,0.508,0.5058,1.969,0.0,PASS,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,CLE,KC,PASS,52.4,,,,,2.17,2.46,4.63,KC,0.534,0.5245,1.873,1.07,0.5u,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,CIN,CHC,PASS,53.2,,,,,2.04,2.42,4.46,CHC,0.544,0.5317,1.838,2.12,1u,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,NYM,COL,PASS,51.7,,,,,3.02,2.82,5.84,NYM,0.524,0.5173,1.908,0.02,PASS,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,PIT,AZ,PASS,54.7,,,,,2.65,2.1,4.74,PIT,0.565,0.5468,1.77,4.32,2u,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,ATH,PHI,PASS,51.8,,,,,2.49,2.28,4.78,ATH,0.525,0.518,1.905,0.12,PASS,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,BAL,MIA,PASS,52.8,,,,,2.2,2.53,4.73,MIA,0.539,0.5281,1.855,1.59,1u,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,TB,BOS,PASS,50.4,,,,,2.43,2.48,4.9,BOS,0.506,0.5043,1.976,0.0,PASS,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,STL,SD,PASS,51.8,,,,,2.21,2.42,4.63,SD,0.525,0.518,1.905,0.12,PASS,Market gated off (Brier 0.2472),,,,
+backfill,2026-05-06,TOR,TB,,,,,,,,,,,,,,,,,0,2,2,TB
+backfill,2026-05-06,MIL,STL,,,,,,,,,,,,,,,,,5,0,5,MIL
+backfill,2026-05-06,LAD,HOU,,,,,,,,,,,,,,,,,10,1,11,LAD
+backfill,2026-05-06,SD,SF,,,,,,,,,,,,,,,,,1,1,2,PUSH
+backfill,2026-05-06,CWS,LAA,,,,,,,,,,,,,,,,,1,7,8,LAA
+backfill,2026-05-06,ATL,SEA,,,,,,,,,,,,,,,,,0,1,1,SEA
+backfill,2026-05-06,BOS,DET,,,,,,,,,,,,,,,,,4,0,4,BOS
+backfill,2026-05-06,ATH,PHI,,,,,,,,,,,,,,,,,2,1,3,ATH
+backfill,2026-05-06,BAL,MIA,,,,,,,,,,,,,,,,,5,3,8,BAL
+backfill,2026-05-06,MIN,WSH,,,,,,,,,,,,,,,,,2,3,5,WSH
+backfill,2026-05-06,TEX,NYY,,,,,,,,,,,,,,,,,6,0,6,TEX
+backfill,2026-05-06,CIN,CHC,,,,,,,,,,,,,,,,,2,4,6,CHC
+backfill,2026-05-06,CLE,KC,,,,,,,,,,,,,,,,,2,1,3,CLE
+backfill,2026-05-06,NYM,COL,,,,,,,,,,,,,,,,,4,0,4,NYM
+backfill,2026-05-06,PIT,AZ,,,,,,,,,,,,,,,,,1,0,1,PIT
 backfill,2026-05-05,BOS,DET,,,,,,,,,,,,,,,,,10,3,13,BOS
 backfill,2026-05-05,TOR,TB,,,,,,,,,,,,,,,,,3,2,5,TOR
 backfill,2026-05-05,ATH,PHI,,,,,,,,,,,,,,,,,0,1,1,PHI

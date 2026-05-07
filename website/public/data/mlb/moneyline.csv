@@ -1,19 +1,29 @@
 section,date,away,home,status,conviction_pct,away_sp_name,home_sp_name,away_sp_fip,home_sp_fip,away_sp_factor,home_sp_factor,away_bp_factor,home_bp_factor,away_runs_proj,home_runs_proj,away_win_prob,home_win_prob,ml_pick,model_prob,fair_odds_dec,market_odds_dec,market_odds_american,book,edge_pct,kelly_pct,kelly_advice,status_reason,away_score,home_score,ml_winner
-projection,2026-05-06,TOR,TB,PASS,52.9,,,,,,,,,3.67,4.11,0.451,0.549,TB,0.5294,1.821,,,,,2.64,1u,No market price available,,,
-projection,2026-05-06,MIL,STL,PASS,50.0,,,,,,,,,4.77,4.77,0.5,0.5,STL,0.5,2.0,,,,,0.0,PASS,No market price available,,,
-projection,2026-05-06,LAD,HOU,PASS,59.6,,,,,,,,,5.45,3.96,0.66,0.34,LAD,0.596,1.515,,,,,5.0,2u,No market price available,,,
-projection,2026-05-06,SD,SF,PASS,55.6,,,,,,,,,4.29,3.43,0.594,0.406,SD,0.5564,1.684,,,,,5.0,2u,No market price available,,,
-projection,2026-05-06,CWS,LAA,PASS,54.7,,,,,,,,,5.01,4.3,0.578,0.422,CWS,0.5468,1.73,,,,,5.0,2u,No market price available,,,
-projection,2026-05-06,ATL,SEA,PASS,52.2,,,,,,,,,4.43,4.09,0.537,0.463,ATL,0.5222,1.862,,,,,1.38,0.5u,No market price available,,,
-projection,2026-05-06,BOS,DET,PASS,52.8,,,,,,,,,4.53,4.1,0.547,0.453,BOS,0.5282,1.828,1.0833,-1200,fanduel,-42.78,0.0,PASS,Edge -42.78% below +4.00% threshold,,,
-projection,2026-05-06,ATH,PHI,PLAY,54.0,,,,,,,,,4.21,4.82,0.433,0.567,PHI,0.5402,1.764,2.24,124,fanduel,21.0,5.0,2u,,,,
-projection,2026-05-06,BAL,MIA,PLAY,51.9,,,,,,,,,4.22,4.51,0.469,0.531,MIA,0.5186,1.883,3.85,285,fanduel,99.66,5.0,2u,,,,
-projection,2026-05-06,MIN,WSH,PASS,54.1,,,,,,,,,5.77,5.14,0.569,0.431,MIN,0.5414,1.757,1.7143,-140,fanduel,-7.19,0.0,PASS,Edge -7.19% below +4.00% threshold,,,
-projection,2026-05-06,TEX,NYY,PLAY,57.5,,,,,,,,,3.74,4.89,0.375,0.625,NYY,0.575,1.6,4.4,340,fanduel,153.0,5.0,2u,,,,
-projection,2026-05-06,CIN,CHC,PASS,57.1,,,,,,,,,4.0,5.09,0.382,0.618,CHC,0.5708,1.618,1.3774,-265,fanduel,-21.38,0.0,PASS,Edge -21.38% below +4.00% threshold,,,
-projection,2026-05-06,CLE,KC,PASS,50.7,,,,,,,,,4.47,4.58,0.488,0.512,KC,0.5072,1.953,1.6757,-148,fanduel,-15.01,0.0,PASS,Edge -15.01% below +4.00% threshold,,,
-projection,2026-05-06,NYM,COL,PASS,51.5,,,,,,,,,4.77,4.55,0.525,0.475,NYM,0.515,1.905,1.6329,-158,fanduel,-15.91,0.0,PASS,Edge -15.91% below +4.00% threshold,,,
-projection,2026-05-06,PIT,AZ,PASS,54.0,,,,,,,,,4.92,4.32,0.566,0.434,PIT,0.5396,1.767,1.7576,-132,fanduel,-5.16,0.0,PASS,Edge -5.16% below +4.00% threshold,,,
+projection,2026-05-07,TEX,NYY,PASS,55.6,,,,,,,,,3.62,4.48,0.407,0.593,NYY,0.5558,1.686,1.7042,-142,fanduel,-5.28,0.75,0.5u,Edge -5.28% below +4.00% threshold,,,
+projection,2026-05-07,MIN,WSH,PLAY,54.7,,,,,,,,,4.81,5.52,0.422,0.578,WSH,0.5468,1.73,1.9259,-108,fanduel,5.31,5.0,2u,,,,
+projection,2026-05-07,CLE,KC,PASS,53.1,,,,,,,,,3.95,4.41,0.449,0.551,KC,0.5306,1.815,1.6944,-144,fanduel,-10.1,0.0,PASS,Edge -10.10% below +4.00% threshold,,,
+projection,2026-05-07,CIN,CHC,PASS,53.6,,,,,,,,,3.83,4.38,0.44,0.56,CHC,0.536,1.786,1.5,-200,fanduel,-19.6,0.0,PASS,Edge -19.60% below +4.00% threshold,,,
+projection,2026-05-07,NYM,COL,PASS,52.1,,,,,,,,,5.27,4.95,0.535,0.465,NYM,0.521,1.869,1.6757,-148,fanduel,-12.7,0.0,PASS,Edge -12.70% below +4.00% threshold,,,
+projection,2026-05-07,PIT,AZ,PASS,53.2,,,,,,,,,4.78,4.29,0.554,0.446,PIT,0.5324,1.805,1.9259,-108,fanduel,2.53,3.62,2u,Edge +2.53% below +4.00% threshold,,,
+projection,2026-05-07,ATH,PHI,PASS,52.7,,,,,,,,,4.16,4.57,0.455,0.545,PHI,0.527,1.835,1.7692,-130,fanduel,-6.76,0.0,PASS,Edge -6.76% below +4.00% threshold,,,
+projection,2026-05-07,BAL,MIA,PASS,53.2,,,,,,,,,4.05,4.53,0.446,0.554,MIA,0.5324,1.805,1.8333,-120,fanduel,-2.4,0.94,0.5u,Edge -2.40% below +4.00% threshold,,,
+projection,2026-05-07,TB,BOS,PASS,50.2,,,,,,,,,4.15,4.19,0.496,0.504,BOS,0.5024,1.984,1.8333,-120,fanduel,-7.9,0.0,PASS,Edge -7.90% below +4.00% threshold,,,
+projection,2026-05-07,STL,SD,PASS,52.0,,,,,,,,,4.13,4.43,0.467,0.533,SD,0.5198,1.876,1.5618,-178,fanduel,-18.82,0.0,PASS,Edge -18.82% below +4.00% threshold,,,
+backfill,2026-05-06,TOR,TB,,,,,,,,,,,,,,,,,,,,,,,,,0,3,TB
+backfill,2026-05-06,MIL,STL,,,,,,,,,,,,,,,,,,,,,,,,,6,2,MIL
+backfill,2026-05-06,LAD,HOU,,,,,,,,,,,,,,,,,,,,,,,,,12,2,LAD
+backfill,2026-05-06,SD,SF,,,,,,,,,,,,,,,,,,,,,,,,,5,1,SD
+backfill,2026-05-06,CWS,LAA,,,,,,,,,,,,,,,,,,,,,,,,,2,8,LAA
+backfill,2026-05-06,ATL,SEA,,,,,,,,,,,,,,,,,,,,,,,,,1,3,SEA
+backfill,2026-05-06,BOS,DET,,,,,,,,,,,,,,,,,,,,,,,,,4,0,BOS
+backfill,2026-05-06,ATH,PHI,,,,,,,,,,,,,,,,,,,,,,,,,3,6,PHI
+backfill,2026-05-06,BAL,MIA,,,,,,,,,,,,,,,,,,,,,,,,,7,4,BAL
+backfill,2026-05-06,MIN,WSH,,,,,,,,,,,,,,,,,,,,,,,,,2,15,WSH
+backfill,2026-05-06,TEX,NYY,,,,,,,,,,,,,,,,,,,,,,,,,6,1,TEX
+backfill,2026-05-06,CIN,CHC,,,,,,,,,,,,,,,,,,,,,,,,,6,7,CHC
+backfill,2026-05-06,CLE,KC,,,,,,,,,,,,,,,,,,,,,,,,,3,1,CLE
+backfill,2026-05-06,NYM,COL,,,,,,,,,,,,,,,,,,,,,,,,,10,5,NYM
+backfill,2026-05-06,PIT,AZ,,,,,,,,,,,,,,,,,,,,,,,,,1,0,PIT
 backfill,2026-05-05,BOS,DET,,,,,,,,,,,,,,,,,,,,,,,,,10,3,BOS
 backfill,2026-05-05,TOR,TB,,,,,,,,,,,,,,,,,,,,,,,,,3,4,TB
 backfill,2026-05-05,ATH,PHI,,,,,,,,,,,,,,,,,,,,,,,,,1,9,PHI

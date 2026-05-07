@@ -1,19 +1,29 @@
 section,date,away,home,status,conviction_pct,away_sp_name,home_sp_name,away_sp_factor,home_sp_factor,away_bp_factor,home_bp_factor,venue,temp_f,wind_mph,wind_dir,weather_factor,away_stars_present,home_stars_present,away_missing_stars,home_missing_stars,away_lineup_factor,home_lineup_factor,away_runs_proj,home_runs_proj,total_proj,pick_8.5,pick_9.0,pick_9.5,kelly_line,model_prob,fair_odds_dec,market_odds_dec,market_odds_american,book,edge_pct,kelly_pct,kelly_advice,status_reason,total_runs,result_8.5,result_9.0,result_9.5
-projection,2026-05-06,TOR,TB,PASS,60.4,,,,,,,,,,,,,,,,,,3.67,4.11,7.79,UNDER,UNDER,UNDER,UNDER 8.5,0.6037,1.609,,,,,5.0,2u,No market price available,,,,
-projection,2026-05-06,MIL,STL,PASS,54.1,,,,,,,,,,,,,,,,,,4.77,4.77,9.55,OVER,OVER,OVER,OVER 8.5,0.5408,1.826,,,,,2.49,1u,No market price available,,,,
-projection,2026-05-06,LAD,HOU,PASS,54.8,,,,,,,,,,,,,,,,,,5.45,3.96,9.41,OVER,OVER,UNDER,UNDER 9.5,0.5484,1.796,,,,,3.45,2u,No market price available,,,,
-projection,2026-05-06,SD,SF,PASS,60.9,,,,,,,,,,,,,,,,,,4.29,3.43,7.72,UNDER,UNDER,UNDER,UNDER 8.5,0.6088,1.593,,,,,5.0,2u,No market price available,,,,
-projection,2026-05-06,CWS,LAA,PASS,55.6,,,,,,,,,,,,,,,,,,5.01,4.3,9.31,OVER,OVER,UNDER,UNDER 9.5,0.5561,1.767,,,,,4.43,2u,No market price available,,,,
-projection,2026-05-06,ATL,SEA,PASS,61.7,,,,,,,,,,,,,,,,,,4.43,4.09,8.52,OVER,UNDER,UNDER,UNDER 9.5,0.6165,1.57,,,,,5.0,2u,No market price available,,,,
-projection,2026-05-06,BOS,DET,PLAY,53.7,,,,,,,,,,,,,,,,,,4.53,4.1,8.63,OVER,UNDER,UNDER,UNDER 8.5,0.5366,1.841,2.02,102,fanduel,8.38,4.76,2u,,,,,
-projection,2026-05-06,ATH,PHI,PLAY,65.6,,,,,,,,,,,,,,,,,,4.21,4.82,9.03,OVER,OVER,UNDER,OVER 6.5,0.6564,1.462,1.6494,-154,fanduel,8.27,5.0,2u,,,,,
-projection,2026-05-06,BAL,MIA,PLAY,76.7,,,,,,,,,,,,,,,,,,4.22,4.51,8.73,OVER,UNDER,UNDER,UNDER 12.5,0.7669,1.229,1.8197,-122,fanduel,39.55,5.0,2u,,,,,
-projection,2026-05-06,MIN,WSH,PLAY,72.6,,,,,,,,,,,,,,,,,,5.77,5.14,10.91,OVER,OVER,OVER,OVER 7.5,0.7261,1.306,1.7246,-138,fanduel,25.22,5.0,2u,,,,,
-projection,2026-05-06,TEX,NYY,PLAY,60.9,,,,,,,,,,,,,,,,,,3.74,4.89,8.63,OVER,UNDER,UNDER,UNDER 9.5,0.6088,1.594,1.9615,-104,fanduel,19.42,5.0,2u,,,,,
-projection,2026-05-06,CIN,CHC,PLAY,64.2,,,,,,,,,,,,,,,,,,4.0,5.09,9.08,OVER,OVER,UNDER,UNDER 10.5,0.642,1.499,1.7692,-130,fanduel,13.57,5.0,2u,,,,,
-projection,2026-05-06,CLE,KC,PLAY,65.8,,,,,,,,,,,,,,,,,,4.47,4.58,9.05,OVER,OVER,UNDER,OVER 6.5,0.6581,1.458,1.8772,-114,fanduel,23.54,5.0,2u,,,,,
-projection,2026-05-06,NYM,COL,PLAY,55.5,,,,,,,,,,,,,,,,,,4.77,4.55,9.32,OVER,OVER,UNDER,UNDER 9.5,0.5552,1.769,1.9091,-110,fanduel,6.0,4.34,2u,,,,,
-projection,2026-05-06,PIT,AZ,PLAY,59.4,,,,,,,,,,,,,,,,,,4.92,4.32,9.24,OVER,OVER,UNDER,OVER 7.5,0.5943,1.638,1.8772,-114,fanduel,11.57,5.0,2u,,,,,
+projection,2026-05-07,TEX,NYY,PLAY,57.9,,,,,,,,,,,,,,,,,,3.62,4.48,8.1,UNDER,UNDER,UNDER,UNDER 8.5,0.579,1.685,1.9524,-105,fanduel,13.05,5.0,2u,,,,,
+projection,2026-05-07,MIN,WSH,PASS,52.8,,,,,,,,,,,,,,,,,,4.81,5.52,10.34,OVER,OVER,OVER,OVER 9.0,0.5281,1.877,1.9091,-110,fanduel,0.81,0.94,0.5u,Edge +0.81% below +2.50% threshold,,,,
+projection,2026-05-07,CLE,KC,PLAY,56.0,,,,,,,,,,,,,,,,,,3.95,4.41,8.35,UNDER,UNDER,UNDER,UNDER 9.0,0.5595,1.755,2.0,100,fanduel,11.9,5.0,2u,,,,,
+projection,2026-05-07,CIN,CHC,PLAY,57.1,,,,,,,,,,,,,,,,,,3.83,4.38,8.21,UNDER,UNDER,UNDER,UNDER 8.5,0.5706,1.715,1.8929,-112,fanduel,8.0,5.0,2u,,,,,
+projection,2026-05-07,NYM,COL,PASS,55.8,,,,,,,,,,,,,,,,,,5.27,4.95,10.22,OVER,OVER,OVER,UNDER 11.0,0.5578,1.76,1.8197,-122,fanduel,1.5,2.07,1u,Edge +1.50% below +2.50% threshold,,,,
+projection,2026-05-07,PIT,AZ,PASS,42.6,,,,,,,,,,,,,,,,,,4.78,4.29,9.08,OVER,OVER,UNDER,OVER 9.0,0.426,2.423,1.9091,-110,fanduel,-18.66,0.0,PASS,Edge -18.66% below +2.50% threshold,,,,
+projection,2026-05-07,ATH,PHI,PLAY,52.7,,,,,,,,,,,,,,,,,,4.16,4.57,8.74,OVER,UNDER,UNDER,UNDER 9.0,0.5272,1.878,1.9524,-105,fanduel,2.93,2.08,1u,,,,,
+projection,2026-05-07,BAL,MIA,PASS,54.1,,,,,,,,,,,,,,,,,,4.05,4.53,8.58,OVER,UNDER,UNDER,UNDER 8.5,0.5408,1.825,1.8696,-115,fanduel,1.11,1.41,0.5u,Edge +1.11% below +2.50% threshold,,,,
+projection,2026-05-07,TB,BOS,PLAY,56.1,,,,,,,,,,,,,,,,,,4.15,4.19,8.33,UNDER,UNDER,UNDER,UNDER 8.5,0.5612,1.749,1.8696,-115,fanduel,4.92,3.97,2u,,,,,
+projection,2026-05-07,STL,SD,PASS,45.7,,,,,,,,,,,,,,,,,,4.13,4.43,8.55,OVER,UNDER,UNDER,OVER 8.0,0.4567,2.226,1.9091,-110,fanduel,-12.82,0.0,PASS,Edge -12.82% below +2.50% threshold,,,,
+backfill,2026-05-06,TOR,TB,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,3,UNDER,UNDER,UNDER
+backfill,2026-05-06,MIL,STL,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,8,UNDER,UNDER,UNDER
+backfill,2026-05-06,LAD,HOU,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,14,OVER,OVER,OVER
+backfill,2026-05-06,SD,SF,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,6,UNDER,UNDER,UNDER
+backfill,2026-05-06,CWS,LAA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,10,OVER,OVER,OVER
+backfill,2026-05-06,ATL,SEA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,4,UNDER,UNDER,UNDER
+backfill,2026-05-06,BOS,DET,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,4,UNDER,UNDER,UNDER
+backfill,2026-05-06,ATH,PHI,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,9,OVER,PUSH,UNDER
+backfill,2026-05-06,BAL,MIA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,11,OVER,OVER,OVER
+backfill,2026-05-06,MIN,WSH,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,17,OVER,OVER,OVER
+backfill,2026-05-06,TEX,NYY,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,7,UNDER,UNDER,UNDER
+backfill,2026-05-06,CIN,CHC,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,13,OVER,OVER,OVER
+backfill,2026-05-06,CLE,KC,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,4,UNDER,UNDER,UNDER
+backfill,2026-05-06,NYM,COL,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,15,OVER,OVER,OVER
+backfill,2026-05-06,PIT,AZ,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,1,UNDER,UNDER,UNDER
 backfill,2026-05-05,BOS,DET,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,13,OVER,OVER,OVER
 backfill,2026-05-05,TOR,TB,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,7,UNDER,UNDER,UNDER
 backfill,2026-05-05,ATH,PHI,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,10,OVER,OVER,OVER

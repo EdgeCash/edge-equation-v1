@@ -1,0 +1,22 @@
+{
+  "player": "UNDER 8.5",
+  "as_of": "2026-05-07T11:35:40Z",
+  "items": [
+    {
+      "label": "Slate role",
+      "value": "Batter"
+    },
+    {
+      "label": "MLBAM id",
+      "value": "Unknown \u2014 name not resolved"
+    },
+    {
+      "label": "Slate date",
+      "value": "2026-05-07"
+    },
+    {
+      "label": "Source",
+      "value": "Limited data \u2014 name \u2192 MLBAM id lookup pending"
+    }
+  ]
+}
