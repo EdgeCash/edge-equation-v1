@@ -11,12 +11,20 @@ from typing import Type
 
 from ..base import ParlayEngine
 from .baseline import BaselineEngine
+from .beam import BeamEngine
 from .deduped import SameGameDedupedEngine
+from .diversified import DiversifiedEngine
+from .ilp import ILPEngine
+from .independent import IndependentEngine
 
 
 ENGINES: dict[str, Type[ParlayEngine]] = {
     BaselineEngine.name: BaselineEngine,
     SameGameDedupedEngine.name: SameGameDedupedEngine,
+    IndependentEngine.name: IndependentEngine,
+    BeamEngine.name: BeamEngine,
+    ILPEngine.name: ILPEngine,
+    DiversifiedEngine.name: DiversifiedEngine,
 }
 
 
