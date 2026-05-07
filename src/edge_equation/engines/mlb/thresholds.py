@@ -115,14 +115,19 @@ ALLOWED_GAME_RESULT_MARKETS: FrozenSet[str] = frozenset({
 })
 
 
-# Player-prop markets — match canonical names from
-# ``engines.props_prizepicks.markets`` plus the audit's expanded set.
-# Markets the engine doesn't yet project on are still listed here so a
-# future expansion drops in without touching the rule module.
+# Player-prop markets eligible for parlay LEGS. Match canonical
+# names from ``engines.props_prizepicks.markets`` plus the audit's
+# expanded set. The single-pick ledger ships every projected market
+# regardless of this set; this is the "what's allowed to combine"
+# universe.
+#
+# HR is intentionally OUT. Home-run props are sub-15% probability
+# bets even on the strongest hitters, and multiplying them onto
+# anything else collapses joint prob fast — they're singles-only by
+# policy. They still appear on the daily card as individual picks.
 ALLOWED_PLAYER_PROP_MARKETS: FrozenSet[str] = frozenset({
     "Hits",
     "RBI",
-    "HR",
     "K",
     "Total_Bases",
     "Runs",          # Runs scored
