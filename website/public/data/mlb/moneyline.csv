@@ -1,14 +1,14 @@
 section,date,away,home,status,conviction_pct,away_sp_name,home_sp_name,away_sp_fip,home_sp_fip,away_sp_factor,home_sp_factor,away_bp_factor,home_bp_factor,away_runs_proj,home_runs_proj,away_win_prob,home_win_prob,ml_pick,model_prob,fair_odds_dec,market_odds_dec,market_odds_american,book,edge_pct,kelly_pct,kelly_advice,status_reason,away_score,home_score,ml_winner
-projection,2026-05-07,TEX,NYY,PASS,55.8,,,,,,,,,3.74,4.62,0.404,0.596,NYY,0.5576,1.678,1.6173,-162,fanduel,-9.82,0.0,PASS,Edge -9.82% below +4.00% threshold,,,
-projection,2026-05-07,MIN,WSH,PASS,54.7,,,,,,,,,4.89,5.62,0.421,0.579,WSH,0.5474,1.727,1.8333,-120,fanduel,0.35,3.69,2u,Edge +0.35% below +4.00% threshold,,,
-projection,2026-05-07,CLE,KC,PASS,53.2,,,,,,,,,4.14,4.62,0.447,0.553,KC,0.5318,1.808,1.6944,-144,fanduel,-9.89,0.0,PASS,Edge -9.89% below +4.00% threshold,,,
-projection,2026-05-07,CIN,CHC,PASS,53.7,,,,,,,,,3.89,4.44,0.439,0.561,CHC,0.5366,1.783,1.5102,-196,fanduel,-18.96,0.0,PASS,Edge -18.96% below +4.00% threshold,,,
-projection,2026-05-07,NYM,COL,PASS,52.2,,,,,,,,,5.44,5.11,0.536,0.464,NYM,0.5216,1.866,1.6494,-154,fanduel,-13.97,0.0,PASS,Edge -13.97% below +4.00% threshold,,,
+projection,2026-05-07,TEX,NYY,PASS,54.7,,,,,,,,,3.94,4.65,0.421,0.579,NYY,0.5474,1.727,,,,,5.0,2u,No market price available,,,
+projection,2026-05-07,MIN,WSH,PASS,54.2,,,,,,,,,4.96,5.61,0.43,0.57,WSH,0.542,1.754,1.8696,-115,fanduel,1.33,3.78,2u,Edge +1.33% below +4.00% threshold,,,
+projection,2026-05-07,CLE,KC,PLAY,52.9,,,,,,,,,4.32,4.75,0.452,0.548,KC,0.5288,1.825,5.5,450,fanduel,190.84,5.0,2u,,,,
+projection,2026-05-07,CIN,CHC,PASS,55.7,,,,,,,,,3.8,4.68,0.405,0.595,CHC,0.557,1.681,1.1299,-770,fanduel,-37.06,0.0,PASS,Edge -37.06% below +4.00% threshold,,,
+projection,2026-05-07,NYM,COL,PASS,51.9,,,,,,,,,5.71,5.43,0.531,0.469,NYM,0.5186,1.883,1.6757,-148,fanduel,-13.1,0.0,PASS,Edge -13.10% below +4.00% threshold,,,
 projection,2026-05-07,PIT,AZ,PLAY,53.2,,,,,,,,,4.78,4.29,0.554,0.446,PIT,0.5324,1.805,1.9615,-104,fanduel,4.43,4.51,2u,,,,
-projection,2026-05-07,ATH,PHI,PASS,52.8,,,,,,,,,4.31,4.74,0.453,0.547,PHI,0.5282,1.828,1.7692,-130,fanduel,-6.55,0.0,PASS,Edge -6.55% below +4.00% threshold,,,
-projection,2026-05-07,BAL,MIA,PASS,53.2,,,,,,,,,4.05,4.53,0.446,0.554,MIA,0.5324,1.805,1.8065,-124,fanduel,-3.82,0.05,PASS,Edge -3.82% below +4.00% threshold,,,
-projection,2026-05-07,TB,BOS,PASS,50.2,,,,,,,,,4.34,4.38,0.496,0.504,BOS,0.5024,1.984,1.8621,-116,fanduel,-6.45,0.0,PASS,Edge -6.45% below +4.00% threshold,,,
-projection,2026-05-07,STL,SD,PASS,52.0,,,,,,,,,4.23,4.54,0.466,0.534,SD,0.5204,1.873,1.5814,-172,fanduel,-17.7,0.0,PASS,Edge -17.70% below +4.00% threshold,,,
+projection,2026-05-07,ATH,PHI,PASS,52.9,,,,,,,,,4.44,4.88,0.452,0.548,PHI,0.5288,1.825,1.7692,-130,fanduel,-6.44,0.0,PASS,Edge -6.44% below +4.00% threshold,,,
+projection,2026-05-07,BAL,MIA,PASS,53.2,,,,,,,,,4.05,4.53,0.446,0.554,MIA,0.5324,1.805,1.7692,-130,fanduel,-5.81,0.0,PASS,Edge -5.81% below +4.00% threshold,,,
+projection,2026-05-07,TB,BOS,PASS,50.3,,,,,,,,,4.47,4.51,0.495,0.505,BOS,0.503,1.98,1.8621,-116,fanduel,-6.34,0.0,PASS,Edge -6.34% below +4.00% threshold,,,
+projection,2026-05-07,STL,SD,PASS,52.1,,,,,,,,,4.36,4.67,0.465,0.535,SD,0.521,1.869,1.5814,-172,fanduel,-17.61,0.0,PASS,Edge -17.61% below +4.00% threshold,,,
 backfill,2026-05-06,TOR,TB,,,,,,,,,,,,,,,,,,,,,,,,,0,3,TB
 backfill,2026-05-06,MIL,STL,,,,,,,,,,,,,,,,,,,,,,,,,6,2,MIL
 backfill,2026-05-06,LAD,HOU,,,,,,,,,,,,,,,,,,,,,,,,,12,2,LAD
