@@ -190,7 +190,22 @@ def umpire_first_inning_stats(
     if statcast_df is None or statcast_df.empty:
         return _empty_umpire_f1()
 
-    ump_col = "home_plate_umpire_id" if "home_plate_umpire_id" in statcast_df.columns else "ump_id"
+    # Statcast pitch frames don't always carry the umpire id --- the
+    # home-plate-umpire column is added by a separate scraper that
+    # joins on game_pk. When neither candidate column is present (older
+    # backfill snapshots, today's slate before the umpire merge runs)
+    # we return the empty default so the caller sees a sample size of
+    # 0 and the EB shrinkage regresses to the league mean. Without this
+    # guard the bracket access on ``ump_id`` raised ``KeyError`` and
+    # surfaced as ``Feature build failed for game XXXX: 'ump_id'`` in
+    # the walk-forward training log, dropping that game from the
+    # training set instead of just losing the umpire signal for it.
+    if "home_plate_umpire_id" in statcast_df.columns:
+        ump_col = "home_plate_umpire_id"
+    elif "ump_id" in statcast_df.columns:
+        ump_col = "ump_id"
+    else:
+        return _empty_umpire_f1()
     df = statcast_df[statcast_df[ump_col] == int(ump_id)]
     if df.empty:
         return _empty_umpire_f1()
