@@ -94,6 +94,19 @@ class PitchArsenal:
     csw_pct: float = 0.295         # called-strike + whiff %
     zone_pct: float = 0.495        # in-zone %
     chase_pct: float = 0.30        # o-swing %
+    # First-inning-specific pitch-mix usage (Statcast inning=1).
+    # CMU NRFI capstone found these filled 6 of the top-10 feature
+    # importance slots after FIP. Defaults are league F1 averages.
+    f1_mix_ff_pct: float = 0.40    # 4-seam fastball
+    f1_mix_si_pct: float = 0.18    # sinker
+    f1_mix_fc_pct: float = 0.07    # cutter
+    f1_mix_cu_pct: float = 0.10    # curveball
+    f1_mix_ch_pct: float = 0.13    # changeup
+    f1_arsenal_depth: float = 4.0  # # of pitch types >=5% in F1
+    # First-pitch-strike rate (theScore: F-strike pitchers run ~3.60
+    # expected ERA, ball-1 pitchers ~5.50). League avg ~0.62.
+    f_strike_pct: float = 0.62
+    f_strike_sample_pa: float = 0.0  # drives EB shrinkage
 
 
 @dataclass
@@ -119,6 +132,12 @@ class PitcherInputs:
     first_inn_stats: Mapping[str, float] = field(default_factory=dict)
     # Pitch arsenal descriptors (Statcast 30-day window).
     arsenal: PitchArsenal = field(default_factory=PitchArsenal)
+    # Opener / bullpen-day flag. When True, this row's stats describe
+    # a reliever working as the F1 pitcher --- a meaningfully different
+    # distribution (typically high-K, ~1 inning capacity) the model
+    # should treat distinctly. Bullpen days move F1 totals by ~0.5-1.0 R
+    # per published research; ignoring this collapses ~5% of the slate.
+    is_opener: bool = False
 
 
 @dataclass
@@ -159,6 +178,16 @@ class UmpireInputs:
     zone_size_idx: float = LEAGUE_PRIORS["ump_zone_idx"]
     run_env_idx: float = LEAGUE_PRIORS["ump_run_env_idx"]
     called_strike_above_avg: float = LEAGUE_PRIORS["ump_csa"]
+    # First-inning-specific umpire splits (Statcast inning=1 over the
+    # umpire's career). The chain we believe in: tight F1 zone -> walks
+    # -> walks to top-of-order -> runs. Generic season CSA washes out
+    # over 9 innings, so an F1-specific signal is sharper for NRFI.
+    # See ``f1_shrinkage.shrink_ump_f1_csa`` --- low-sample umps regress
+    # to league mean (0.0).
+    f1_csa: float = 0.0           # F1 called strikes above avg (delta)
+    f1_walk_rate: float = 0.085   # F1 walks per PA, league avg
+    f1_called_sample: float = 0.0 # F1 called pitches in umpire's history
+    f1_pa_sample: float = 0.0     # F1 PAs in umpire's history
     # 2026 ABS Challenge defaults reflect the league trailing average,
     # NOT the conservative pre-ABS prior. When `enable_abs_2026=False`
     # downstream layers will zero these out.
@@ -331,8 +360,29 @@ class FeatureBuilder:
         # FIP-anchored xERA: tilt toward FIP (luck-corrected).
         xera = self.knobs.fip_blend * season_fip + (1 - self.knobs.fip_blend) * era_blend
 
-        # First-inning specific splits (Statcast).
+        # First-inning specific splits (Statcast). These get an extra
+        # EB shrinkage pass calibrated to F1 sample sizes (~70 PA half-
+        # shrink for BB%, ~150 PA for K%) before they reach the model
+        # --- the season-level shrinker would treat 30 starts of F1
+        # data as "no sample" and collapse the signal.
+        from .f1_shrinkage import (
+            shrink_f1_bb_pct, shrink_f1_hr_pct,
+            shrink_f1_k_pct, shrink_f1_runs_per_inn,
+        )
         first = dict(p.first_inn_stats) if p.first_inn_stats else {}
+        f1_pa = float(first.get("p1_inn_pa", 0))
+        f1_k_raw = float(first.get("p1_inn_k_pct", season_k))
+        f1_bb_raw = float(first.get("p1_inn_bb_pct", season_bb))
+        f1_hr_raw = float(first.get("p1_inn_hr_pct", p.season_hr_pct))
+        f1_runs_raw = float(first.get("p1_inn_runs_per", 0.55))
+        f1_k = shrink_f1_k_pct(f1_k_raw, f1_pa)
+        f1_bb = shrink_f1_bb_pct(f1_bb_raw, f1_pa)
+        f1_hr = shrink_f1_hr_pct(f1_hr_raw, f1_pa)
+        # Innings sample = unique games in the F1 frame; if we only have
+        # PA count, approximate one inning per ~4 PAs.
+        f1_innings = max(0.0, f1_pa / 4.0)
+        f1_runs_per = shrink_f1_runs_per_inn(f1_runs_raw, f1_innings)
+
         a = p.arsenal
         return {
             f"{prefix}_era": era_blend,
@@ -345,11 +395,17 @@ class FeatureBuilder:
             f"{prefix}_kbb_diff": season_k - season_bb,
             f"{prefix}_hand_R": float(p.hand == "R"),
             f"{prefix}_hand_L": float(p.hand == "L"),
-            f"{prefix}_first_inn_k_pct": float(first.get("p1_inn_k_pct", season_k)),
-            f"{prefix}_first_inn_bb_pct": float(first.get("p1_inn_bb_pct", season_bb)),
-            f"{prefix}_first_inn_hr_pct": float(first.get("p1_inn_hr_pct", p.season_hr_pct)),
-            f"{prefix}_first_inn_runs_per": float(first.get("p1_inn_runs_per", 0.55)),
-            f"{prefix}_first_inn_pa": float(first.get("p1_inn_pa", 0)),
+            # Shrunk F1 splits --- sharper than season K%/BB% for inning 1
+            # but anchored to season when sample is thin.
+            f"{prefix}_first_inn_k_pct": f1_k,
+            f"{prefix}_first_inn_bb_pct": f1_bb,
+            f"{prefix}_first_inn_hr_pct": f1_hr,
+            f"{prefix}_first_inn_runs_per": f1_runs_per,
+            f"{prefix}_first_inn_pa": f1_pa,
+            # Raw F1 stats kept alongside so the model can learn its
+            # own preference between raw + shrunk.
+            f"{prefix}_first_inn_k_pct_raw": f1_k_raw,
+            f"{prefix}_first_inn_bb_pct_raw": f1_bb_raw,
             f"{prefix}_bf_sample": bf,
             # Pitch arsenal (Statcast 30d window).
             f"{prefix}_fb_velo": a.fb_velo_mph,
@@ -360,6 +416,19 @@ class FeatureBuilder:
             f"{prefix}_csw_pct": a.csw_pct,
             f"{prefix}_zone_pct": a.zone_pct,
             f"{prefix}_chase_pct": a.chase_pct,
+            # First-inning pitch-mix usage --- CMU's top features after FIP.
+            f"{prefix}_f1_mix_ff": a.f1_mix_ff_pct,
+            f"{prefix}_f1_mix_si": a.f1_mix_si_pct,
+            f"{prefix}_f1_mix_fc": a.f1_mix_fc_pct,
+            f"{prefix}_f1_mix_cu": a.f1_mix_cu_pct,
+            f"{prefix}_f1_mix_ch": a.f1_mix_ch_pct,
+            f"{prefix}_f1_arsenal_depth": a.f1_arsenal_depth,
+            # First-pitch-strike rate (theScore: ~2 ERA pts difference).
+            f"{prefix}_f_strike_pct": a.f_strike_pct,
+            f"{prefix}_f_strike_sample": a.f_strike_sample_pa,
+            # Opener flag --- bullpen days have meaningfully different F1
+            # distributions and shouldn't be treated as starter rows.
+            f"{prefix}_is_opener": float(p.is_opener),
             # 2026 ABS per-matchup BB% uplift (0.0 when ABS off).
             f"{prefix}_abs_bb_uplift_pp": abs_uplift_pp,
         }
@@ -424,6 +493,21 @@ class FeatureBuilder:
         else:
             attenuation = 1.0
         zone_idx = ((u.zone_size_idx - 100.0) * attenuation) + 100.0
+
+        # First-inning-specific umpire splits, EB-shrunk to league mean
+        # (CSA: 0.0 / walk_rate: 0.085) when sample is thin. The
+        # half-shrink points come from ``f1_shrinkage._F1_HALF_SHRINK``.
+        from .f1_shrinkage import (
+            shrink_ump_f1_csa, shrink_ump_f1_walk_rate,
+        )
+        f1_csa_shrunk = shrink_ump_f1_csa(u.f1_csa, u.f1_called_sample)
+        f1_walk_shrunk = shrink_ump_f1_walk_rate(u.f1_walk_rate, u.f1_pa_sample)
+        # ABS-era pulls everyone toward the rulebook zone, so dampen
+        # the F1 CSA signal in 2026+ by the same attenuation factor
+        # used for the season zone_idx above.
+        if self.cfg.enable_abs_2026:
+            f1_csa_shrunk = f1_csa_shrunk * attenuation
+
         return {
             "ump_zone_idx": zone_idx,
             "ump_run_env_idx": u.run_env_idx,
@@ -432,6 +516,13 @@ class FeatureBuilder:
             "abs_team_challenge_home": u.abs_team_challenge_success_home if self.cfg.enable_abs_2026 else 0.0,
             "abs_team_challenge_away": u.abs_team_challenge_success_away if self.cfg.enable_abs_2026 else 0.0,
             "abs_era_active": float(self.cfg.enable_abs_2026),
+            # First-inning-specific umpire signal --- the chain we believe
+            # in: tight F1 zone -> walks to top-of-order -> runs.
+            "ump_f1_csa": f1_csa_shrunk,
+            "ump_f1_csa_raw": u.f1_csa,
+            "ump_f1_walk_rate": f1_walk_shrunk,
+            "ump_f1_called_sample": u.f1_called_sample,
+            "ump_f1_pa_sample": u.f1_pa_sample,
         }
 
     def _weather_layer(self, ctx: GameContext) -> dict[str, float]:
@@ -517,6 +608,57 @@ class FeatureBuilder:
             out[f"int_lineup_shape_x_park_runs_vs_{side}"] = (
                 gap * (f["park_factor_runs"] - 1.0)
             )
+
+        # F-Strike% × umpire F1 CSA --- the "wild pitcher meets tight ump"
+        # YRFI smoking gun. Negative product = ball-1 pitcher facing a
+        # squeezing ump (max walks); positive = strike-throwing pitcher
+        # with a wide-zone ump (max NRFI). The cross is more predictive
+        # of F1 walks than either input alone (theScore + ABCA research).
+        for side in ("home_p", "away_p"):
+            out[f"int_{side}_f_strike_x_ump_f1_csa"] = (
+                (f.get(f"{side}_f_strike_pct", 0.62) - 0.62)
+                * f.get("ump_f1_csa", 0.0)
+            )
+
+        # Pitch-mix depth × top-3 K%: deep arsenals exploit aggressive
+        # top-of-order hitters more than thin arsenals do.
+        for side, vs in (("home_p", "vs_home_p"), ("away_p", "vs_away_p")):
+            out[f"int_{side}_arsenal_x_top3_k"] = (
+                f.get(f"{side}_f1_arsenal_depth", 4.0)
+                * f.get(f"{vs}_top3_k_pct", 0.21)
+            )
+
+        # Opener flag × season K%: openers are typically high-K relievers
+        # and a positive interaction here lets the model down-weight the
+        # season starter stats (which describe a different role).
+        for side in ("home_p", "away_p"):
+            out[f"int_{side}_opener_x_kpct"] = (
+                f.get(f"{side}_is_opener", 0.0)
+                * f.get(f"{side}_k_pct", 0.225)
+            )
+
+        # Woolner-derived NRFI prior: closed-form P(0 runs in inning |
+        # expected RPG). Gives the model a calibrated baseline it can
+        # blend with vs override entirely. Inputs are quick proxies of
+        # F1 RPG per side (FIP / 9 + small adjustments) so the prior
+        # depends only on already-computed features.
+        from .woolner import nrfi_probability
+        # Top-of-1 = away offense vs home pitcher (away bats first).
+        # Bottom-of-1 = home offense vs away pitcher.
+        top_rpg = max(0.05, _f1_rpg_proxy(
+            f.get("home_p_fip", 4.10),
+            f.get("vs_home_p_top3_obp", 0.330),
+            f.get("park_factor_runs", 1.0),
+        ))
+        bottom_rpg = max(0.05, _f1_rpg_proxy(
+            f.get("away_p_fip", 4.10),
+            f.get("vs_away_p_top3_obp", 0.330),
+            f.get("park_factor_runs", 1.0),
+        ))
+        out["woolner_top_rpg"] = top_rpg
+        out["woolner_bottom_rpg"] = bottom_rpg
+        out["woolner_nrfi_prior"] = nrfi_probability(top_rpg, bottom_rpg)
+
         return out
 
     # ------------------------------------------------------------------
@@ -584,6 +726,44 @@ class FeatureBuilder:
         # Bottom of 1st: HOME hitting (vs away pitcher).
         bot_half = half(away_p, home_l, is_home_pitching=False)
         return top_half, bot_half
+
+
+# --- Helpers used by the interactions layer ------------------------------
+
+
+def _f1_rpg_proxy(
+    pitcher_fip: float,
+    opp_top3_obp: float,
+    park_factor_runs: float,
+) -> float:
+    """Quick estimator of expected first-inning runs per side.
+
+    Used to feed the Woolner exponential link --- a calibrated prior
+    we hand to the GBT alongside the raw features. Calibrated to
+    league average ~0.51 R / half-inning at FIP=4.10, OBP=0.330,
+    park=100 (i.e. the league-mean game).
+
+    The math is intentionally simple. Trees can layer their own
+    non-linear adjustments on top; the value of this feature is its
+    monotone, well-calibrated mapping from "neutralised inputs" to
+    a half-inning RPG, which the boosted ensemble would otherwise
+    have to learn from scratch.
+
+    Park-factor scale convention: the project's park_factor_runs is
+    on a 100-base scale (100 = neutral, COL=113, etc.), not a 1.00
+    multiplier. We coerce both conventions here so callers don't have
+    to guess.
+    """
+    # Tolerate both 100-base (e.g. 103) and 1.00-base (e.g. 1.03)
+    # conventions for park_factor_runs.
+    if park_factor_runs > 5.0:
+        park_mult = park_factor_runs / 100.0
+    else:
+        park_mult = park_factor_runs
+    fip_term = (pitcher_fip - 4.10) / 9.0          # extra ER per inning
+    obp_term = (opp_top3_obp - 0.330) * 1.5         # baserunner -> run factor
+    park_term = (park_mult - 1.0) * 0.51           # park adjusts league mean
+    return 0.51 + fip_term + obp_term + park_term
 
 
 # --- Convenience: serialize features for DuckDB ---------------------------
