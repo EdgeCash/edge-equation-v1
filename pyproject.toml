@@ -26,6 +26,13 @@ dev = [
   "ruff>=0.5",
   "mypy>=1.10",
 ]
+# Parlay-lab shootout extras. Only the ILP engine actually needs PuLP;
+# every other engine in parlay_lab/ runs on the deterministic core. Kept
+# optional so the production install stays lean. Install with:
+#     pip install -e '.[parlay-lab]'
+parlay-lab = [
+  "pulp>=2.7",
+]
 # Elite NRFI/YRFI engine — optional ML/data stack. Install with:
 #     pip install -e '.[nrfi]'
 # These are deliberately optional so the deterministic core stays
