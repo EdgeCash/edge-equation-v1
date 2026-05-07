@@ -2,10 +2,19 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { AlertBanner } from "../../components/AlertBanner";
 import { ChalkboardBackground } from "../../components/ChalkboardBackground";
-import { DailyCardTable } from "../../components/DailyCardTable";
+import { DailyCardView, SPORTS_DISPLAY } from "../../components/DailyCardView";
 import { EmailSignup } from "../../components/EmailSignup";
 import { loadAlertReport } from "../../lib/alerts";
-import { getDailyData, type TodaysPlay } from "../../lib/types";
+import {
+  getDailyFeed,
+  picksForSport,
+  gameParlaysForSport,
+  propParlaysForSport,
+  type FeedParlay,
+  type FeedPick,
+  type SportKey,
+} from "../../lib/feed";
+import { getDailyData } from "../../lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +22,9 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Today's daily card",
   description:
-    "Today's full daily card across every sport. Picks shown only "
-    + "for games not yet started. Updated by 11 AM CDT.",
+    "Today's full daily card across every sport we cover. ELITE and "
+    + "STRONG by default; toggle for every LEAN+ pick the engine "
+    + "graded today. Updated by 11 AM CDT.",
 };
 
 
@@ -24,22 +34,57 @@ export default async function DailyCardPage() {
   const proto = h.get("x-forwarded-proto") ?? "https";
   const origin = host ? `${proto}://${host}` : undefined;
 
-  const [data, alerts] = await Promise.all([
+  const [feed, mlbDaily, alerts] = await Promise.all([
+    getDailyFeed(),
+    // Legacy MLB payload only feeds the hero (slate / priced / odds source).
+    // Picks come from the unified feed below.
     getDailyData(origin),
     loadAlertReport(),
   ]);
 
-  if (!data) {
+  if (!feed) {
     return <DataUnavailable />;
   }
 
-  const card = data.tabs.todays_card;
-  const plays = (card?.projections ?? []) as TodaysPlay[];
-  const fadeList = (card?.backfill ?? []) as TodaysPlay[];
-  const generatedAt = data.generated_at;
-  const today = data.today;
-  const counts = data.counts;
-  const oddsSource = data.odds_source;
+  const picksBySport: Record<SportKey, FeedPick[]> = {
+    mlb: picksForSport(feed, "mlb"),
+    wnba: picksForSport(feed, "wnba"),
+    nfl: picksForSport(feed, "nfl"),
+    ncaaf: picksForSport(feed, "ncaaf"),
+  };
+  const parlaysBySport: Record<
+    SportKey, { game_results: FeedParlay[]; player_props: FeedParlay[] }
+  > = {
+    mlb: {
+      game_results: gameParlaysForSport(feed, "mlb"),
+      player_props: propParlaysForSport(feed, "mlb"),
+    },
+    wnba: {
+      game_results: gameParlaysForSport(feed, "wnba"),
+      player_props: propParlaysForSport(feed, "wnba"),
+    },
+    nfl: {
+      game_results: gameParlaysForSport(feed, "nfl"),
+      player_props: propParlaysForSport(feed, "nfl"),
+    },
+    ncaaf: {
+      game_results: gameParlaysForSport(feed, "ncaaf"),
+      player_props: propParlaysForSport(feed, "ncaaf"),
+    },
+  };
+
+  const totalPicks = SPORTS_DISPLAY.reduce(
+    (n, { key }) => n + picksBySport[key].length, 0,
+  );
+  const sportsWithPicks = SPORTS_DISPLAY.filter(
+    ({ key }) => picksBySport[key].length > 0,
+  ).map(({ label }) => label);
+
+  const generatedAt = feed.generated_at;
+  const today = feed.date;
+  const oddsSource = mlbDaily?.odds_source ?? feed.source ?? "—";
+  const slateGames = mlbDaily?.counts.slate_games;
+  const pricedGames = mlbDaily?.counts.priced_games;
 
   return (
     <>
@@ -53,15 +98,20 @@ export default async function DailyCardPage() {
           <h1 className="mt-1 text-4xl sm:text-5xl font-bold text-chalk-50">
             {today}
             <span className="block text-base font-normal text-chalk-300 mt-2">
-              {plays.length === 0
-                ? "No plays today. The math says pass."
-                : `${plays.length} ${plays.length === 1 ? "play" : "plays"} on the card.`}
+              {totalPicks === 0
+                ? "No plays today across any sport. The math says pass."
+                : `${totalPicks} ${totalPicks === 1 ? "pick" : "picks"} on the card across ${sportsWithPicks.join(" / ")}.`}
             </span>
           </h1>
 
           <p className="mt-6 text-sm text-chalk-300 max-w-2xl">
-            {counts.slate_games} games on the slate · {counts.priced_games} priced via{" "}
-            <span className="text-chalk-100">{oddsSource}</span> · published{" "}
+            {slateGames !== undefined && pricedGames !== undefined ? (
+              <>
+                {slateGames} MLB games on the slate · {pricedGames} priced via{" "}
+                <span className="text-chalk-100">{oddsSource}</span> ·{" "}
+              </>
+            ) : null}
+            published{" "}
             <time dateTime={generatedAt}>
               {new Date(generatedAt).toLocaleString("en-US", {
                 timeZone: "America/New_York",
@@ -80,29 +130,30 @@ export default async function DailyCardPage() {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        {plays.length > 0 ? (
-          <DailyCardTable plays={plays} />
-        ) : (
-          <EmptyCard
-            backfillTitle={card?.backfill_section_title}
-            fadeList={fadeList}
-          />
-        )}
+      {totalPicks > 0 ? (
+        <DailyCardView
+          picksBySport={picksBySport}
+          parlaysBySport={parlaysBySport}
+          generatedAt={generatedAt}
+        />
+      ) : (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+          <EmptyCard />
+        </section>
+      )}
 
-        {plays.length > 0 && (
-          <p className="mt-6 text-xs text-chalk-500 max-w-2xl">
-            Tier and unit count are derived from the model&apos;s edge over the
-            current best market price. Picks below the per-market edge threshold
-            are excluded from this card and listed in the FADE / SKIP section in
-            the daily backtest output. CLV is captured at first pitch and shown
-            on the{" "}
-            <Link href="/track-record" className="text-elite hover:underline">
-              track record
-            </Link>
-            .
-          </p>
-        )}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-10">
+        <p className="text-xs text-chalk-500 max-w-2xl">
+          Tier and unit count are derived from the model&apos;s edge over the
+          current best market price. The default view shows ELITE and STRONG
+          only; toggle to <em>All LEAN+</em> for every pick the engine graded
+          today, or click <em>Download CSV</em> for an audit-trail export. CLV
+          is captured at first pitch and shown on the{" "}
+          <Link href="/track-record" className="text-elite hover:underline">
+            track record
+          </Link>
+          .
+        </p>
       </section>
 
       <section className="max-w-3xl mx-auto px-4 sm:px-6 pb-12">
@@ -120,13 +171,7 @@ export default async function DailyCardPage() {
 
 /* ---------- Empty card ---------- */
 
-function EmptyCard({
-  backfillTitle,
-  fadeList,
-}: {
-  backfillTitle?: string;
-  fadeList: TodaysPlay[];
-}) {
+function EmptyCard() {
   return (
     <div className="chalk-card p-8 sm:p-12 text-center">
       <p className="font-chalk text-3xl text-elite/80 -rotate-2 inline-block">
@@ -142,17 +187,6 @@ function EmptyCard({
         bankrolls die.
       </p>
 
-      {backfillTitle && (
-        <div className="mt-8 text-left max-w-2xl mx-auto bg-chalkboard-900/60 border border-chalkboard-700 rounded-md p-4">
-          <p className="text-xs uppercase tracking-wider text-chalk-500 mb-2">
-            Why each market was excluded
-          </p>
-          <p className="text-sm text-chalk-300 font-mono leading-relaxed">
-            {backfillTitle}
-          </p>
-        </div>
-      )}
-
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link href="/track-record" className="btn-ghost">
           See track record
@@ -161,12 +195,6 @@ function EmptyCard({
           Read the methodology
         </Link>
       </div>
-
-      {fadeList.length > 0 && (
-        <p className="mt-6 text-[11px] text-chalk-500">
-          {fadeList.length} sub-threshold leans not published.
-        </p>
-      )}
     </div>
   );
 }
@@ -197,7 +225,7 @@ function DataUnavailable() {
         Daily card unavailable
       </h1>
       <p className="mt-3 text-chalk-300">
-        Couldn&apos;t load <code>/data/mlb/mlb_daily.json</code>. The morning
+        Couldn&apos;t load <code>/data/daily/latest.json</code>. The morning
         build may not have completed yet, or the data file isn&apos;t deployed
         with this build.
       </p>
