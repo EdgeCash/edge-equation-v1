@@ -40,10 +40,15 @@ from ..data.scrapers_etl import (
 from ..data.storage import NRFIStore
 from ..data.weather import WeatherClient
 from ..features.feature_engineering import (
-    FeatureBuilder, GameContext, LineupInputs, PitcherInputs, UmpireInputs,
-    features_to_blob,
+    FeatureBuilder, GameContext, LineupInputs, PitchArsenal, PitcherInputs,
+    UmpireInputs, features_to_blob,
 )
-from ..features.splits import first_inning_pitcher_stats
+from ..features.splits import (
+    first_inning_f_strike_pct,
+    first_inning_pitch_mix,
+    first_inning_pitcher_stats,
+    umpire_first_inning_stats,
+)
 from ..models.inference import NRFIInferenceEngine
 from ..models.model_training import TrainedBundle
 from edge_equation.utils.logging import get_logger
@@ -90,6 +95,93 @@ def _season_from_date(target_date: str) -> int:
 def _abs_active_for_season(season: int) -> bool:
     """ABS Challenge System became league-wide in 2026."""
     return season >= 2026
+
+
+def _first_inn_or_empty(statcast_df, pitcher_id: int) -> dict:
+    """Wrap the F1 pitcher-stats aggregator with the empty-frame guard
+    so the call site is one line."""
+    if statcast_df is None or statcast_df.empty or not pitcher_id:
+        return {}
+    return first_inning_pitcher_stats(statcast_df, pitcher_id)
+
+
+def _arsenal_for_pitcher(statcast_df, pitcher_id: int) -> PitchArsenal:
+    """Build a PitchArsenal populated with the pitcher's F1-specific
+    pitch-mix usage + first-pitch-strike rate, on top of the existing
+    league-prior defaults for the season-wide arsenal fields.
+
+    Empty Statcast frames return the default neutral PitchArsenal --
+    the model still gets a valid feature row, just with sample-size
+    columns at 0 so the EB shrinkage in ``_pitcher_layer`` regresses
+    everything to the league prior.
+
+    Honors ``NRFI_DISABLE_F1_V2`` for A/B testing --- when set, returns
+    the default PitchArsenal so the operator can compare retrains with
+    and without the v2 features without changing code.
+    """
+    from .feature_diff import v2_features_disabled
+    arsenal = PitchArsenal()
+    if v2_features_disabled():
+        return arsenal
+    if statcast_df is None or statcast_df.empty or not pitcher_id:
+        return arsenal
+    mix = first_inning_pitch_mix(statcast_df, pitcher_id)
+    fstrike = first_inning_f_strike_pct(statcast_df, pitcher_id)
+    return PitchArsenal(
+        # Carry the season-wide defaults (velo, spin, csw, etc.) the
+        # caller hasn't overridden. Future PR can wire a 30-day
+        # rolling pull for those too.
+        fb_velo_mph=arsenal.fb_velo_mph,
+        fb_spin_rpm=arsenal.fb_spin_rpm,
+        fb_iv_movement_in=arsenal.fb_iv_movement_in,
+        secondary_whiff_pct=arsenal.secondary_whiff_pct,
+        arsenal_count=arsenal.arsenal_count,
+        csw_pct=arsenal.csw_pct,
+        zone_pct=arsenal.zone_pct,
+        chase_pct=arsenal.chase_pct,
+        # F1-specific fields populated from the splits aggregators.
+        f1_mix_ff_pct=float(mix.get("p1_mix_ff_pct", arsenal.f1_mix_ff_pct)),
+        f1_mix_si_pct=float(mix.get("p1_mix_si_pct", arsenal.f1_mix_si_pct)),
+        f1_mix_fc_pct=float(mix.get("p1_mix_fc_pct", arsenal.f1_mix_fc_pct)),
+        f1_mix_cu_pct=float(mix.get("p1_mix_cu_pct", arsenal.f1_mix_cu_pct)),
+        f1_mix_ch_pct=float(mix.get("p1_mix_ch_pct", arsenal.f1_mix_ch_pct)),
+        f1_arsenal_depth=float(
+            mix.get("p1_arsenal_depth", arsenal.f1_arsenal_depth),
+        ),
+        f_strike_pct=float(
+            fstrike.get("p1_f_strike_pct", arsenal.f_strike_pct),
+        ),
+        f_strike_sample_pa=float(
+            fstrike.get("p1_f_strike_sample_pa", arsenal.f_strike_sample_pa),
+        ),
+    )
+
+
+def _is_opener(g, side: str) -> bool:
+    """Best-effort opener / bullpen-day flag for the day's probable.
+
+    Looks for an explicit ``home_pitcher_role`` / ``away_pitcher_role``
+    column on the schedule row when the upstream ETL has flagged it.
+    Falls back to ``False`` when the row doesn't carry the field, so
+    older backfills (no role column) silently keep their starter-based
+    feature shape. The opener interaction in
+    ``_interactions._pitcher_opener_x_kpct`` then no-ops cleanly.
+
+    Honors ``NRFI_DISABLE_F1_V2`` for A/B testing.
+
+    A future PR can sharpen this by parsing MLB Stats API's
+    ``probable_pitcher`` block, which sometimes labels openers
+    explicitly, or by checking the pitcher's average IP / start over
+    the last 5 outings (< 3.0 IP avg = strong opener signal).
+    """
+    from .feature_diff import v2_features_disabled
+    if v2_features_disabled():
+        return False
+    role_attr = f"{side}_pitcher_role"
+    role = getattr(g, role_attr, None)
+    if not role:
+        return False
+    return str(role).strip().lower() in {"opener", "bullpen", "reliever"}
 
 
 def reconstruct_features_for_date(
@@ -208,22 +300,26 @@ def reconstruct_features_for_date(
                             "roof_open": None,
                         }])
 
-                # Pitcher inputs (first-inning splits from Statcast).
+                # Pitcher inputs (first-inning splits + pitch-mix +
+                # F-strike from Statcast). The ``_arsenal_for_pitcher``
+                # helper builds the F1-specific PitchArsenal block; an
+                # empty Statcast frame falls back to neutral league
+                # priors (still valid feature row, just zeroed sample).
                 home_pid = _safe_int(g.home_pitcher_id, default=0)
                 away_pid = _safe_int(g.away_pitcher_id, default=0)
                 home_p = PitcherInputs(
                     pitcher_id=home_pid,
                     hand=_safe_str(g.home_pitcher_hand) or "R",
-                    first_inn_stats=first_inning_pitcher_stats(
-                        statcast_df, home_pid,
-                    ) if statcast_df is not None and not statcast_df.empty else {},
+                    first_inn_stats=_first_inn_or_empty(statcast_df, home_pid),
+                    arsenal=_arsenal_for_pitcher(statcast_df, home_pid),
+                    is_opener=_is_opener(g, "home"),
                 )
                 away_p = PitcherInputs(
                     pitcher_id=away_pid,
                     hand=_safe_str(g.away_pitcher_hand) or "R",
-                    first_inn_stats=first_inning_pitcher_stats(
-                        statcast_df, away_pid,
-                    ) if statcast_df is not None and not statcast_df.empty else {},
+                    first_inn_stats=_first_inn_or_empty(statcast_df, away_pid),
+                    arsenal=_arsenal_for_pitcher(statcast_df, away_pid),
+                    is_opener=_is_opener(g, "away"),
                 )
 
                 # Lineup inputs — defaults are league averages; richer lookups
@@ -231,9 +327,27 @@ def reconstruct_features_for_date(
                 home_lu = LineupInputs(confirmed=bool(_safe_str(g.home_lineup)))
                 away_lu = LineupInputs(confirmed=bool(_safe_str(g.away_lineup)))
 
+                # Umpire F1-specific splits feed the chain we believe in:
+                # tight zone -> walks to top-of-order -> runs. EB-shrunk
+                # to league mean inside the umpire feature layer when
+                # sample is thin. Honors NRFI_DISABLE_F1_V2 for A/B.
+                from .feature_diff import v2_features_disabled
+                ump_id = _safe_int(g.ump_id)
+                ump_f1 = (
+                    umpire_first_inning_stats(statcast_df, ump_id)
+                    if (not v2_features_disabled()
+                         and statcast_df is not None
+                         and not statcast_df.empty
+                         and ump_id)
+                    else {}
+                )
                 ump = UmpireInputs(
-                    ump_id=_safe_int(g.ump_id),
+                    ump_id=ump_id,
                     full_name="",  # pulled from `umpires` table when present
+                    f1_csa=float(ump_f1.get("ump_f1_csa", 0.0)),
+                    f1_walk_rate=float(ump_f1.get("ump_f1_walk_rate", 0.085)),
+                    f1_called_sample=float(ump_f1.get("ump_f1_called", 0.0)),
+                    f1_pa_sample=float(ump_f1.get("ump_f1_pa", 0.0)),
                 )
 
                 gpk = _safe_int(g.game_pk, default=0)
