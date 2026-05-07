@@ -69,7 +69,18 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e .
+          # `[nrfi]` brings in pybaseball, duckdb, scikit-learn, xgboost,
+          # and the rest of the ML/data stack the props + NRFI engines
+          # need at runtime. Without this, every props projection falls
+          # back to the league prior (confidence 0.30), the LEAN-tier
+          # confidence floor of 0.31 strips them, and the site shows
+          # zero props every day. Mirrors mlb-daily.yml + nrfi-daily-
+          # odds-snapshot.yml which install the same extra.
+          pip install -e ".[nrfi]"
+          # openpyxl is only used by the legacy MLB spreadsheet's xlsx
+          # writer; it's not in `[nrfi]` because the engines themselves
+          # don't depend on it.
+          pip install openpyxl
 
       - name: Configure git
         run: |
