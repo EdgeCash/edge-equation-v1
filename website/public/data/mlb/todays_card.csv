@@ -1,31 +1,31 @@
 section,date,matchup,starting_pitchers,bet_type,pick,model_prob,fair_odds_dec,market_odds_dec,market_odds_american,book,edge_pct,kelly_pct,kelly_advice,portfolio_scaled_from,game_time
-projection,2026-05-07,TEX@NYY,,totals,UNDER 8.5,0.579,1.685,1.9524,-105,fanduel,13.05,5.0,2u,,2026-05-07T16:35:00Z
-projection,2026-05-07,CLE@KC,,totals,UNDER 9.0,0.5595,1.755,2.0,100,fanduel,11.9,5.0,2u,,2026-05-07T18:10:00Z
-projection,2026-05-07,CIN@CHC,,totals,UNDER 8.5,0.5706,1.715,1.8929,-112,fanduel,8.0,3.61,2u,5.0,2026-05-07T18:20:00Z
-projection,2026-05-07,NYM@COL,,run_line,COL,0.5998,1.653,1.7937,-126,fanduel,7.58,5.0,2u,,2026-05-07T19:10:00Z
-projection,2026-05-07,MIN@WSH,,moneyline,WSH,0.5468,1.73,1.9259,-108,fanduel,5.31,5.0,2u,,2026-05-07T17:05:00Z
-projection,2026-05-07,TB@BOS,,totals,UNDER 8.5,0.5612,1.749,1.8696,-115,fanduel,4.92,3.97,2u,,2026-05-07T23:10:00Z
+projection,2026-05-07,CIN@CHC,,totals,UNDER 8.5,0.5706,1.715,1.9804,-102,fanduel,12.99,3.61,2u,5.0,2026-05-07T18:20:00Z
+projection,2026-05-07,TEX@NYY,,totals,UNDER 8.5,0.5722,1.709,1.9615,-104,fanduel,12.25,5.0,2u,,2026-05-07T16:35:00Z
+projection,2026-05-07,CLE@KC,,totals,UNDER 9.0,0.5578,1.76,2.0,100,fanduel,11.56,5.0,2u,,2026-05-07T18:10:00Z
+projection,2026-05-07,NYM@COL,,run_line,COL,0.5998,1.653,1.7812,-128,fanduel,6.83,4.97,2u,,2026-05-07T19:10:00Z
 projection,2026-05-07,CIN@CHC,,run_line,CIN,0.5807,1.709,1.8,-125,fanduel,4.54,2.39,1u,3.31,2026-05-07T18:20:00Z
-projection,2026-05-07,ATH@PHI,,totals,UNDER 9.0,0.5272,1.878,1.9524,-105,fanduel,2.93,2.08,1u,,2026-05-07T22:40:00Z
+projection,2026-05-07,MIN@WSH,,moneyline,WSH,0.5474,1.727,1.9091,-110,fanduel,4.5,5.0,2u,,2026-05-07T17:05:00Z
+projection,2026-05-07,STL@SD,,run_line,STL,0.6007,1.65,1.7246,-138,fanduel,3.6,3.11,2u,,2026-05-08T02:10:00Z
 backfill,2026-05-07,PIT@AZ,,moneyline,PIT,0.5324,1.805,1.9259,-108,fanduel,2.53,3.62,2u,,2026-05-07T19:40:00Z
-backfill,2026-05-07,STL@SD,,run_line,STL,0.6007,1.65,1.7042,-142,fanduel,2.37,2.32,1u,,2026-05-08T02:10:00Z
+backfill,2026-05-07,MIN@WSH,,totals,OVER 9.0,0.5366,1.84,1.9091,-110,fanduel,2.43,2.07,1u,,2026-05-07T17:05:00Z
+backfill,2026-05-07,BAL@MIA,,totals,UNDER 8.5,0.5408,1.825,1.8929,-112,fanduel,2.37,2.09,1u,,2026-05-07T22:40:00Z
 backfill,2026-05-07,NYM@COL,,totals,UNDER 11.0,0.5578,1.76,1.8197,-122,fanduel,1.5,2.07,1u,,2026-05-07T19:10:00Z
-backfill,2026-05-07,BAL@MIA,,totals,UNDER 8.5,0.5408,1.825,1.8696,-115,fanduel,1.11,1.41,0.5u,,2026-05-07T22:40:00Z
-backfill,2026-05-07,MIN@WSH,,totals,OVER 9.0,0.5281,1.877,1.9091,-110,fanduel,0.81,0.94,0.5u,,2026-05-07T17:05:00Z
+backfill,2026-05-07,ATH@PHI,,totals,UNDER 9.0,0.5196,1.913,1.9524,-105,fanduel,1.44,1.08,0.5u,,2026-05-07T22:40:00Z
+backfill,2026-05-07,TB@BOS,,totals,UNDER 8.5,0.5476,1.8,1.8197,-122,fanduel,-0.35,0.68,0.5u,,2026-05-07T23:10:00Z
 backfill,2026-05-07,BAL@MIA,,moneyline,MIA,0.5324,1.805,1.8333,-120,fanduel,-2.4,0.94,0.5u,,2026-05-07T22:40:00Z
-backfill,2026-05-07,TEX@NYY,,moneyline,NYY,0.5558,1.686,1.7042,-142,fanduel,-5.28,0.75,0.5u,,2026-05-07T16:35:00Z
-backfill,2026-05-07,CLE@KC,,run_line,CLE,0.5874,1.689,1.6098,-164,fanduel,-5.44,0.0,PASS,,2026-05-07T18:10:00Z
-backfill,2026-05-07,ATH@PHI,,moneyline,PHI,0.527,1.835,1.7692,-130,fanduel,-6.76,0.0,PASS,,2026-05-07T22:40:00Z
-backfill,2026-05-07,TB@BOS,,moneyline,BOS,0.5024,1.984,1.8333,-120,fanduel,-7.9,0.0,PASS,,2026-05-07T23:10:00Z
-backfill,2026-05-07,TB@BOS,,run_line,TB,0.6225,1.59,1.4762,-210,fanduel,-8.1,0.0,PASS,,2026-05-07T23:10:00Z
-backfill,2026-05-07,PIT@AZ,,run_line,AZ,0.5846,1.698,1.5495,-182,fanduel,-9.42,0.0,PASS,,2026-05-07T19:40:00Z
-backfill,2026-05-07,ATH@PHI,,run_line,ATH,0.5921,1.675,1.5208,-192,fanduel,-9.95,0.0,PASS,,2026-05-07T22:40:00Z
+backfill,2026-05-07,ATH@PHI,,moneyline,PHI,0.5276,1.832,1.7937,-126,fanduel,-5.36,0.0,PASS,,2026-05-07T22:40:00Z
+backfill,2026-05-07,TEX@NYY,,moneyline,NYY,0.5564,1.684,1.6944,-144,fanduel,-5.72,0.47,PASS,,2026-05-07T16:35:00Z
+backfill,2026-05-07,CLE@KC,,run_line,CLE,0.5874,1.689,1.6024,-166,fanduel,-5.88,0.0,PASS,,2026-05-07T18:10:00Z
+backfill,2026-05-07,TB@BOS,,moneyline,BOS,0.5024,1.984,1.8621,-116,fanduel,-6.45,0.0,PASS,,2026-05-07T23:10:00Z
+backfill,2026-05-07,ATH@PHI,,run_line,ATH,0.5912,1.678,1.5319,-188,fanduel,-9.43,0.0,PASS,,2026-05-07T22:40:00Z
+backfill,2026-05-07,PIT@AZ,,run_line,AZ,0.5846,1.698,1.5435,-184,fanduel,-9.77,0.0,PASS,,2026-05-07T19:40:00Z
 backfill,2026-05-07,CLE@KC,,moneyline,KC,0.5306,1.815,1.6944,-144,fanduel,-10.1,0.0,PASS,,2026-05-07T18:10:00Z
+backfill,2026-05-07,STL@SD,,totals,OVER 8.0,0.4617,2.198,1.9091,-110,fanduel,-11.85,0.0,PASS,,2026-05-08T02:10:00Z
+backfill,2026-05-07,TEX@NYY,,run_line,TEX,0.5542,1.795,1.5882,-170,fanduel,-11.99,0.0,PASS,,2026-05-07T16:35:00Z
 backfill,2026-05-07,NYM@COL,,moneyline,NYM,0.521,1.869,1.6757,-148,fanduel,-12.7,0.0,PASS,,2026-05-07T19:10:00Z
-backfill,2026-05-07,STL@SD,,totals,OVER 8.0,0.4567,2.226,1.9091,-110,fanduel,-12.82,0.0,PASS,,2026-05-08T02:10:00Z
-backfill,2026-05-07,TEX@NYY,,run_line,TEX,0.5551,1.792,1.5682,-176,fanduel,-12.95,0.0,PASS,,2026-05-07T16:35:00Z
 backfill,2026-05-07,PIT@AZ,,totals,OVER 9.0,0.426,2.423,1.9091,-110,fanduel,-18.66,0.0,PASS,,2026-05-07T19:40:00Z
 backfill,2026-05-07,STL@SD,,moneyline,SD,0.5198,1.876,1.5618,-178,fanduel,-18.82,0.0,PASS,,2026-05-08T02:10:00Z
 backfill,2026-05-07,CIN@CHC,,moneyline,CHC,0.536,1.786,1.5,-200,fanduel,-19.6,0.0,PASS,,2026-05-07T18:20:00Z
-backfill,2026-05-07,MIN@WSH,,run_line,MIN,0.5665,1.754,,,,,4.85,2u,,2026-05-07T17:05:00Z
+backfill,2026-05-07,MIN@WSH,,run_line,MIN,0.5655,1.757,,,,,4.74,2u,,2026-05-07T17:05:00Z
 backfill,2026-05-07,BAL@MIA,,run_line,BAL,0.5855,1.695,,,,,5.0,2u,,2026-05-07T22:40:00Z
+backfill,2026-05-07,TB@BOS,,run_line,TB,0.6216,1.592,,,,,5.0,2u,,2026-05-07T23:10:00Z

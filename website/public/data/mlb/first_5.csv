@@ -1,14 +1,14 @@
 section,date,away,home,status,conviction_pct,away_sp_name,home_sp_name,away_sp_factor,home_sp_factor,f5_away_proj,f5_home_proj,f5_total_proj,f5_pick,f5_win_prob,model_prob,fair_odds_dec,kelly_pct,kelly_advice,status_reason,f5_away,f5_home,f5_total,f5_winner
-projection,2026-05-07,TEX,NYY,PASS,53.6,,,,,2.08,2.5,4.59,NYY,0.55,0.536,1.818,2.75,1u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-07,MIN,WSH,PASS,50.6,,,,,2.76,2.82,5.58,WSH,0.508,0.5058,1.969,0.0,PASS,Market gated off (Brier 0.2472),,,,
-projection,2026-05-07,CLE,KC,PASS,52.4,,,,,2.17,2.46,4.63,KC,0.534,0.5245,1.873,1.07,0.5u,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,TEX,NYY,PASS,53.6,,,,,2.09,2.52,4.61,NYY,0.55,0.536,1.818,2.75,1u,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,MIN,WSH,PASS,50.6,,,,,2.77,2.84,5.61,WSH,0.508,0.5058,1.969,0.0,PASS,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,CLE,KC,PASS,52.4,,,,,2.18,2.47,4.64,KC,0.534,0.5245,1.873,1.07,0.5u,Market gated off (Brier 0.2472),,,,
 projection,2026-05-07,CIN,CHC,PASS,53.2,,,,,2.04,2.42,4.46,CHC,0.544,0.5317,1.838,2.12,1u,Market gated off (Brier 0.2472),,,,
 projection,2026-05-07,NYM,COL,PASS,51.7,,,,,3.02,2.82,5.84,NYM,0.524,0.5173,1.908,0.02,PASS,Market gated off (Brier 0.2472),,,,
 projection,2026-05-07,PIT,AZ,PASS,54.7,,,,,2.65,2.1,4.74,PIT,0.565,0.5468,1.77,4.32,2u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-07,ATH,PHI,PASS,51.8,,,,,2.49,2.28,4.78,ATH,0.525,0.518,1.905,0.12,PASS,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,ATH,PHI,PASS,51.8,,,,,2.51,2.3,4.8,ATH,0.525,0.518,1.905,0.12,PASS,Market gated off (Brier 0.2472),,,,
 projection,2026-05-07,BAL,MIA,PASS,52.8,,,,,2.2,2.53,4.73,MIA,0.539,0.5281,1.855,1.59,1u,Market gated off (Brier 0.2472),,,,
-projection,2026-05-07,TB,BOS,PASS,50.4,,,,,2.43,2.48,4.9,BOS,0.506,0.5043,1.976,0.0,PASS,Market gated off (Brier 0.2472),,,,
-projection,2026-05-07,STL,SD,PASS,51.8,,,,,2.21,2.42,4.63,SD,0.525,0.518,1.905,0.12,PASS,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,TB,BOS,PASS,50.4,,,,,2.45,2.5,4.95,BOS,0.506,0.5043,1.976,0.0,PASS,Market gated off (Brier 0.2472),,,,
+projection,2026-05-07,STL,SD,PASS,51.8,,,,,2.22,2.42,4.64,SD,0.525,0.518,1.905,0.12,PASS,Market gated off (Brier 0.2472),,,,
 backfill,2026-05-06,TOR,TB,,,,,,,,,,,,,,,,,0,2,2,TB
 backfill,2026-05-06,MIL,STL,,,,,,,,,,,,,,,,,5,0,5,MIL
 backfill,2026-05-06,LAD,HOU,,,,,,,,,,,,,,,,,10,1,11,LAD

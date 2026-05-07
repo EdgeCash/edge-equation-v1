@@ -1,0 +1,33 @@
+{
+  "player": "Blake Dunn",
+  "rows": [
+    {
+      "date": "2026-03-15",
+      "opponent": "SEA",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 3,
+        "AB": 3,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 1
+      }
+    },
+    {
+      "date": "2026-03-13",
+      "opponent": "SF",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 3,
+        "AB": 2,
+        "H": 0,
+        "HR": 0,
+        "BB": 1,
+        "K": 1
+      }
+    }
+  ]
+}

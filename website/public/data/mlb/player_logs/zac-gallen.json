@@ -1,0 +1,135 @@
+{
+  "player": "Zac Gallen",
+  "rows": [
+    {
+      "date": "2026-05-01",
+      "opponent": "CHC",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 21,
+        "H": 7,
+        "HR": 0,
+        "BB": 3,
+        "K": 3
+      }
+    },
+    {
+      "date": "2026-04-25",
+      "opponent": "SD",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 10,
+        "H": 1,
+        "HR": 0,
+        "BB": 0,
+        "K": 3
+      }
+    },
+    {
+      "date": "2026-04-18",
+      "opponent": "TOR",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 25,
+        "H": 9,
+        "HR": 0,
+        "BB": 0,
+        "K": 3
+      }
+    },
+    {
+      "date": "2026-04-12",
+      "opponent": "PHI",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 22,
+        "H": 8,
+        "HR": 1,
+        "BB": 1,
+        "K": 2
+      }
+    },
+    {
+      "date": "2026-04-07",
+      "opponent": "NYM",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 23,
+        "H": 5,
+        "HR": 0,
+        "BB": 4,
+        "K": 5
+      }
+    },
+    {
+      "date": "2026-04-01",
+      "opponent": "DET",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 21,
+        "H": 4,
+        "HR": 0,
+        "BB": 0,
+        "K": 2
+      }
+    },
+    {
+      "date": "2026-03-26",
+      "opponent": "LAD",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 19,
+        "H": 5,
+        "HR": 1,
+        "BB": 2,
+        "K": 2
+      }
+    },
+    {
+      "date": "2026-03-20",
+      "opponent": "MIL",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 21,
+        "H": 9,
+        "HR": 3,
+        "BB": 2,
+        "K": 0
+      }
+    },
+    {
+      "date": "2026-03-14",
+      "opponent": "SF",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 15,
+        "H": 7,
+        "HR": 1,
+        "BB": 1,
+        "K": 1
+      }
+    },
+    {
+      "date": "2026-03-09",
+      "opponent": "SEA",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 9,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 3
+      }
+    }
+  ]
+}

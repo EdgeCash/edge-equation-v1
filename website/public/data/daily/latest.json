@@ -1,11 +1,569 @@
 {
   "version": 1,
-  "generated_at": "2026-05-07T11:35:40+00:00",
-  "footer": "Picks shown only for games not yet started \u00b7 Updated: 2026-05-07 06:35 CDT | Data as of 11:35 UTC",
+  "generated_at": "2026-05-07T13:27:03+00:00",
+  "footer": "Picks shown only for games not yet started \u00b7 Updated: 2026-05-07 08:27 CDT | Data as of 13:27 UTC",
   "date": "2026-05-07",
   "source": "run_daily.py",
   "notes": "Public-testing release. Manual operator trigger. Lineups + weather + umpires confirmed at publish time.",
   "picks": [
+    {
+      "id": "0-Hits-bo-bichette-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Bo Bichette \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -134.0
+      },
+      "fair_prob": "0.6898",
+      "edge": "0.1547",
+      "kelly": "0.0387",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "69.0% Under \u00b7 \u03bb=0.98 \u00b7 edge +15.5pp \u00b7 conf 69%",
+      "event_time": "2026-05-07T19:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-rhett-lowder-3.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Rhett Lowder \u00b7 Strikeouts Over 3.5",
+      "line": {
+        "number": "3.5",
+        "odds": -107.0
+      },
+      "fair_prob": "0.6251",
+      "edge": "0.1375",
+      "kelly": "0.0344",
+      "grade": "A+",
+      "tier": "ELITE",
+      "notes": "62.5% Over \u00b7 \u03bb=4.58 \u00b7 edge +13.8pp \u00b7 conf 55%",
+      "event_time": "2026-05-07T18:21:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-shea-langeliers-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Shea Langeliers \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 118.0
+      },
+      "fair_prob": "0.5904",
+      "edge": "0.1616",
+      "kelly": "0.0404",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "59.0% Over \u00b7 \u03bb=2.34 \u00b7 edge +16.2pp \u00b7 conf 68%",
+      "event_time": "2026-05-07T22:41:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-jose-quintana-3.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Jose Quintana \u00b7 Strikeouts Over 3.5",
+      "line": {
+        "number": "3.5",
+        "odds": 132.0
+      },
+      "fair_prob": "0.5681",
+      "edge": "0.1607",
+      "kelly": "0.0402",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "56.8% Over \u00b7 \u03bb=4.29 \u00b7 edge +16.1pp \u00b7 conf 50%",
+      "event_time": "2026-05-07T19:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-ildemaro-vargas-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Ildemaro Vargas \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 141.0
+      },
+      "fair_prob": "0.5479",
+      "edge": "0.1593",
+      "kelly": "0.0398",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "54.8% Over \u00b7 \u03bb=2.15 \u00b7 edge +15.9pp \u00b7 conf 65%",
+      "event_time": "2026-05-07T19:41:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-christian-scott-4.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Christian Scott \u00b7 Strikeouts Over 4.5",
+      "line": {
+        "number": "4.5",
+        "odds": 109.0
+      },
+      "fair_prob": "0.5774",
+      "edge": "0.1268",
+      "kelly": "0.0317",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "57.7% Over \u00b7 \u03bb=5.36 \u00b7 edge +12.7pp \u00b7 conf 40%",
+      "event_time": "2026-05-07T19:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-mark-vientos-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Mark Vientos \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -205.0
+      },
+      "fair_prob": "0.7476",
+      "edge": "0.1179",
+      "kelly": "0.0295",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "74.8% Under \u00b7 \u03bb=0.86 \u00b7 edge +11.8pp \u00b7 conf 63%",
+      "event_time": "2026-05-07T19:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-trea-turner-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Trea Turner \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -197.0
+      },
+      "fair_prob": "0.7368",
+      "edge": "0.1159",
+      "kelly": "0.0290",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "73.7% Under \u00b7 \u03bb=0.89 \u00b7 edge +11.6pp \u00b7 conf 69%",
+      "event_time": "2026-05-07T22:41:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-marcus-semien-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Marcus Semien \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -206.0
+      },
+      "fair_prob": "0.7455",
+      "edge": "0.1154",
+      "kelly": "0.0289",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "74.5% Under \u00b7 \u03bb=0.87 \u00b7 edge +11.5pp \u00b7 conf 68%",
+      "event_time": "2026-05-07T19:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-samuel-basallo-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Samuel Basallo \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 142.0
+      },
+      "fair_prob": "0.4930",
+      "edge": "0.1062",
+      "kelly": "0.0265",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "49.3% Over \u00b7 \u03bb=1.84 \u00b7 edge +10.6pp \u00b7 conf 65%",
+      "event_time": "2026-05-07T22:41:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-vinnie-pasquantino-0.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Vinnie Pasquantino \u00b7 Hits Under 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 193.0
+      },
+      "fair_prob": "0.4254",
+      "edge": "0.1049",
+      "kelly": "0.0262",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "42.5% Under \u00b7 \u03bb=0.78 \u00b7 edge +10.5pp \u00b7 conf 67%",
+      "event_time": "2026-05-07T18:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-bo-bichette-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Bo Bichette \u00b7 Total Bases Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 119.0
+      },
+      "fair_prob": "0.5280",
+      "edge": "0.1015",
+      "kelly": "0.0254",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "52.8% Under \u00b7 \u03bb=1.43 \u00b7 edge +10.1pp \u00b7 conf 69%",
+      "event_time": "2026-05-07T19:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-steven-kwan-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Steven Kwan \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -251.0
+      },
+      "fair_prob": "0.7697",
+      "edge": "0.0989",
+      "kelly": "0.0247",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "77.0% Under \u00b7 \u03bb=0.82 \u00b7 edge +9.9pp \u00b7 conf 68%",
+      "event_time": "2026-05-07T18:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-juan-soto-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Juan Soto \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -185.0
+      },
+      "fair_prob": "0.7055",
+      "edge": "0.0984",
+      "kelly": "0.0246",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "70.5% Under \u00b7 \u03bb=0.99 \u00b7 edge +9.8pp \u00b7 conf 61%",
+      "event_time": "2026-05-07T19:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-adley-rutschman-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Adley Rutschman \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 123.0
+      },
+      "fair_prob": "0.5170",
+      "edge": "0.0978",
+      "kelly": "0.0244",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "51.7% Over \u00b7 \u03bb=1.91 \u00b7 edge +9.8pp \u00b7 conf 62%",
+      "event_time": "2026-05-07T22:41:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-mitch-keller-3.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Mitch Keller \u00b7 Strikeouts Over 3.5",
+      "line": {
+        "number": "3.5",
+        "odds": -162.0
+      },
+      "fair_prob": "0.6807",
+      "edge": "0.0968",
+      "kelly": "0.0242",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "68.1% Over \u00b7 \u03bb=4.85 \u00b7 edge +9.7pp \u00b7 conf 54%",
+      "event_time": "2026-05-07T19:41:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-slade-cecconi-3.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Slade Cecconi \u00b7 Strikeouts Over 3.5",
+      "line": {
+        "number": "3.5",
+        "odds": -142.0
+      },
+      "fair_prob": "0.6483",
+      "edge": "0.0939",
+      "kelly": "0.0235",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "64.8% Over \u00b7 \u03bb=4.63 \u00b7 edge +9.4pp \u00b7 conf 54%",
+      "event_time": "2026-05-07T18:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-blake-dunn-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Blake Dunn \u00b7 Hits Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": -107.0
+      },
+      "fair_prob": "0.5761",
+      "edge": "0.0932",
+      "kelly": "0.0233",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "57.6% Over \u00b7 \u03bb=0.93 \u00b7 edge +9.3pp \u00b7 conf 34%",
+      "event_time": "2026-05-07T18:21:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Hits-brett-baty-1.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_HITS",
+      "selection": "Brett Baty \u00b7 Hits Under 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": -225.0
+      },
+      "fair_prob": "0.7416",
+      "edge": "0.0927",
+      "kelly": "0.0232",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "74.2% Under \u00b7 \u03bb=0.90 \u00b7 edge +9.3pp \u00b7 conf 66%",
+      "event_time": "2026-05-07T19:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-aaron-judge-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Aaron Judge \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 102.0
+      },
+      "fair_prob": "0.5529",
+      "edge": "0.0900",
+      "kelly": "0.0225",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "55.3% Over \u00b7 \u03bb=2.03 \u00b7 edge +9.0pp \u00b7 conf 68%",
+      "event_time": "2026-05-07T16:36:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-blake-dunn-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Blake Dunn \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 315.0
+      },
+      "fair_prob": "0.3160",
+      "edge": "0.0899",
+      "kelly": "0.0225",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "31.6% Over \u00b7 \u03bb=0.47 \u00b7 edge +9.0pp \u00b7 conf 34%",
+      "event_time": "2026-05-07T18:21:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-zac-gallen-4.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Zac Gallen \u00b7 Strikeouts Under 4.5",
+      "line": {
+        "number": "4.5",
+        "odds": -107.0
+      },
+      "fair_prob": "0.5770",
+      "edge": "0.0895",
+      "kelly": "0.0224",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "57.7% Under \u00b7 \u03bb=4.11 \u00b7 edge +9.0pp \u00b7 conf 53%",
+      "event_time": "2026-05-07T19:41:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-mackenzie-gore-6.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "MacKenzie Gore \u00b7 Strikeouts Under 6.5",
+      "line": {
+        "number": "6.5",
+        "odds": -149.0
+      },
+      "fair_prob": "0.6543",
+      "edge": "0.0893",
+      "kelly": "0.0223",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "65.4% Under \u00b7 \u03bb=5.51 \u00b7 edge +8.9pp \u00b7 conf 53%",
+      "event_time": "2026-05-07T16:36:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-josh-jung-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Josh Jung \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 122.0
+      },
+      "fair_prob": "0.5105",
+      "edge": "0.0890",
+      "kelly": "0.0223",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "51.1% Over \u00b7 \u03bb=1.87 \u00b7 edge +8.9pp \u00b7 conf 66%",
+      "event_time": "2026-05-07T16:36:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-chase-delauter-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Chase DeLauter \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 113.0
+      },
+      "fair_prob": "0.5270",
+      "edge": "0.0880",
+      "kelly": "0.0220",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "52.7% Over \u00b7 \u03bb=1.93 \u00b7 edge +8.8pp \u00b7 conf 67%",
+      "event_time": "2026-05-07T18:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-K-shota-imanaga-6.5-UNDER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_K",
+      "selection": "Shota Imanaga \u00b7 Strikeouts Under 6.5",
+      "line": {
+        "number": "6.5",
+        "odds": -146.0
+      },
+      "fair_prob": "0.6472",
+      "edge": "0.0877",
+      "kelly": "0.0219",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "64.7% Under \u00b7 \u03bb=5.56 \u00b7 edge +8.8pp \u00b7 conf 54%",
+      "event_time": "2026-05-07T18:21:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-taylor-walls-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Taylor Walls \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 307.0
+      },
+      "fair_prob": "0.3177",
+      "edge": "0.0873",
+      "kelly": "0.0218",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "31.8% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.7pp \u00b7 conf 61%",
+      "event_time": "2026-05-07T23:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-RBI-evan-carter-0.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_RBI",
+      "selection": "Evan Carter \u00b7 RBIs Over 0.5",
+      "line": {
+        "number": "0.5",
+        "odds": 294.0
+      },
+      "fair_prob": "0.3207",
+      "edge": "0.0829",
+      "kelly": "0.0207",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "32.1% Over \u00b7 \u03bb=0.47 \u00b7 edge +8.3pp \u00b7 conf 67%",
+      "event_time": "2026-05-07T16:36:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-elly-de-la-cruz-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Elly De La Cruz \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 135.0
+      },
+      "fair_prob": "0.4790",
+      "edge": "0.0807",
+      "kelly": "0.0202",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "47.9% Over \u00b7 \u03bb=1.75 \u00b7 edge +8.1pp \u00b7 conf 69%",
+      "event_time": "2026-05-07T18:21:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "0-Total_Bases-troy-johnston-1.5-OVER",
+      "sport": "MLB",
+      "market_type": "PLAYER_PROP_TOTAL_BASES",
+      "selection": "Troy Johnston \u00b7 Total Bases Over 1.5",
+      "line": {
+        "number": "1.5",
+        "odds": 116.0
+      },
+      "fair_prob": "0.5124",
+      "edge": "0.0794",
+      "kelly": "0.0199",
+      "grade": "B",
+      "tier": "MODERATE",
+      "notes": "51.2% Over \u00b7 \u03bb=1.86 \u00b7 edge +7.9pp \u00b7 conf 66%",
+      "event_time": "2026-05-07T19:11:00Z",
+      "game_id": "0"
+    },
+    {
+      "id": "mlb-legacy-cin-chc-totals-under-8-5",
+      "sport": "MLB",
+      "market_type": "TOTAL",
+      "selection": "UNDER 8.5 \u00b7 CIN@CHC",
+      "line": {
+        "number": "8.5",
+        "odds": -102.0
+      },
+      "fair_prob": "0.5706",
+      "edge": "0.1299",
+      "kelly": "0.0361",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "",
+      "event_time": "2026-05-07T18:20:00Z",
+      "game_id": "CIN@CHC"
+    },
     {
       "id": "mlb-legacy-tex-nyy-totals-under-8-5",
       "sport": "MLB",
@@ -13,10 +571,10 @@
       "selection": "UNDER 8.5 \u00b7 TEX@NYY",
       "line": {
         "number": "8.5",
-        "odds": -105.0
+        "odds": -104.0
       },
-      "fair_prob": "0.5790",
-      "edge": "0.1305",
+      "fair_prob": "0.5722",
+      "edge": "0.1225",
       "kelly": "0.0500",
       "grade": "A",
       "tier": "STRONG",
@@ -33,8 +591,8 @@
         "number": "9.0",
         "odds": 100.0
       },
-      "fair_prob": "0.5595",
-      "edge": "0.1190",
+      "fair_prob": "0.5578",
+      "edge": "0.1156",
       "kelly": "0.0500",
       "grade": "A",
       "tier": "STRONG",
@@ -43,76 +601,22 @@
       "game_id": "CLE@KC"
     },
     {
-      "id": "mlb-legacy-cin-chc-totals-under-8-5",
-      "sport": "MLB",
-      "market_type": "TOTAL",
-      "selection": "UNDER 8.5 \u00b7 CIN@CHC",
-      "line": {
-        "number": "8.5",
-        "odds": -112.0
-      },
-      "fair_prob": "0.5706",
-      "edge": "0.0800",
-      "kelly": "0.0361",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "",
-      "event_time": "2026-05-07T18:20:00Z",
-      "game_id": "CIN@CHC"
-    },
-    {
       "id": "mlb-legacy-nym-col-run_line-col",
       "sport": "MLB",
       "market_type": "RUN_LINE",
       "selection": "COL \u00b7 NYM@COL",
       "line": {
         "number": null,
-        "odds": -126.0
+        "odds": -128.0
       },
       "fair_prob": "0.5998",
-      "edge": "0.0758",
-      "kelly": "0.0500",
+      "edge": "0.0683",
+      "kelly": "0.0497",
       "grade": "A",
       "tier": "STRONG",
       "notes": "",
       "event_time": "2026-05-07T19:10:00Z",
       "game_id": "NYM@COL"
-    },
-    {
-      "id": "mlb-legacy-min-wsh-moneyline-wsh",
-      "sport": "MLB",
-      "market_type": "ML",
-      "selection": "WSH \u00b7 MIN@WSH",
-      "line": {
-        "number": null,
-        "odds": -108.0
-      },
-      "fair_prob": "0.5468",
-      "edge": "0.0531",
-      "kelly": "0.0500",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "",
-      "event_time": "2026-05-07T17:05:00Z",
-      "game_id": "MIN@WSH"
-    },
-    {
-      "id": "mlb-legacy-tb-bos-totals-under-8-5",
-      "sport": "MLB",
-      "market_type": "TOTAL",
-      "selection": "UNDER 8.5 \u00b7 TB@BOS",
-      "line": {
-        "number": "8.5",
-        "odds": -115.0
-      },
-      "fair_prob": "0.5612",
-      "edge": "0.0492",
-      "kelly": "0.0397",
-      "grade": "A",
-      "tier": "STRONG",
-      "notes": "",
-      "event_time": "2026-05-07T23:10:00Z",
-      "game_id": "TB@BOS"
     },
     {
       "id": "mlb-legacy-cin-chc-run_line-cin",
@@ -133,22 +637,40 @@
       "game_id": "CIN@CHC"
     },
     {
-      "id": "mlb-legacy-ath-phi-totals-under-9-0",
+      "id": "mlb-legacy-min-wsh-moneyline-wsh",
       "sport": "MLB",
-      "market_type": "TOTAL",
-      "selection": "UNDER 9.0 \u00b7 ATH@PHI",
+      "market_type": "ML",
+      "selection": "WSH \u00b7 MIN@WSH",
       "line": {
-        "number": "9.0",
-        "odds": -105.0
+        "number": null,
+        "odds": -110.0
       },
-      "fair_prob": "0.5272",
-      "edge": "0.0293",
-      "kelly": "0.0208",
-      "grade": "B",
-      "tier": "MODERATE",
+      "fair_prob": "0.5474",
+      "edge": "0.0450",
+      "kelly": "0.0500",
+      "grade": "A",
+      "tier": "STRONG",
       "notes": "",
-      "event_time": "2026-05-07T22:40:00Z",
-      "game_id": "ATH@PHI"
+      "event_time": "2026-05-07T17:05:00Z",
+      "game_id": "MIN@WSH"
+    },
+    {
+      "id": "mlb-legacy-stl-sd-run_line-stl",
+      "sport": "MLB",
+      "market_type": "RUN_LINE",
+      "selection": "STL \u00b7 STL@SD",
+      "line": {
+        "number": null,
+        "odds": -138.0
+      },
+      "fair_prob": "0.6007",
+      "edge": "0.0360",
+      "kelly": "0.0311",
+      "grade": "A",
+      "tier": "STRONG",
+      "notes": "",
+      "event_time": "2026-05-08T02:10:00Z",
+      "game_id": "STL@SD"
     }
   ],
   "parlays": {
@@ -159,37 +681,37 @@
         "id": "2026-05-07-player_props-parlay-1",
         "universe": "player_props",
         "n_legs": 3,
-        "combined_decimal_odds": 12.102020000000003,
-        "combined_american_odds": 1110.2020000000002,
-        "fair_decimal_odds": 5.54016620498615,
-        "joint_prob_corr": "0.1805",
-        "joint_prob_independent": "0.1857",
-        "implied_prob": "0.0826",
-        "edge_pp": "9.7869",
-        "ev_units": "0.5922",
+        "combined_decimal_odds": 9.763737313432836,
+        "combined_american_odds": 876.3737313432836,
+        "fair_decimal_odds": 4.746084480303749,
+        "joint_prob_corr": "0.2107",
+        "joint_prob_independent": "0.2147",
+        "implied_prob": "0.1024",
+        "edge_pp": "10.8280",
+        "ev_units": "0.5286",
         "stake_units": 0.5,
         "note": "3\u20136 legs only \u2014 built from proven edges only.",
         "legs": [
           {
             "market_type": "Total_Bases",
             "selection": "Ildemaro Vargas Total Bases Over 1.5",
-            "line_odds": 145.0,
-            "side_probability": "0.5502",
+            "line_odds": 141.0,
+            "side_probability": "0.5479",
             "tier": "STRONG"
           },
           {
             "market_type": "K",
             "selection": "Jose Quintana Strikeouts Over 3.5",
-            "line_odds": 133.0,
-            "side_probability": "0.5676",
+            "line_odds": 132.0,
+            "side_probability": "0.5681",
             "tier": "STRONG"
           },
           {
-            "market_type": "Total_Bases",
-            "selection": "Shea Langeliers Total Bases Over 1.5",
-            "line_odds": 112.0,
-            "side_probability": "0.5946",
-            "tier": "STRONG"
+            "market_type": "Hits",
+            "selection": "Bo Bichette Hits Under 1.5",
+            "line_odds": -134.0,
+            "side_probability": "0.6898",
+            "tier": "ELITE"
           }
         ]
       },
@@ -197,36 +719,36 @@
         "id": "2026-05-07-player_props-parlay-2",
         "universe": "player_props",
         "n_legs": 3,
-        "combined_decimal_odds": 9.845094202898553,
-        "combined_american_odds": 884.5094202898553,
-        "fair_decimal_odds": 4.701457451810061,
-        "joint_prob_corr": "0.2127",
-        "joint_prob_independent": "0.2170",
-        "implied_prob": "0.1016",
-        "edge_pp": "11.1127",
-        "ev_units": "0.5470",
+        "combined_decimal_odds": 10.816620560747666,
+        "combined_american_odds": 981.6620560747665,
+        "fair_decimal_odds": 5.2631578947368425,
+        "joint_prob_corr": "0.1900",
+        "joint_prob_independent": "0.1946",
+        "implied_prob": "0.0925",
+        "edge_pp": "9.7550",
+        "ev_units": "0.5276",
         "stake_units": 0.5,
         "note": "3\u20136 legs only \u2014 built from proven edges only.",
         "legs": [
           {
             "market_type": "Total_Bases",
             "selection": "Ildemaro Vargas Total Bases Over 1.5",
-            "line_odds": 145.0,
-            "side_probability": "0.5502",
+            "line_odds": 141.0,
+            "side_probability": "0.5479",
             "tier": "STRONG"
           },
           {
             "market_type": "K",
             "selection": "Jose Quintana Strikeouts Over 3.5",
-            "line_odds": 133.0,
-            "side_probability": "0.5676",
+            "line_odds": 132.0,
+            "side_probability": "0.5681",
             "tier": "STRONG"
           },
           {
-            "market_type": "Hits",
-            "selection": "Bo Bichette Hits Under 1.5",
-            "line_odds": -138.0,
-            "side_probability": "0.6950",
+            "market_type": "K",
+            "selection": "Rhett Lowder Strikeouts Over 3.5",
+            "line_odds": -107.0,
+            "side_probability": "0.6251",
             "tier": "ELITE"
           }
         ]
@@ -235,37 +757,37 @@
         "id": "2026-05-07-player_props-parlay-3",
         "universe": "player_props",
         "n_legs": 3,
-        "combined_decimal_odds": 11.11516,
-        "combined_american_odds": 1011.516,
-        "fair_decimal_odds": 5.512679162072767,
-        "joint_prob_corr": "0.1814",
-        "joint_prob_independent": "0.1881",
-        "implied_prob": "0.0900",
-        "edge_pp": "9.1433",
-        "ev_units": "0.5081",
+        "combined_decimal_odds": 9.174546268656716,
+        "combined_american_odds": 817.4546268656716,
+        "fair_decimal_odds": 4.576659038901602,
+        "joint_prob_corr": "0.2185",
+        "joint_prob_independent": "0.2232",
+        "implied_prob": "0.1090",
+        "edge_pp": "10.9503",
+        "ev_units": "0.5023",
         "stake_units": 0.5,
         "note": "3\u20136 legs only \u2014 built from proven edges only.",
         "legs": [
           {
             "market_type": "Total_Bases",
             "selection": "Ildemaro Vargas Total Bases Over 1.5",
-            "line_odds": 145.0,
-            "side_probability": "0.5502",
+            "line_odds": 141.0,
+            "side_probability": "0.5479",
             "tier": "STRONG"
           },
           {
             "market_type": "Total_Bases",
             "selection": "Shea Langeliers Total Bases Over 1.5",
-            "line_odds": 112.0,
-            "side_probability": "0.5946",
+            "line_odds": 118.0,
+            "side_probability": "0.5904",
             "tier": "STRONG"
           },
           {
-            "market_type": "K",
-            "selection": "Christian Scott Strikeouts Over 4.5",
-            "line_odds": 114.0,
-            "side_probability": "0.5749",
-            "tier": "STRONG"
+            "market_type": "Hits",
+            "selection": "Bo Bichette Hits Under 1.5",
+            "line_odds": -134.0,
+            "side_probability": "0.6898",
+            "tier": "ELITE"
           }
         ]
       }

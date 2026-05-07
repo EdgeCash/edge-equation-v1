@@ -493,6 +493,36 @@
       "result": "PUSH",
       "units": 0.0,
       "graded_at": "2026-05-07T11:29:09.148489Z"
+    },
+    {
+      "pick_id": "2026-05-07|STL@SD|run_line|STL",
+      "date": "2026-05-07",
+      "matchup": "STL@SD",
+      "game_pk": 823306,
+      "game_time": "2026-05-08T02:10:00Z",
+      "bet_type": "run_line",
+      "pick": "STL",
+      "spec": {
+        "type": "run_line",
+        "team": "STL",
+        "point": -1.5
+      },
+      "model_prob": 0.6007,
+      "edge_pct_at_pick": 3.6,
+      "kelly_pct": 3.11,
+      "kelly_advice": "2u",
+      "pick_price_dec": 1.7246,
+      "pick_price_american": -138,
+      "book_at_pick": "fanduel",
+      "pick_taken_at": "2026-05-07T13:19:16.308273Z",
+      "odds_source": "the-odds-api",
+      "closing_price_dec": null,
+      "closing_price_american": null,
+      "closing_book": null,
+      "closing_recorded_at": null,
+      "clv_pct": null,
+      "result": null,
+      "units": null
     }
   ]
 }

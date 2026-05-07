@@ -1,0 +1,122 @@
+{
+  "player": "Mitch Keller",
+  "rows": [
+    {
+      "date": "2026-05-01",
+      "opponent": "CIN",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 26,
+        "H": 3,
+        "HR": 0,
+        "BB": 1,
+        "K": 6
+      }
+    },
+    {
+      "date": "2026-04-25",
+      "opponent": "MIL",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 22,
+        "H": 5,
+        "HR": 0,
+        "BB": 2,
+        "K": 6
+      }
+    },
+    {
+      "date": "2026-04-19",
+      "opponent": "TB",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 25,
+        "H": 5,
+        "HR": 0,
+        "BB": 0,
+        "K": 5
+      }
+    },
+    {
+      "date": "2026-04-14",
+      "opponent": "WSH",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 21,
+        "H": 6,
+        "HR": 1,
+        "BB": 5,
+        "K": 3
+      }
+    },
+    {
+      "date": "2026-04-08",
+      "opponent": "SD",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 22,
+        "H": 3,
+        "HR": 0,
+        "BB": 1,
+        "K": 4
+      }
+    },
+    {
+      "date": "2026-04-03",
+      "opponent": "BAL",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 26,
+        "H": 6,
+        "HR": 0,
+        "BB": 4,
+        "K": 4
+      }
+    },
+    {
+      "date": "2026-03-28",
+      "opponent": "NYM",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 21,
+        "H": 3,
+        "HR": 0,
+        "BB": 0,
+        "K": 3
+      }
+    },
+    {
+      "date": "2026-03-22",
+      "opponent": "BOS",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 15,
+        "H": 3,
+        "HR": 0,
+        "BB": 1,
+        "K": 5
+      }
+    },
+    {
+      "date": "2026-03-17",
+      "opponent": "HOU",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 19,
+        "H": 4,
+        "HR": 2,
+        "BB": 3,
+        "K": 6
+      }
+    }
+  ]
+}

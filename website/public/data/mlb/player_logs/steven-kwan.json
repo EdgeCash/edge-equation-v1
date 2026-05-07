@@ -1,0 +1,659 @@
+{
+  "player": "Steven Kwan",
+  "rows": [
+    {
+      "date": "2026-05-05",
+      "opponent": "KC",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 4,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.174,
+        "xSLG": 0.22
+      }
+    },
+    {
+      "date": "2026-05-04",
+      "opponent": "KC",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 4,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.091,
+        "xSLG": 0.172
+      }
+    },
+    {
+      "date": "2026-05-03",
+      "opponent": "ATH",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 4,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.099,
+        "xSLG": 0.144
+      }
+    },
+    {
+      "date": "2026-05-02",
+      "opponent": "ATH",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 6,
+        "AB": 4,
+        "H": 1,
+        "HR": 0,
+        "BB": 2,
+        "K": 1,
+        "xBA": 0.308,
+        "xSLG": 0.341
+      }
+    },
+    {
+      "date": "2026-05-01",
+      "opponent": "ATH",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 4,
+        "H": 2,
+        "HR": 0,
+        "BB": 1,
+        "K": 1,
+        "xBA": 0.488,
+        "xSLG": 0.567
+      }
+    },
+    {
+      "date": "2026-04-29",
+      "opponent": "TB",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 4,
+        "H": 1,
+        "HR": 0,
+        "BB": 1,
+        "K": 0,
+        "xBA": 0.414,
+        "xSLG": 0.474
+      }
+    },
+    {
+      "date": "2026-04-28",
+      "opponent": "TB",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 4,
+        "H": 1,
+        "HR": 0,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.066,
+        "xSLG": 0.079
+      }
+    },
+    {
+      "date": "2026-04-27",
+      "opponent": "TB",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 4,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 1,
+        "xBA": 0.102,
+        "xSLG": 0.168
+      }
+    },
+    {
+      "date": "2026-04-26",
+      "opponent": "TOR",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 5,
+        "H": 1,
+        "HR": 0,
+        "BB": 0,
+        "K": 2,
+        "xBA": 0.513,
+        "xSLG": 0.59
+      }
+    },
+    {
+      "date": "2026-04-22",
+      "opponent": "HOU",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 3,
+        "H": 1,
+        "HR": 0,
+        "BB": 1,
+        "K": 0,
+        "xBA": 0.115,
+        "xSLG": 0.125
+      }
+    },
+    {
+      "date": "2026-04-21",
+      "opponent": "HOU",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 3,
+        "H": 1,
+        "HR": 0,
+        "BB": 2,
+        "K": 0,
+        "xBA": 0.175,
+        "xSLG": 0.295
+      }
+    },
+    {
+      "date": "2026-04-20",
+      "opponent": "HOU",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 4,
+        "H": 0,
+        "HR": 0,
+        "BB": 1,
+        "K": 0,
+        "xBA": 0.153,
+        "xSLG": 0.298
+      }
+    },
+    {
+      "date": "2026-04-19",
+      "opponent": "BAL",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 5,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 1,
+        "xBA": 0.281,
+        "xSLG": 0.328
+      }
+    },
+    {
+      "date": "2026-04-18",
+      "opponent": "BAL",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 4,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 2,
+        "xBA": 0.036,
+        "xSLG": 0.042
+      }
+    },
+    {
+      "date": "2026-04-17",
+      "opponent": "BAL",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 4,
+        "H": 1,
+        "HR": 0,
+        "BB": 1,
+        "K": 0,
+        "xBA": 0.336,
+        "xSLG": 0.378
+      }
+    },
+    {
+      "date": "2026-04-16",
+      "opponent": "BAL",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 4,
+        "H": 2,
+        "HR": 0,
+        "BB": 0,
+        "K": 1,
+        "xBA": 0.628,
+        "xSLG": 0.72
+      }
+    },
+    {
+      "date": "2026-04-15",
+      "opponent": "STL",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 4,
+        "H": 1,
+        "HR": 0,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.208,
+        "xSLG": 0.254
+      }
+    },
+    {
+      "date": "2026-04-14",
+      "opponent": "STL",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 5,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.122,
+        "xSLG": 0.148
+      }
+    },
+    {
+      "date": "2026-04-13",
+      "opponent": "STL",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 5,
+        "H": 2,
+        "HR": 0,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.566,
+        "xSLG": 0.67
+      }
+    },
+    {
+      "date": "2026-04-11",
+      "opponent": "ATL",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 4,
+        "H": 0,
+        "HR": 0,
+        "BB": 1,
+        "K": 0,
+        "xBA": 0.157,
+        "xSLG": 0.183
+      }
+    },
+    {
+      "date": "2026-04-10",
+      "opponent": "ATL",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 4,
+        "H": 2,
+        "HR": 0,
+        "BB": 1,
+        "K": 1,
+        "xBA": 0.461,
+        "xSLG": 0.518
+      }
+    },
+    {
+      "date": "2026-04-08",
+      "opponent": "KC",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 4,
+        "H": 1,
+        "HR": 0,
+        "BB": 1,
+        "K": 1,
+        "xBA": 0.251,
+        "xSLG": 0.268
+      }
+    },
+    {
+      "date": "2026-04-07",
+      "opponent": "KC",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 4,
+        "H": 1,
+        "HR": 0,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.384,
+        "xSLG": 0.431
+      }
+    },
+    {
+      "date": "2026-04-06",
+      "opponent": "KC",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 4,
+        "H": 2,
+        "HR": 1,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.382,
+        "xSLG": 0.8
+      }
+    },
+    {
+      "date": "2026-04-05",
+      "opponent": "CHC",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 9,
+        "AB": 8,
+        "H": 1,
+        "HR": 0,
+        "BB": 1,
+        "K": 2,
+        "xBA": 0.096,
+        "xSLG": 0.118
+      }
+    },
+    {
+      "date": "2026-04-03",
+      "opponent": "CHC",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 3,
+        "H": 0,
+        "HR": 0,
+        "BB": 1,
+        "K": 1,
+        "xBA": 0.041,
+        "xSLG": 0.078
+      }
+    },
+    {
+      "date": "2026-04-01",
+      "opponent": "LAD",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 3,
+        "H": 0,
+        "HR": 0,
+        "BB": 1,
+        "K": 0,
+        "xBA": 0.251,
+        "xSLG": 0.298
+      }
+    },
+    {
+      "date": "2026-03-31",
+      "opponent": "LAD",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 2,
+        "H": 0,
+        "HR": 0,
+        "BB": 2,
+        "K": 0,
+        "xBA": 0.165,
+        "xSLG": 0.481
+      }
+    },
+    {
+      "date": "2026-03-30",
+      "opponent": "LAD",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 5,
+        "H": 3,
+        "HR": 0,
+        "BB": 0,
+        "K": 1,
+        "xBA": 0.434,
+        "xSLG": 0.479
+      }
+    },
+    {
+      "date": "2026-03-29",
+      "opponent": "SEA",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 3,
+        "AB": 3,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.174,
+        "xSLG": 0.199
+      }
+    },
+    {
+      "date": "2026-03-28",
+      "opponent": "SEA",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 5,
+        "H": 2,
+        "HR": 0,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.295,
+        "xSLG": 0.369
+      }
+    },
+    {
+      "date": "2026-03-27",
+      "opponent": "SEA",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 4,
+        "H": 2,
+        "HR": 0,
+        "BB": 0,
+        "K": 0,
+        "xBA": 0.333,
+        "xSLG": 0.373
+      }
+    },
+    {
+      "date": "2026-03-26",
+      "opponent": "SEA",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 5,
+        "AB": 5,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 2,
+        "xBA": 0.225,
+        "xSLG": 0.247
+      }
+    },
+    {
+      "date": "2026-03-23",
+      "opponent": "AZ",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 2,
+        "H": 0,
+        "HR": 0,
+        "BB": 2,
+        "K": 1
+      }
+    },
+    {
+      "date": "2026-03-22",
+      "opponent": "CIN",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 2,
+        "H": 0,
+        "HR": 0,
+        "BB": 2,
+        "K": 1
+      }
+    },
+    {
+      "date": "2026-03-20",
+      "opponent": "SEA",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 3,
+        "AB": 2,
+        "H": 0,
+        "HR": 0,
+        "BB": 1,
+        "K": 0
+      }
+    },
+    {
+      "date": "2026-03-19",
+      "opponent": "KC",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 3,
+        "H": 1,
+        "HR": 0,
+        "BB": 1,
+        "K": 1
+      }
+    },
+    {
+      "date": "2026-03-17",
+      "opponent": "CIN",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 3,
+        "AB": 3,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 1
+      }
+    },
+    {
+      "date": "2026-03-15",
+      "opponent": "ATH",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 4,
+        "AB": 3,
+        "H": 1,
+        "HR": 0,
+        "BB": 1,
+        "K": 0
+      }
+    },
+    {
+      "date": "2026-03-12",
+      "opponent": "MIL",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 3,
+        "AB": 3,
+        "H": 0,
+        "HR": 0,
+        "BB": 0,
+        "K": 0
+      }
+    },
+    {
+      "date": "2026-03-10",
+      "opponent": "SF",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "PA": 3,
+        "AB": 3,
+        "H": 1,
+        "HR": 0,
+        "BB": 0,
+        "K": 0
+      }
+    },
+    {
+      "date": "2026-03-09",
+      "opponent": "KC",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "PA": 3,
+        "AB": 3,
+        "H": 2,
+        "HR": 2,
+        "BB": 0,
+        "K": 0
+      }
+    }
+  ]
+}

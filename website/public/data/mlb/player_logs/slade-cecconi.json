@@ -1,0 +1,122 @@
+{
+  "player": "Slade Cecconi",
+  "rows": [
+    {
+      "date": "2026-05-02",
+      "opponent": "ATH",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 25,
+        "H": 10,
+        "HR": 2,
+        "BB": 0,
+        "K": 3
+      }
+    },
+    {
+      "date": "2026-04-26",
+      "opponent": "TOR",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 24,
+        "H": 6,
+        "HR": 1,
+        "BB": 1,
+        "K": 5
+      }
+    },
+    {
+      "date": "2026-04-20",
+      "opponent": "HOU",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 27,
+        "H": 10,
+        "HR": 2,
+        "BB": 2,
+        "K": 2
+      }
+    },
+    {
+      "date": "2026-04-15",
+      "opponent": "STL",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 20,
+        "H": 3,
+        "HR": 0,
+        "BB": 5,
+        "K": 4
+      }
+    },
+    {
+      "date": "2026-04-10",
+      "opponent": "ATL",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 23,
+        "H": 7,
+        "HR": 2,
+        "BB": 1,
+        "K": 3
+      }
+    },
+    {
+      "date": "2026-04-05",
+      "opponent": "CHC",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 21,
+        "H": 1,
+        "HR": 0,
+        "BB": 2,
+        "K": 6
+      }
+    },
+    {
+      "date": "2026-03-29",
+      "opponent": "SEA",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 24,
+        "H": 6,
+        "HR": 1,
+        "BB": 5,
+        "K": 5
+      }
+    },
+    {
+      "date": "2026-03-23",
+      "opponent": "AZ",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 15,
+        "H": 1,
+        "HR": 0,
+        "BB": 2,
+        "K": 2
+      }
+    },
+    {
+      "date": "2026-03-12",
+      "opponent": "MIL",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 15,
+        "H": 2,
+        "HR": 0,
+        "BB": 1,
+        "K": 6
+      }
+    }
+  ]
+}

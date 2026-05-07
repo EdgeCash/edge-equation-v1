@@ -1,0 +1,135 @@
+{
+  "player": "Rhett Lowder",
+  "rows": [
+    {
+      "date": "2026-05-02",
+      "opponent": "PIT",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 13,
+        "H": 5,
+        "HR": 0,
+        "BB": 4,
+        "K": 1
+      }
+    },
+    {
+      "date": "2026-04-26",
+      "opponent": "DET",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 22,
+        "H": 6,
+        "HR": 0,
+        "BB": 1,
+        "K": 7
+      }
+    },
+    {
+      "date": "2026-04-20",
+      "opponent": "TB",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 24,
+        "H": 5,
+        "HR": 0,
+        "BB": 2,
+        "K": 3
+      }
+    },
+    {
+      "date": "2026-04-15",
+      "opponent": "SF",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 25,
+        "H": 5,
+        "HR": 0,
+        "BB": 1,
+        "K": 4
+      }
+    },
+    {
+      "date": "2026-04-09",
+      "opponent": "MIA",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 26,
+        "H": 8,
+        "HR": 0,
+        "BB": 2,
+        "K": 2
+      }
+    },
+    {
+      "date": "2026-04-04",
+      "opponent": "TEX",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 23,
+        "H": 3,
+        "HR": 0,
+        "BB": 2,
+        "K": 4
+      }
+    },
+    {
+      "date": "2026-03-29",
+      "opponent": "BOS",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 20,
+        "H": 3,
+        "HR": 1,
+        "BB": 2,
+        "K": 5
+      }
+    },
+    {
+      "date": "2026-03-24",
+      "opponent": "MIL",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 15,
+        "H": 4,
+        "HR": 0,
+        "BB": 0,
+        "K": 3
+      }
+    },
+    {
+      "date": "2026-03-14",
+      "opponent": "TEX",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 18,
+        "H": 4,
+        "HR": 0,
+        "BB": 4,
+        "K": 4
+      }
+    },
+    {
+      "date": "2026-03-09",
+      "opponent": "ATH",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 18,
+        "H": 7,
+        "HR": 0,
+        "BB": 0,
+        "K": 4
+      }
+    }
+  ]
+}

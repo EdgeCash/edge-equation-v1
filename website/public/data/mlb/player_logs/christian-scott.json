@@ -1,0 +1,57 @@
+{
+  "player": "Christian Scott",
+  "rows": [
+    {
+      "date": "2026-05-01",
+      "opponent": "LAA",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 19,
+        "H": 3,
+        "HR": 1,
+        "BB": 1,
+        "K": 8
+      }
+    },
+    {
+      "date": "2026-04-23",
+      "opponent": "MIN",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 10,
+        "H": 0,
+        "HR": 0,
+        "BB": 6,
+        "K": 1
+      }
+    },
+    {
+      "date": "2026-03-16",
+      "opponent": "WSH",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 14,
+        "H": 5,
+        "HR": 1,
+        "BB": 0,
+        "K": 4
+      }
+    },
+    {
+      "date": "2026-03-10",
+      "opponent": "STL",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 13,
+        "H": 1,
+        "HR": 0,
+        "BB": 4,
+        "K": 4
+      }
+    }
+  ]
+}

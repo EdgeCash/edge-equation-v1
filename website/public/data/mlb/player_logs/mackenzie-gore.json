@@ -1,0 +1,122 @@
+{
+  "player": "MacKenzie Gore",
+  "rows": [
+    {
+      "date": "2026-05-01",
+      "opponent": "DET",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 18,
+        "H": 4,
+        "HR": 0,
+        "BB": 3,
+        "K": 3
+      }
+    },
+    {
+      "date": "2026-04-25",
+      "opponent": "ATH",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 25,
+        "H": 6,
+        "HR": 0,
+        "BB": 3,
+        "K": 7
+      }
+    },
+    {
+      "date": "2026-04-19",
+      "opponent": "SEA",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 23,
+        "H": 7,
+        "HR": 3,
+        "BB": 1,
+        "K": 5
+      }
+    },
+    {
+      "date": "2026-04-14",
+      "opponent": "ATH",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 22,
+        "H": 3,
+        "HR": 0,
+        "BB": 6,
+        "K": 5
+      }
+    },
+    {
+      "date": "2026-04-08",
+      "opponent": "SEA",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 17,
+        "H": 1,
+        "HR": 0,
+        "BB": 2,
+        "K": 9
+      }
+    },
+    {
+      "date": "2026-04-03",
+      "opponent": "CIN",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 24,
+        "H": 6,
+        "HR": 2,
+        "BB": 0,
+        "K": 9
+      }
+    },
+    {
+      "date": "2026-03-29",
+      "opponent": "PHI",
+      "is_home": false,
+      "result": null,
+      "stats": {
+        "BF": 22,
+        "H": 2,
+        "HR": 0,
+        "BB": 4,
+        "K": 7
+      }
+    },
+    {
+      "date": "2026-03-23",
+      "opponent": "KC",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 14,
+        "H": 3,
+        "HR": 0,
+        "BB": 0,
+        "K": 3
+      }
+    },
+    {
+      "date": "2026-03-16",
+      "opponent": "CWS",
+      "is_home": true,
+      "result": null,
+      "stats": {
+        "BF": 18,
+        "H": 2,
+        "HR": 0,
+        "BB": 4,
+        "K": 3
+      }
+    }
+  ]
+}
