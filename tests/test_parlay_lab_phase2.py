@@ -138,13 +138,28 @@ def test_ilp_engine_respects_same_game_cap():
         assert len(game_ids) == len(set(game_ids))
 
 
-def test_ilp_engine_returns_empty_when_pulp_not_installed(monkeypatch):
-    """Mock PuLP out of import to simulate a deploy without the extra."""
-    import edge_equation.parlay_lab.engines.ilp as ilp_mod
-    monkeypatch.setattr(ilp_mod, "_PULP_OK", False)
-    monkeypatch.setattr(ilp_mod, "pulp", None)
-    legs = [_fake_leg("A", 0.65, "g1"), _fake_leg("B", 0.62, "g2")]
-    assert ilp_mod.ILPEngine().build(legs, _config()) == []
+def test_ilp_engine_falls_back_to_baseline_when_pulp_missing(monkeypatch):
+    """With PuLP unavailable, the ILP strategy logs a warning and
+    delegates to the baseline rather than returning ``[]``. Better to
+    keep producing parlays than to silently drop today's card."""
+    import edge_equation.engines.parlay.strategies as strategies_mod
+    from edge_equation.parlay_lab.engines.ilp import ILPEngine
+
+    monkeypatch.setattr(strategies_mod, "_PULP_OK", False)
+    monkeypatch.setattr(strategies_mod, "pulp", None)
+    legs = [
+        _fake_leg("A", 0.65, "g1"),
+        _fake_leg("B", 0.62, "g2"),
+        _fake_leg("C", 0.60, "g3"),
+    ]
+    result = ILPEngine().build(legs, _config(max_legs=2))
+    # Baseline produces every C(3, 2) combo that clears the gate.
+    # Just assert it produces SOMETHING --- the fallback path is
+    # alive and the engine doesn't drop the entire card.
+    assert len(result) > 0
+    # Every produced candidate is a valid 2-leg combo from the input.
+    for cand in result:
+        assert cand.n_legs == 2
 
 
 # ---------------------------------------------------------------------------

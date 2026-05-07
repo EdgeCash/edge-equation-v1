@@ -485,7 +485,15 @@ def build_game_results_parlay(
             max_abs_correlation=rules.max_abs_correlation,
         )
         plain_legs = [e.leg for e in qualifying]
-        all_candidates = build_parlay_candidates(plain_legs, config=pcfg)
+        # Strategy-pluggable via env vars (see strategy_resolver). Default
+        # is the baseline itertools+copula enumeration; flip
+        # MLB_GAME_PARLAY_STRATEGY=ilp (or =deduped / =baseline) to swap
+        # in a different construction algorithm without redeploying code.
+        from edge_equation.engines.parlay.strategy_resolver import (
+            resolve_strategy,
+        )
+        strategy = resolve_strategy("game_results")
+        all_candidates = strategy(plain_legs, pcfg)
         # Enforce the audit's MIN_LEGS floor here (shared builder's
         # minimum is 2 by default).
         candidates = [
