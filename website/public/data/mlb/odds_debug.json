@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-07T13:15:39+00:00",
+  "fetched_at": "2026-05-07T15:17:30+00:00",
   "source": "the-odds-api",
   "game_count": 10,
   "games": [
@@ -8,29 +8,29 @@
       "first_pitch": "2026-05-07T16:36:00Z",
       "moneyline": {
         "TEX": {
-          "american": "+122",
-          "decimal": 2.22,
+          "american": "+136",
+          "decimal": 2.36,
           "book": "fanduel"
         },
         "NYY": {
-          "american": "-144",
-          "decimal": 1.6944,
+          "american": "-162",
+          "decimal": 1.6173,
           "book": "fanduel"
         },
         "vig_free": {
-          "TEX": "43.3%",
-          "NYY": "56.7%"
+          "TEX": "40.7%",
+          "NYY": "59.3%"
         }
       },
       "run_line": {
         "NYY -1.5": {
-          "american": "+140",
-          "decimal": 2.4,
+          "american": "+130",
+          "decimal": 2.3,
           "book": "fanduel"
         },
         "TEX +1.5": {
-          "american": "-170",
-          "decimal": 1.5882,
+          "american": "-156",
+          "decimal": 1.641,
           "book": "fanduel"
         }
       },
@@ -38,18 +38,18 @@
         {
           "line": 8.5,
           "OVER": {
-            "american": "-118",
-            "decimal": 1.8475,
+            "american": "-120",
+            "decimal": 1.8333,
             "book": "fanduel"
           },
           "UNDER": {
-            "american": "-104",
-            "decimal": 1.9615,
+            "american": "-102",
+            "decimal": 1.9804,
             "book": "fanduel"
           },
           "vig_free": {
-            "OVER": "51.5%",
-            "UNDER": "48.5%"
+            "OVER": "51.9%",
+            "UNDER": "48.1%"
           }
         }
       ]
@@ -59,29 +59,29 @@
       "first_pitch": "2026-05-07T17:06:00Z",
       "moneyline": {
         "MIN": {
-          "american": "-106",
-          "decimal": 1.9434,
+          "american": "+102",
+          "decimal": 2.02,
           "book": "fanduel"
         },
         "WSH": {
-          "american": "-110",
-          "decimal": 1.9091,
+          "american": "-120",
+          "decimal": 1.8333,
           "book": "fanduel"
         },
         "vig_free": {
-          "MIN": "49.6%",
-          "WSH": "50.4%"
+          "MIN": "47.6%",
+          "WSH": "52.4%"
         }
       },
       "run_line": {
         "MIN -1.5": {
-          "american": "+150",
-          "decimal": 2.5,
+          "american": "+164",
+          "decimal": 2.64,
           "book": "fanduel"
         },
         "WSH +1.5": {
-          "american": "-182",
-          "decimal": 1.5495,
+          "american": "-200",
+          "decimal": 1.5,
           "book": "fanduel"
         }
       },
@@ -89,18 +89,18 @@
         {
           "line": 9.0,
           "OVER": {
-            "american": "-110",
-            "decimal": 1.9091,
+            "american": "-115",
+            "decimal": 1.8696,
             "book": "fanduel"
           },
           "UNDER": {
-            "american": "-110",
-            "decimal": 1.9091,
+            "american": "-105",
+            "decimal": 1.9524,
             "book": "fanduel"
           },
           "vig_free": {
-            "OVER": "50.0%",
-            "UNDER": "50.0%"
+            "OVER": "51.1%",
+            "UNDER": "48.9%"
           }
         }
       ]
@@ -126,13 +126,13 @@
       },
       "run_line": {
         "CLE +1.5": {
-          "american": "-166",
-          "decimal": 1.6024,
+          "american": "-164",
+          "decimal": 1.6098,
           "book": "fanduel"
         },
         "KC -1.5": {
-          "american": "+138",
-          "decimal": 2.38,
+          "american": "+136",
+          "decimal": 2.36,
           "book": "fanduel"
         }
       },
@@ -161,29 +161,29 @@
       "first_pitch": "2026-05-07T18:21:00Z",
       "moneyline": {
         "CIN": {
-          "american": "+168",
-          "decimal": 2.68,
+          "american": "+164",
+          "decimal": 2.64,
           "book": "fanduel"
         },
         "CHC": {
-          "american": "-200",
-          "decimal": 1.5,
+          "american": "-196",
+          "decimal": 1.5102,
           "book": "fanduel"
         },
         "vig_free": {
-          "CIN": "35.9%",
-          "CHC": "64.1%"
+          "CIN": "36.4%",
+          "CHC": "63.6%"
         }
       },
       "run_line": {
         "CHC -1.5": {
-          "american": "+104",
-          "decimal": 2.04,
+          "american": "+108",
+          "decimal": 2.08,
           "book": "fanduel"
         },
         "CIN +1.5": {
-          "american": "-125",
-          "decimal": 1.8,
+          "american": "-130",
+          "decimal": 1.7692,
           "book": "fanduel"
         }
       },
@@ -212,18 +212,18 @@
       "first_pitch": "2026-05-07T19:11:00Z",
       "moneyline": {
         "NYM": {
-          "american": "-148",
-          "decimal": 1.6757,
+          "american": "-154",
+          "decimal": 1.6494,
           "book": "fanduel"
         },
         "COL": {
-          "american": "+126",
-          "decimal": 2.26,
+          "american": "+130",
+          "decimal": 2.3,
           "book": "fanduel"
         },
         "vig_free": {
-          "NYM": "57.4%",
-          "COL": "42.6%"
+          "NYM": "58.2%",
+          "COL": "41.8%"
         }
       },
       "run_line": {
@@ -240,20 +240,20 @@
       },
       "totals": [
         {
-          "line": 11.0,
+          "line": 10.5,
           "OVER": {
-            "american": "+100",
-            "decimal": 2.0,
+            "american": "-120",
+            "decimal": 1.8333,
             "book": "fanduel"
           },
           "UNDER": {
-            "american": "-122",
-            "decimal": 1.8197,
+            "american": "-102",
+            "decimal": 1.9804,
             "book": "fanduel"
           },
           "vig_free": {
-            "OVER": "47.6%",
-            "UNDER": "52.4%"
+            "OVER": "51.9%",
+            "UNDER": "48.1%"
           }
         }
       ]
@@ -263,48 +263,48 @@
       "first_pitch": "2026-05-07T19:41:00Z",
       "moneyline": {
         "PIT": {
-          "american": "-108",
-          "decimal": 1.9259,
+          "american": "-104",
+          "decimal": 1.9615,
           "book": "fanduel"
         },
         "AZ": {
-          "american": "-108",
-          "decimal": 1.9259,
+          "american": "-112",
+          "decimal": 1.8929,
           "book": "fanduel"
         },
         "vig_free": {
-          "PIT": "50.0%",
-          "AZ": "50.0%"
+          "PIT": "49.1%",
+          "AZ": "50.9%"
         }
       },
       "run_line": {
         "AZ +1.5": {
-          "american": "-184",
-          "decimal": 1.5435,
+          "american": "-194",
+          "decimal": 1.5155,
           "book": "fanduel"
         },
         "PIT -1.5": {
-          "american": "+152",
-          "decimal": 2.52,
+          "american": "+160",
+          "decimal": 2.6,
           "book": "fanduel"
         }
       },
       "totals": [
         {
-          "line": 9.0,
+          "line": 8.5,
           "OVER": {
-            "american": "-110",
-            "decimal": 1.9091,
+            "american": "-120",
+            "decimal": 1.8333,
             "book": "fanduel"
           },
           "UNDER": {
-            "american": "-110",
-            "decimal": 1.9091,
+            "american": "-102",
+            "decimal": 1.9804,
             "book": "fanduel"
           },
           "vig_free": {
-            "OVER": "50.0%",
-            "UNDER": "50.0%"
+            "OVER": "51.9%",
+            "UNDER": "48.1%"
           }
         }
       ]
@@ -314,29 +314,29 @@
       "first_pitch": "2026-05-07T22:41:00Z",
       "moneyline": {
         "ATH": {
-          "american": "+108",
-          "decimal": 2.08,
+          "american": "+110",
+          "decimal": 2.1,
           "book": "fanduel"
         },
         "PHI": {
-          "american": "-126",
-          "decimal": 1.7937,
+          "american": "-130",
+          "decimal": 1.7692,
           "book": "fanduel"
         },
         "vig_free": {
-          "ATH": "46.3%",
-          "PHI": "53.7%"
+          "ATH": "45.7%",
+          "PHI": "54.3%"
         }
       },
       "run_line": {
         "ATH +1.5": {
-          "american": "-188",
-          "decimal": 1.5319,
+          "american": "-182",
+          "decimal": 1.5495,
           "book": "fanduel"
         },
         "PHI -1.5": {
-          "american": "+155",
-          "decimal": 2.55,
+          "american": "+150",
+          "decimal": 2.5,
           "book": "fanduel"
         }
       },
@@ -365,29 +365,29 @@
       "first_pitch": "2026-05-07T22:41:00Z",
       "moneyline": {
         "BAL": {
-          "american": "+102",
-          "decimal": 2.02,
+          "american": "+106",
+          "decimal": 2.06,
           "book": "fanduel"
         },
         "MIA": {
-          "american": "-120",
-          "decimal": 1.8333,
+          "american": "-124",
+          "decimal": 1.8065,
           "book": "fanduel"
         },
         "vig_free": {
-          "BAL": "47.6%",
-          "MIA": "52.4%"
+          "BAL": "46.7%",
+          "MIA": "53.3%"
         }
       },
       "run_line": {
-        "BAL -1.5": {
-          "american": "+168",
-          "decimal": 2.68,
-          "book": "fanduel"
-        },
-        "MIA +1.5": {
+        "BAL +1.5": {
           "american": "-205",
           "decimal": 1.4878,
+          "book": "fanduel"
+        },
+        "MIA -1.5": {
+          "american": "+168",
+          "decimal": 2.68,
           "book": "fanduel"
         }
       },
@@ -446,18 +446,18 @@
         {
           "line": 8.5,
           "OVER": {
-            "american": "+100",
-            "decimal": 2.0,
+            "american": "-112",
+            "decimal": 1.8929,
             "book": "fanduel"
           },
           "UNDER": {
-            "american": "-122",
-            "decimal": 1.8197,
+            "american": "-108",
+            "decimal": 1.9259,
             "book": "fanduel"
           },
           "vig_free": {
-            "OVER": "47.6%",
-            "UNDER": "52.4%"
+            "OVER": "50.4%",
+            "UNDER": "49.6%"
           }
         }
       ]
@@ -467,29 +467,29 @@
       "first_pitch": "2026-05-08T02:11:00Z",
       "moneyline": {
         "STL": {
-          "american": "+150",
-          "decimal": 2.5,
+          "american": "+144",
+          "decimal": 2.44,
           "book": "fanduel"
         },
         "SD": {
-          "american": "-178",
-          "decimal": 1.5618,
+          "american": "-172",
+          "decimal": 1.5814,
           "book": "fanduel"
         },
         "vig_free": {
-          "STL": "38.5%",
-          "SD": "61.5%"
+          "STL": "39.3%",
+          "SD": "60.7%"
         }
       },
       "run_line": {
         "SD -1.5": {
-          "american": "+115",
-          "decimal": 2.15,
+          "american": "+120",
+          "decimal": 2.2,
           "book": "fanduel"
         },
         "STL +1.5": {
-          "american": "-138",
-          "decimal": 1.7246,
+          "american": "-144",
+          "decimal": 1.6944,
           "book": "fanduel"
         }
       },

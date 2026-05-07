@@ -523,6 +523,67 @@
       "clv_pct": null,
       "result": null,
       "units": null
+    },
+    {
+      "pick_id": "2026-05-07|NYM@COL|totals|UNDER 10.5",
+      "date": "2026-05-07",
+      "matchup": "NYM@COL",
+      "game_pk": 824362,
+      "game_time": "2026-05-07T19:10:00Z",
+      "bet_type": "totals",
+      "pick": "UNDER 10.5",
+      "spec": {
+        "type": "totals",
+        "side": "UNDER",
+        "line": 10.5
+      },
+      "model_prob": 0.5323,
+      "edge_pct_at_pick": 5.42,
+      "kelly_pct": 2.43,
+      "kelly_advice": "1u",
+      "pick_price_dec": 1.9804,
+      "pick_price_american": -102,
+      "book_at_pick": "fanduel",
+      "pick_taken_at": "2026-05-07T15:21:37.642283Z",
+      "odds_source": "the-odds-api",
+      "closing_price_dec": null,
+      "closing_price_american": null,
+      "closing_book": null,
+      "closing_recorded_at": null,
+      "clv_pct": null,
+      "result": "LOSS",
+      "units": -1.0,
+      "graded_at": "2026-05-07T15:21:37.643480Z"
+    },
+    {
+      "pick_id": "2026-05-07|PIT@AZ|moneyline|PIT",
+      "date": "2026-05-07",
+      "matchup": "PIT@AZ",
+      "game_pk": 825090,
+      "game_time": "2026-05-07T19:40:00Z",
+      "bet_type": "moneyline",
+      "pick": "PIT",
+      "spec": {
+        "type": "moneyline",
+        "team": "PIT"
+      },
+      "model_prob": 0.5324,
+      "edge_pct_at_pick": 4.43,
+      "kelly_pct": 4.51,
+      "kelly_advice": "2u",
+      "pick_price_dec": 1.9615,
+      "pick_price_american": -104,
+      "book_at_pick": "fanduel",
+      "pick_taken_at": "2026-05-07T15:21:37.642283Z",
+      "odds_source": "the-odds-api",
+      "closing_price_dec": null,
+      "closing_price_american": null,
+      "closing_book": null,
+      "closing_recorded_at": null,
+      "clv_pct": null,
+      "result": "WIN",
+      "units": 0.9615,
+      "graded_at": "2026-05-07T15:21:37.643489Z"
     }
   ]
 }
