@@ -220,6 +220,35 @@ def test_umpire_first_inning_stats_walk_rate_for_wild_ump():
     assert out["ump_f1_pa"] == 1.0
 
 
+def test_umpire_first_inning_stats_returns_empty_when_no_ump_column():
+    """Statcast pitch frames don't always carry the umpire id (the
+    home_plate_umpire scraper hasn't merged it yet, older backfill
+    snapshots predate the join). The function must NOT crash with a
+    KeyError --- it must return the empty default so the EB shrinker
+    can regress to the league mean.
+
+    Regression guard for the ``Feature build failed for game XXXX:
+    'ump_id'`` warning that flooded the NRFI Weekly Retrain log."""
+    import pandas as pd
+    from edge_equation.engines.nrfi.features.splits import (
+        umpire_first_inning_stats,
+    )
+    # Frame has all the pitch columns the function uses, but no umpire
+    # id column at all.
+    df = pd.DataFrame([
+        {"pitcher": 1, "pitch_type": "FF", "pitch_number": 1,
+         "description": "called_strike", "events": None, "zone": 5,
+         "game_pk": 1, "post_bat_score": 0},
+    ])
+    out = umpire_first_inning_stats(df, ump_id=42)
+    # Returns the empty default --- sample sizes 0, neutral CSA, league
+    # avg walk rate. Most importantly: NO RAISE.
+    assert out["ump_f1_pa"] == 0.0
+    assert out["ump_f1_called"] == 0.0
+    assert out["ump_f1_csa"] == 0.0
+    assert out["ump_f1_walk_rate"] == pytest.approx(0.085, abs=1e-6)
+
+
 # ---------------------------------------------------------------------------
 # FeatureBuilder produces the new columns
 # ---------------------------------------------------------------------------
