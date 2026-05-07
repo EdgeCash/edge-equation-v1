@@ -51,7 +51,12 @@ jobs:
   build:
     if: ${{ vars.DAILY_MASTER_ENABLED == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 60 min cushions the per-day Statcast lookups (40+ players ×
+    # several seconds of network for each rate frame) and the
+    # projection / parlay sweeps that sit downstream. Daily Master
+    # #7 was cancelled at exactly the previous 30 min cap right
+    # after the props parlay step.
+    timeout-minutes: 60
     permissions:
       contents: write
     steps:
